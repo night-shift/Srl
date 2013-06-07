@@ -1,0 +1,55 @@
+#ifndef SRL_STORAGE_H
+#define SRL_STORAGE_H
+
+#include "Node.h"
+#include "Value.h"
+#include "Blocks.h"
+#include "String.h"
+#include "Heap.h"
+
+namespace Srl { namespace Lib {
+
+    template<class T> struct Link {
+
+        size_t     hash;
+        T          field;
+        MemBlock   name;
+
+        Link(size_t hash_, const T& field_, const MemBlock& name_)
+            : hash(hash_), field(field_), name(name_) { }
+    };
+
+    class Storage {
+
+    public :
+        static const Encoding Name_Encoding = Encoding::UTF8;
+
+        Storage() { }
+        ~Storage();
+        Storage& operator= (Storage&& g);
+        Storage(Storage&& g);
+
+        Link<Node>*  store_node  (const Node& node, Tree& tree, const String& name);
+        Link<Node>*  create_node (Tree& tree, Type type, const String& name, bool store_data = true);
+        Link<Value>* store_value (const Value& value, const String& name, bool store_data = true);
+
+        size_t hash_string      (const String& str);
+
+        inline std::vector<uint8_t>&  str_conv_buffer();
+        inline std::vector<uint8_t>&  type_conv_buffer();
+        inline std::deque<Node*>&     nodes();
+
+   private :
+        Heap                  data_heap;
+        Heap                  node_heap;
+        Heap                  str_heap;
+        std::deque<Node*>     stored_nodes;
+        std::vector<uint8_t>  str_buffer;
+        std::vector<uint8_t>  type_buffer;
+
+        void clear_nodes();
+    };
+
+} }
+
+#endif

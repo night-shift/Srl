@@ -1,0 +1,163 @@
+#include "Srl/Srl.h"
+#include "Srl/Internal.h"
+
+using namespace std;
+using namespace Srl;
+using namespace Lib;
+
+Tree::Tree(Tree&& g)
+{
+    *this = move(g);
+}
+
+Tree& Tree::operator= (Tree&& g)
+{
+    this->storage   = move(g.storage);
+    this->root_name = move(g.root_name);
+    this->root_node = move(g.root_node);
+
+    this->root_node.tree = this;
+    auto& nodes = this->storage.nodes();
+    for(auto& n : nodes) {
+        n->tree = this;
+    }
+
+    return *this;
+}
+
+void Tree::parse_value(const Value& value, const String& field_name)
+{
+    assert(this->temp_parser != nullptr && "Parser not set.");
+
+    this->parse_out_convert(value, field_name, *this->temp_parser);
+}
+
+void Tree::parse_out(Parser& parser, Lib::Out& out, const function<void()>& store_switch)
+{
+    this->temp_parser = &parser;
+    this->temp_stream = &out;
+
+    this->root_node.just_parse = true;
+
+    this->parse_value(Value(Type::Object), this->root_name);
+
+    store_switch();
+
+    this->parse_value(Value(Type::Scope_End), this->root_name);
+}
+
+void Tree::parse_out(Parser& parser, Out& out)
+{
+    this->temp_parser = &parser;
+    this->temp_stream = &out;
+    this->root_node.to_source(this->root_name);
+}
+
+void Tree::parse_in(Parser& parser, In& source, bool just_parse)
+{
+    auto first_seg = parser.parse_in(source);
+    auto& node_name = first_seg.name;
+    auto& value = first_seg.value;
+
+    if(!TpTools::is_scope(value.type())) {
+        throw Exception("Unable to parse source. Data malformed.");
+    }
+
+    this->root_name = String(node_name, Encoding::UTF8).unwrap<char>();
+    this->root_node = Node(this, value.type(), just_parse);
+
+    this->root_node.parse_in(source, parser);
+}
+
+void Tree::parse_out_convert(const Value& value, const String& val_name, Parser& parser)
+{
+    MemBlock name_conv;
+
+    if(val_name.encoding() == Encoding::UTF8) {
+        name_conv = MemBlock(val_name.data(), val_name.size());
+
+    } else {
+        auto& buffer = this->storage.str_conv_buffer();
+        auto size = Tools::convert_charset(Encoding::UTF8, val_name, buffer, true);
+        name_conv = MemBlock(&buffer[0], size);
+    }
+
+    auto type = value.type();
+
+    bool no_conversion_needed =
+        /* scope types don't need conversion */
+        TpTools::is_scope(type) || type == Type::Scope_End ||
+        /* strings must be UTF8 and escaped in text formats */
+        (type == Type::String && parser.get_format() != Format::Text &&
+         value.encoding() == Encoding::UTF8) ||
+        /* binary types must be converted to string in text formats */
+        (type != Type::String && parser.get_format() == Format::Binary);
+
+    if(no_conversion_needed) {
+        parser.parse_out(value, name_conv, *this->temp_stream);
+
+    } else {
+        parser.parse_out(
+            this->convert_type(value), name_conv, *this->temp_stream
+        );
+    }
+}
+
+Value Tree::convert_type(const Value& value)
+{
+    size_t data_size = 0;
+    auto& buffer = this->storage.type_conv_buffer();
+
+    if(value.type() == Type::String) {
+
+        String wrap(value.data(), value.size(), value.encoding());
+        data_size = Tools::convert_charset(Encoding::UTF8, wrap, buffer, true);
+
+    } else if(TpTools::is_literal(value.type())) {
+
+        data_size = Tools::type_to_string(value.type(), value.data(), buffer);
+
+    } else {
+
+        assert(value.type() == Type::Binary && "Value type invalid.");
+
+        data_size = Tools::bytes_to_base64(value.data(), value.size(), buffer);
+    }
+
+    return Value( { &buffer[0], data_size }, value.type());
+
+}
+
+Node* Tree::root()
+{
+    return &this->root_node;
+}
+
+const std::string& Tree::name() const
+{
+    return this->root_name;
+}
+
+void Tree::srl_resolve(Context<Insert>& ctx)
+{
+    vector<uint8_t> source = this->to_source<PSrl>();
+
+    auto wrap = BitWrap(&source[0], source.size());
+
+    ctx(wrap, "binary");
+
+}
+
+void Tree::srl_resolve(Context<Paste>& ctx)
+{
+    vector<uint8_t> vec;
+
+    auto wrap = BitWrap([&vec](size_t size) {
+        vec.resize(size);
+        return &vec[0];
+    });
+
+    ctx(wrap, "binary");
+
+    *this = Tree::From_Source<PSrl>(vec);
+}
