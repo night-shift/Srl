@@ -18,33 +18,6 @@ namespace {
 
         return MemBlock(&buffer[0], size);
     }
-
-    pair<size_t, MemBlock>
-    process_name(const String& name, Heap& heap, vector<uint8_t>& buffer, bool store_data)
-    {
-        auto name_conv = convert_string(name, buffer, Storage::Name_Encoding);
-        auto name_hash = hash_function(name_conv);
-
-        if(store_data) {
-            name_conv = heap.copy(name_conv);
-        }
-
-        return { name_hash, name_conv };
-    }
-
-    template<class T>
-    Link<T>* create_link(uint8_t* mem, const T& val, const String& name, Heap& str_heap,
-                         vector<uint8_t>& buffer, bool store_data)
-    {
-        auto pair = process_name(name, str_heap, buffer, store_data);
-        auto* link = new(mem) Link<T>(
-            pair.first,
-            val,
-            pair.second
-        );
-
-        return link;
-    }
 }
 
 Storage::~Storage()
@@ -62,9 +35,10 @@ Storage& Storage::operator= (Storage&& s)
     this->clear_nodes();
     this->stored_nodes = move(s.stored_nodes);
 
-    this->data_heap = move(s.data_heap);
-    this->node_heap = move(s.node_heap);
-    this->str_heap  = move(s.str_heap);
+    this->data_heap  = move(s.data_heap);
+    this->value_heap = move(s.value_heap);
+    this->node_heap  = move(s.node_heap);
+    this->str_heap   = move(s.str_heap);
 
     return *this;
 }
@@ -84,23 +58,58 @@ size_t Storage::hash_string(const String& str)
         : hash_function(convert_string(str, this->str_buffer, Storage::Name_Encoding));
 }
 
+template<class T>
+Link<T>* Storage::create_link(const T& val, const String& name, Heap<Link<T>>& heap, bool store_name)
+{
+    static const String empty_str = String(MemBlock(), Storage::Name_Encoding);
+
+     auto name_conv = name.encoding() == Storage::Name_Encoding
+        ? MemBlock(name.data(), name.size())
+        : convert_string(name, this->str_buffer, Storage::Name_Encoding);
+
+    auto name_hash = hash_function(name_conv);
+
+    const String* str_ptr = nullptr;
+
+    if(store_name && name.size() > 0) {
+        auto* mem = this->str_heap.get_mem(1);
+
+        auto* ptr = new(mem) String(name_conv, Storage::Name_Encoding);
+        if(name_conv.size <= max_packed_block_size()) {
+            ptr->block.move_to_local();
+
+        } else {
+            ptr->block.extern_data = copy(this->data_heap, name_conv).ptr;
+        }
+        str_ptr = ptr;
+
+    } else {
+        str_ptr = &empty_str;
+    }
+
+    auto* mem = heap.get_mem(1);
+
+    auto* link = new(mem) Link<T>(name_hash, val);
+    link->field.name_ptr = str_ptr;
+
+    return link;
+}
+
 Link<Node>* Storage::store_node(const Node& node, Tree& tree, const String& name)
 {
     if(node.tree != &tree) {
         auto* link = this->create_node(tree, node.scope_type, name);
         for(auto n : node.nodes) {
-            link->field.insert_node(n->field, String(n->name, Storage::Name_Encoding));
+            link->field.insert_node(n->field, *n->field.name());
         }
         for(auto v : node.values) {
-            link->field.insert_value(v->field, String(v->name, Storage::Name_Encoding));
+            link->field.insert_value(v->field, *v->field.name());
         }
         return link;
 
     } else {
         /* all the fields are already stored here */
-        auto* mem = this->node_heap.alloc_type<Link<Node>>();
-        auto* link = create_link(mem, node, name, this->str_heap, this->str_buffer, true);
-
+        auto* link = this->create_link(node, name, this->node_heap, true);
         this->stored_nodes.push_back(&link->field);
 
         return link;
@@ -109,12 +118,7 @@ Link<Node>* Storage::store_node(const Node& node, Tree& tree, const String& name
 
 Link<Node>* Storage::create_node(Tree& tree, Type type, const String& name, bool store_data)
 {
-    auto* mem = this->node_heap.alloc_type<Link<Node>>();
-    auto* link = create_link(
-        mem,
-        Node(&tree, type),
-        name, this->str_heap, this->str_buffer, store_data
-    );
+    auto* link = this->create_link(Node(&tree, type), name, this->node_heap, store_data);
 
     this->stored_nodes.push_back(&link->field);
 
@@ -123,19 +127,18 @@ Link<Node>* Storage::create_node(Tree& tree, Type type, const String& name, bool
 
 Link<Value>* Storage::store_value(const Value& value, const String& name, bool store_data)
 {
-    auto* mem = this->data_heap.alloc_type<Link<Value>>();
-    MemBlock data(value.data(), value.size());
+    auto* link = this->create_link(value, name, this->value_heap, store_data);
 
-    if(store_data && value.size() > 0) {
-        data = this->data_heap.copy(data);
+    auto& block = link->field.block;
+
+    if(store_data) {
+        if(block.size <= max_packed_block_size()) {
+            block.move_to_local();
+
+        } else {
+            block.extern_data = copy(this->data_heap, { block.extern_data, block.size }).ptr;
+        }
     }
-
-    auto* link = create_link(
-        mem,
-        Value(data, value.type(), value.encoding()),
-        name,
-        this->str_heap, this->str_buffer, store_data
-    );
 
     return link;
 }

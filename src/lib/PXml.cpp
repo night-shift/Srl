@@ -17,13 +17,13 @@ namespace {
     };
 
     template<class... chars>
-    constexpr array<const char, sizeof...(chars) + 2> make_sub(chars... chr)
+    constexpr array<const char, sizeof...(chars) + 2> ar_sub(chars... chr)
     {
         return array<const char, sizeof...(chars) + 2> { { '&', chr..., ';' } };
     }
 
     template<class... chars>
-    constexpr array<const char, sizeof...(chars)> make(chars... chr)
+    constexpr array<const char, sizeof...(chars)> ar(chars... chr)
     {
         return array<const char, sizeof...(chars)> { { chr...} };
     }
@@ -31,16 +31,16 @@ namespace {
     void write_escape(const MemBlock& str, Out& out)
     {
        out.write_substitute(str,
-            '&', make_sub('a','m','p'), '<', make_sub('l','t'), '>', make_sub('g','t'),
-            '\"', make_sub('q','o','u','t'), '\'', make_sub('a','p','o','s')
+            '&', ar_sub('a','m','p'), '<', ar_sub('l','t'), '>', ar_sub('g','t'),
+            '\"', ar_sub('q','o','u','t'), '\'', ar_sub('a','p','o','s')
        );
     }
 
     MemBlock read_escape(uint8_t delimiter, In& in, vector<uint8_t>& buffer)
     {
         auto len = in.read_substitue(error, delimiter, buffer,
-            '&', make_sub('a','m','p'), '<', make_sub('l','t'), '>', make_sub('g','t'),
-            '\"', make_sub('q','o','u','t'), '\'', make_sub('a','p','o','s')
+            '&', ar_sub('a','m','p'), '<', ar_sub('l','t'), '>', ar_sub('g','t'),
+            '\"', ar_sub('q','o','u','t'), '\'', ar_sub('a','p','o','s')
         );
 
         return MemBlock(&buffer[0], len);
@@ -71,7 +71,7 @@ namespace {
 
     bool test_name_tags(MemBlock& opening_tag, MemBlock closing_tag)
     {
-        Tools::trim_space(closing_tag.ptr, closing_tag.size);
+        Tools::trim_space(closing_tag);
 
         /* empty closing tags are allowed */
         if(closing_tag.size == 0U) {
@@ -149,12 +149,12 @@ void PXml::parse_document(Lib::In& source)
         source.move(1, error);
 
         if(*(source.pointer())== '!' || *(source.pointer()) == '?') {
-            source.move_until(error, make('-', '-', '>'), make('?', '>'), make(']','>'));
+            source.move_until(error, ar('-', '-', '>'), ar('?', '>'), ar(']','>'));
             continue;
         }
 
         auto tag = source.read_block_until(error, '=', '>');
-        tag = source.is_streaming() ? this->buffer.copy(tag) : tag;
+        tag = source.is_streaming() ? copy(this->data_buffer, tag) : tag;
 
         if(tag.size < 1) {
             error();
@@ -175,7 +175,7 @@ void PXml::parse_document(Lib::In& source)
                 tag.size--;
                 closed = true;
             }
-            Tools::trim_space(tag.ptr, tag.size);
+            Tools::trim_space(tag);
             this->process_tag_open(tag);
         }
 
@@ -204,22 +204,22 @@ void PXml::parse_document(Lib::In& source)
 
 Lib::MemBlock PXml::read_content(Lib::In& source)
 {
-    if(source.is_at_token(make('<','!'))) {
-        source.move_until(error, make('-','-','>'));
+    if(source.is_at_token(ar('<','!'))) {
+        source.move_until(error, ar('-','-','>'));
         source.move(3, error);
     }
 
-    if(source.is_at_token(make('<','!','[','C','D','A','T','A','['))) {
+    if(source.is_at_token(ar('<','!','[','C','D','A','T','A','['))) {
         source.move(9, error);
-        auto block = source.read_block_until(error, make(']', ']', '>'));
+        auto block = source.read_block_until(error, ar(']', ']', '>'));
 
-        return source.is_streaming() ? this->buffer.copy(block) : block;
+        return source.is_streaming() ? copy(this->data_buffer, block) : block;
 
     } else {
         auto content = read_escape('<', source, this->escape_buffer);
-        Tools::trim_space(content.ptr, content.size);
+        Tools::trim_space(content);
 
-        return this->buffer.copy(content);
+        return copy(this->data_buffer, content);
     }
 }
 
@@ -300,13 +300,13 @@ void PXml::read_attributes(MemBlock& tag, In& source, bool& out_closed)
     this->process_tag_open(MemBlock(tag.ptr, name_len));
 
     MemBlock first(tag.ptr + name_len + 1, tag.size - name_len - 1);
-    Tools::trim_space(first.ptr, first.size);
+    Tools::trim_space(first);
 
     this->process_tag_open(first);
 
     const auto trim_save = [this, &source](MemBlock& block, bool save) {
-        Tools::trim_space(block.ptr, block.size);
-        return save ? this->buffer.copy(block) : block;
+        Tools::trim_space(block);
+        return save ? copy(this->data_buffer, block) : block;
     };
 
     while(true) {
@@ -336,7 +336,7 @@ void PXml::read_attributes(MemBlock& tag, In& source, bool& out_closed)
 
 PXml::XmlTag& PXml::create_tag(const MemBlock& name, Type type, size_t parent_tag, const MemBlock& data)
 {
-    auto* mem = this->buffer.alloc_type<XmlTag>();
+    auto* mem = this->tag_buffer.get_mem(1);
     auto* tag = new(mem) XmlTag(name, type, parent_tag, data);
 
     this->tags.push_back(tag);

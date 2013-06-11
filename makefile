@@ -6,7 +6,7 @@
 # 'make test' compiles and runs an additional test file
 #
 # a compiler with c++11 support is required
-# tested with gcc-4.7+ and clang-3.2
+# tested with gcc-4.8 and clang-3.2
 
 debug    = 0
 libname  = srl

@@ -76,7 +76,7 @@ MemBlock PSrl::read_string(In& source)
         auto block = source.read_block(size, error);
 
         if(source.is_streaming()) {
-            block = this->string_buffer.copy(block);
+            block = copy(this->string_buffer, block);
         }
 
         return *this->indexed_strings.insert(indexed_strings.end(), block);

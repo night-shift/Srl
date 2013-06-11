@@ -4,6 +4,7 @@
 #include "Value.h"
 #include "Resolve.h"
 #include "Storage.h"
+#include "String.h"
 
 namespace Srl {
 
@@ -23,29 +24,34 @@ namespace Srl {
             "Srl Error. Cannot unwrap type."
         );
 
-        assert(this->data_block.size < 1 || this->data_block.ptr != nullptr);
+        assert(this->block.size < 1 || this->block.data() != nullptr);
 
         Lib::Switch<T>::Paste(o, *this);
     }
 
     inline const uint8_t* Value::data() const
     {
-        return this->data_block.ptr;
+        return this->block.data();
     }
 
     inline size_t Value::size() const
     {
-        return this->data_block.size;
+        return this->block.size;
     }
 
     inline Type Value::type() const
     {
-        return this->val_type;
+        return this->block.type;
     }
 
     inline Encoding Value::encoding() const
     {
-        return this->str_encoding;
+        return this->block.encoding;
+    }
+
+    inline const String* Value::name() const
+    {
+        return this->name_ptr;
     }
 }
 

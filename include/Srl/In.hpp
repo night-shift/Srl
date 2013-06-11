@@ -1,5 +1,5 @@
-#ifndef SRL_SOURCE_HPP
-#define SRL_SOURCE_HPP
+#ifndef SRL_IN_HPP
+#define SRL_IN_HPP
 
 #include "In.h"
 #include "Cast.hpp"
@@ -57,13 +57,13 @@ namespace Srl { namespace Lib {
     }
 
     template<class... Tokens>
-    size_t In::move_while(const OffBound& out_of_bounds, Tokens... tokens)
+    size_t In::move_while(const OffBound& out_of_bounds, const Tokens&... tokens)
     {
         return this->move_until<true>(out_of_bounds, tokens...);
     }
 
     template<bool Not, class... Tokens>
-    size_t In::move_until(const OffBound& out_of_bounds, Tokens... tokens)
+    size_t In::move_until(const OffBound& out_of_bounds, const Tokens&... tokens)
     {
         auto steps = 0U;
 
@@ -147,13 +147,13 @@ namespace Srl { namespace Lib {
         return steps;
     }
 
-    template<class Sub, class Tokens, class... Tail>
+    template<class Sub, class Token, class... Tail>
     size_t In::substitute_token(std::vector<uint8_t>& buffer, size_t idx, size_t left,
-                                const Sub& sub, const Tokens& tokens, const Tail&... tail)
+                                const Sub& sub, const Token& token, const Tail&... tail)
     {
-        const auto N = std::tuple_size<Tokens>::value;
+        const auto N = std::tuple_size<Token>::value;
 
-        return left >= N && Aux::comp<N>(this->current_pos, tokens.data())
+        return left >= N && Aux::comp<N>(this->current_pos, token.data())
                 ? this->replace<Sub, N>(sub, buffer, idx)
                 : this->substitute_token(buffer, idx, left, tail...);
     }

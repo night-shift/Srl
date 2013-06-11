@@ -45,7 +45,8 @@ namespace Srl { namespace Lib {
     {
         static_assert(is_character_array<TString>::value
                       || is_character<TString>::value
-                      || is_basic_string<TString>::value,
+                      || is_basic_string<TString>::value
+                      || is_cstr_pointer<TString>::value,
 
         "Srl error. Invalid string type. Valid types are either character arrays, basic_string<T> types or single characters."
 
@@ -179,7 +180,7 @@ namespace Srl { namespace Lib {
             while(*(pointer + size) != 0) { size++; }
 
             return std::make_pair(
-                get_encoding<typename std::remove_pointer<T>::type>,
+                get_encoding<typename std::remove_pointer<T>::type>(),
                 MemBlock(reinterpret_cast<const uint8_t*>(pointer), size)
             );
         }

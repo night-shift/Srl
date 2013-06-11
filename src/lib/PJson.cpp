@@ -11,7 +11,7 @@ namespace {
         throw Exception("Unable to parse JSON document. Index out of bounds.");
     };
 
-    const In::Substitute substitute_unicode = [](In& src, vector<uint8_t>& buf, size_t idx) -> size_t{
+    const In::Substitute unescape_uc_literal = [](In& src, vector<uint8_t>& buf, size_t idx) -> size_t {
         uint8_t hex_buffer[2];
         /* skip "\u" and read 4 hex digits */
         auto block = src.read_block(2 + 4, error);
@@ -21,26 +21,24 @@ namespace {
         return Tools::convert_charset(Encoding::UTF8, String(hex_buffer, 2, Encoding::UTF16), buf, true, idx);
     };
 
-    template<class... chars>
-    constexpr array<const char, sizeof...(chars) + 1> make(chars... chr)
+    constexpr array<const char, 2> ar(const char c)
     {
-        return array<const char, sizeof...(chars) + 1> { { '\\', chr...  } };
+        return array<const char, 2> { { '\\', c } };
     }
 
     void write_escape(const MemBlock& str, Out& out)
     {
         out.write_substitute(str,
-            '\"', make('\"'), '\'', make('\''), '\\', make('\\'), '/', make('/'), '\n', make('n'),
-            '\t', make('t'), '\r', make('r'), '\b', make('b'), '\f', make('f')
+            '\"', ar('\"'), '\'', ar('\''), '\\', ar('\\'), '/', ar('/'), '\n', ar('n'),
+            '\t', ar('t'), '\r',  ar('r'), '\b',  ar('b'), '\f', ar('f')
         );
     }
 
     MemBlock read_unescape(In& in, vector<uint8_t>& buffer)
     {
         auto len = in.read_substitue(error, '\"', buffer,
-            '\"', make('\"'), '\'', make('\''), '\\', make('\\'), '/', make('/'), '\n', make('n'),
-            '\t', make('t'), '\r', make('r'), '\b', make('b'), '\f', make('f'),
-             substitute_unicode, make('u')
+            '\"', ar('\"'), '\'', ar('\''), '\\', ar('\\'), '/', ar('/'), '\n', ar('n'),
+            '\t', ar('t'), '\r',  ar('r'), '\b',  ar('b'), '\f', ar('f'), unescape_uc_literal, ar('u')
         );
 
         return { &buffer[0], len };
@@ -135,23 +133,26 @@ void PJson::insert_spacing(Type type, Out& out)
 }
 
 /* Parse in ****************************************************/
+namespace {
 
-template<size_t C> void fill_table(uint8_t* table, uint8_t char_valid, uint8_t char_invalid)
-{
-    bool valid = (C >= '0' && C <= '9') ||
-        C == 't' || C == 'r' || C == 'u' ||
-        C == 'e' || C == 'f' || C == 'a' ||
-        C == 'l' || C == 's' || C == 'T' ||
-        C == 'F' || C == 'n' || C == 'N' ||
-        C == '+' || C == '.' || C == '-' ||
-        C == 'E' || C == 'i';
+    template<size_t C> void fill_table(uint8_t* table, uint8_t char_valid, uint8_t char_invalid)
+    {
+        bool valid = (C >= '0' && C <= '9') ||
+            C == 't' || C == 'r' || C == 'u' ||
+            C == 'e' || C == 'f' || C == 'a' ||
+            C == 'l' || C == 's' || C == 'T' ||
+            C == 'F' || C == 'n' || C == 'N' ||
+            C == '+' || C == '.' || C == '-' ||
+            C == 'E' || C == 'i';
 
-    table[C] = valid ? char_valid : char_invalid;
+        table[C] = valid ? char_valid : char_invalid;
 
-    fill_table<C + 1>(table, char_valid, char_invalid);
+        fill_table<C + 1>(table, char_valid, char_invalid);
+    }
+
+    template<> void fill_table<256>(uint8_t*, uint8_t, uint8_t) { }
 }
 
-template<> void fill_table<256>(uint8_t*, uint8_t, uint8_t) { }
 
 PJson::LiteralTable::LiteralTable()
 {

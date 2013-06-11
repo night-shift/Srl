@@ -13,10 +13,9 @@ namespace Srl { namespace Lib {
 
         size_t     hash;
         T          field;
-        MemBlock   name;
 
-        Link(size_t hash_, const T& field_, const MemBlock& name_)
-            : hash(hash_), field(field_), name(name_) { }
+        Link(size_t hash_, const T& field_)
+            : hash(hash_), field(field_) { }
     };
 
     class Storage {
@@ -40,14 +39,18 @@ namespace Srl { namespace Lib {
         inline std::deque<Node*>&     nodes();
 
    private :
-        Heap                  data_heap;
-        Heap                  node_heap;
-        Heap                  str_heap;
+        Heap<Link<Value>>     value_heap;
+        Heap<Link<Node>>      node_heap;
+        Heap<String>          str_heap;
+        Heap<uint8_t>         data_heap;
+
         std::deque<Node*>     stored_nodes;
         std::vector<uint8_t>  str_buffer;
         std::vector<uint8_t>  type_buffer;
 
         void clear_nodes();
+        template<class T>
+        Link<T>* create_link(const T& val, const String& name, Heap<Link<T>>& heap, bool store_name);
     };
 
 } }

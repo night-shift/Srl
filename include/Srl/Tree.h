@@ -16,14 +16,17 @@ namespace Srl {
         Tree& operator= (Tree&& g);
         Tree(Tree&& g);
 
-        Tree(const std::string& name_ = "")
-            : root_node(this), root_name(name_) { }
+        Tree(const String& name = "")
+            : root_node(&storage.create_node(*this, Type::Object, name)->field) { }
 
         template<class T>
         static Tree From_Type(T& type, const std::string name = "");
 
         template<class TParser>
         static Tree From_Source (const std::vector<uint8_t>& source, const TParser& parser = TParser());
+
+        template<class TParser>
+        static Tree From_Source (const char* source, size_t source_size, const TParser& parser = TParser());
 
         template<class TParser>
         static Tree From_Source (const uint8_t* source, size_t source_size, const TParser& parser = TParser());
@@ -38,18 +41,16 @@ namespace Srl {
         void to_source(std::ostream& stream, const TParser& parser = TParser());
 
         Node* root();
-        const std::string& name() const;
 
         void srl_resolve(Context<Insert>& ctx);
         void srl_resolve(Context<Paste>& ctx);
 
     private:
-        Node         root_node;
-        std::string  root_name;
         Lib::Storage storage;
+        Node*        root_node;
 
-        Parser*      temp_parser = nullptr;
-        Lib::Out* temp_stream    = nullptr;
+        Parser*   temp_parser = nullptr;
+        Lib::Out* temp_stream = nullptr;
 
         void parse_value (const Value& value, const String& name);
 

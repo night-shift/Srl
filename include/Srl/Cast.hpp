@@ -2,6 +2,7 @@
 #define SRL_CAST_HPP
 
 #include <cstdint>
+#include <type_traits>
 
 namespace Srl { namespace Lib {
 

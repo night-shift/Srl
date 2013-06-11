@@ -169,7 +169,7 @@ void Tools::hex_to_bytes(uint8_t* dest, size_t dest_size, const uint8_t* str, si
         throw Exception("Unable to convert hex string to binary data. Destination buffer too small.");
     }
 
-    const auto conv = [](char& c) {
+    const auto conv = [](uint8_t& c) {
         if(c >= '0' && c <= '9') {
             c -= '0';
 
@@ -184,7 +184,7 @@ void Tools::hex_to_bytes(uint8_t* dest, size_t dest_size, const uint8_t* str, si
         }
     };
 
-    char low = 0, high = 0;
+    uint8_t low = 0, high = 0;
     uint8_t packed = 0;
 
     for (size_t in_idx = 0, out_idx = 0; in_idx < str_len;

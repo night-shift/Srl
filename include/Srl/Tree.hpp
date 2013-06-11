@@ -51,6 +51,12 @@ namespace Srl {
     }
 
     template<class TParser>
+    Tree Tree::From_Source (const char* source, size_t source_size, const TParser& parser)
+    {
+        return Tree::From_Source((const uint8_t*)source, source_size, parser);
+    }
+
+    template<class TParser>
     Tree Tree::From_Source(Lib::In& source, const TParser& parser)
     {
         TParser copy = parser;

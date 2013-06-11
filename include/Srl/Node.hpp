@@ -143,6 +143,11 @@ namespace Srl {
         return this->values.size();
     }
 
+    inline const String* Node::name() const
+    {
+        return this->name_ptr;
+    }
+
     inline Type Node::type() const
     {
         return this->scope_type;

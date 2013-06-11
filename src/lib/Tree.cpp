@@ -13,10 +13,8 @@ Tree::Tree(Tree&& g)
 Tree& Tree::operator= (Tree&& g)
 {
     this->storage   = move(g.storage);
-    this->root_name = move(g.root_name);
     this->root_node = move(g.root_node);
 
-    this->root_node.tree = this;
     auto& nodes = this->storage.nodes();
     for(auto& n : nodes) {
         n->tree = this;
@@ -37,36 +35,37 @@ void Tree::parse_out(Parser& parser, Lib::Out& out, const function<void()>& stor
     this->temp_parser = &parser;
     this->temp_stream = &out;
 
-    this->root_node.just_parse = true;
+    this->root_node->just_parse = true;
 
-    this->parse_value(Value(Type::Object), this->root_name);
+    this->parse_value(Value(Type::Object), *this->root_node->name());
 
     store_switch();
 
-    this->parse_value(Value(Type::Scope_End), this->root_name);
+    this->parse_value(Value(Type::Scope_End), *this->root_node->name());
 }
 
 void Tree::parse_out(Parser& parser, Out& out)
 {
     this->temp_parser = &parser;
     this->temp_stream = &out;
-    this->root_node.to_source(this->root_name);
+    this->root_node->to_source();
 }
 
 void Tree::parse_in(Parser& parser, In& source, bool just_parse)
 {
     auto first_seg = parser.parse_in(source);
-    auto& node_name = first_seg.name;
+    auto& name = first_seg.name;
     auto& value = first_seg.value;
 
     if(!TpTools::is_scope(value.type())) {
         throw Exception("Unable to parse source. Data malformed.");
     }
 
-    this->root_name = String(node_name, Encoding::UTF8).unwrap<char>();
-    this->root_node = Node(this, value.type(), just_parse);
+    auto* link = this->storage.create_node(*this, value.type(), String(name, Encoding::UTF8), !just_parse);
+    this->root_node = &link->field;
+    this->root_node->just_parse = just_parse;
 
-    this->root_node.parse_in(source, parser);
+    this->root_node->parse_in(source, parser);
 }
 
 void Tree::parse_out_convert(const Value& value, const String& val_name, Parser& parser)
@@ -130,12 +129,7 @@ Value Tree::convert_type(const Value& value)
 
 Node* Tree::root()
 {
-    return &this->root_node;
-}
-
-const std::string& Tree::name() const
-{
-    return this->root_name;
+    return this->root_node;
 }
 
 void Tree::srl_resolve(Context<Insert>& ctx)

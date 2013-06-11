@@ -47,7 +47,8 @@ namespace Srl {
             std::string name_string();
         };
 
-        Lib::Heap            buffer;
+        Lib::Heap<uint8_t>   data_buffer;
+        Lib::Heap<XmlTag>    tag_buffer;
         std::vector<XmlTag*> tags;
         std::vector<uint8_t> escape_buffer;
 

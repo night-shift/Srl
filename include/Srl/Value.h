@@ -4,23 +4,26 @@
 #include "Enums.h"
 #include "Type.h"
 #include "Blocks.h"
+#include "TpTools.hpp"
 
 namespace Srl {
 
+    class String;
+    namespace Lib { class Storage; }
+
     class Value {
+
+        friend class Lib::Storage;
 
     public:
         Value(Type type_)
-            : val_type(type_), str_encoding(Encoding::Unknown), data_block({ nullptr, 0 }) { }
+            : block({ nullptr, 0 }, type_, Encoding::Unknown) { }
 
         Value(const Lib::MemBlock& data_, Type type_)
-            : val_type(type_), str_encoding(Encoding::Unknown), data_block(data_) { }
+            : block(data_, type_, Encoding::Unknown) { }
 
         Value(const Lib::MemBlock& data_, Encoding encoding_)
-            : val_type(Type::String), str_encoding(encoding_), data_block(data_) { }
-
-        Value(const Lib::MemBlock& data_, Type type_, Encoding encoding_)
-            : val_type(type_), str_encoding(encoding_), data_block(data_) { }
+            : block(data_, Type::String, encoding_) { }
 
         template<typename T> T    unwrap();
         template<typename T> void paste(T& o);
@@ -29,15 +32,14 @@ namespace Srl {
         inline Encoding       encoding() const;
         inline size_t         size()     const;
         inline const uint8_t* data()     const;
+        inline const String*  name()     const;
 
     private:
-        Type           val_type;
-        Encoding       str_encoding;
-        Lib::MemBlock  data_block;
+        Value(const Lib::PackedBlock& data_) : block(data_) { }
 
+        Lib::PackedBlock block;
+        const String*    name_ptr;
     };
-
-
 }
 
 #endif

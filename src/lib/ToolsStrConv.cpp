@@ -136,6 +136,11 @@ StringToTypeResult string_to_type_converted(const uint8_t* str, size_t str_len, 
     return rslt;
 }
 
+void Tools::trim_space(Lib::MemBlock& block)
+{
+    return trim_space(block.ptr, block.size);
+}
+
 void Tools::trim_space(const uint8_t*& str, size_t& str_len)
 {
     if(str == nullptr) {

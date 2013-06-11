@@ -43,7 +43,7 @@ namespace Srl { namespace Lib {
                                std::vector<uint8_t>& buffer, const Tokens&... tokens);
 
         template<class... Tokens>
-        size_t move_while (const OffBound& out_of_bounds, Tokens... tokens);
+        size_t move_while (const OffBound& out_of_bounds, const Tokens&... tokens);
 
         inline void skip_space(const OffBound& out_of_bounds);
 
@@ -56,7 +56,7 @@ namespace Srl { namespace Lib {
         inline bool is_at_token();
 
     private :
-        static const size_t chunk_size = 16384;
+        static const size_t Stream_Buffer_Size  = 8192;
 
         const uint8_t* start       = nullptr;
         const uint8_t* end         = nullptr;
@@ -72,9 +72,9 @@ namespace Srl { namespace Lib {
         const uint8_t* buffer_mark = nullptr;
 
 
-        template<class Sub, class Tokens, class... Tail>
+        template<class Sub, class Token, class... Tail>
         size_t substitute_token(std::vector<uint8_t>& buffer, size_t idx, size_t left, const Sub& sub,
-                                const Tokens& tokens, const Tail&... tail);
+                                const Token& token, const Tail&... tail);
 
         inline size_t substitute_token(std::vector<uint8_t>& buffer, size_t idx, size_t left);
 
@@ -88,7 +88,7 @@ namespace Srl { namespace Lib {
 
 
         template<bool Not, class... Tokens>
-        size_t move_until (const OffBound& out_of_bounds, Tokens... tokens);
+        size_t move_until (const OffBound& out_of_bounds, const Tokens&... tokens);
 
         bool fetch_data(size_t nbytes);
         void fetch_data(size_t nbytes, const OffBound& out_of_bounds);

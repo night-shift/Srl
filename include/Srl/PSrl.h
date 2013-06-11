@@ -34,7 +34,7 @@ namespace Srl {
 
         std::map<size_t, size_t>   hashed_strings;
         std::vector<Lib::MemBlock> indexed_strings;
-        Lib::Heap                  string_buffer;
+        Lib::Heap<uint8_t>         string_buffer;
         std::stack<Type>           scope_stack;
 
         void push_scope (Type scope_type);

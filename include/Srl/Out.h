@@ -14,8 +14,8 @@ namespace Srl { namespace Lib {
         Out ()
             : streaming(false), stream(nullptr) { }
 
-        Out (std::ostream& stream_, size_t buffer_size = Max_Stream_Buffer_size)
-            : max_cap(buffer_size), streaming(true), stream(&stream_) { }
+        Out (std::ostream& stream_)
+            : streaming(true), stream(&stream_) { }
 
         class Ticket;
 
@@ -48,14 +48,13 @@ namespace Srl { namespace Lib {
         };
 
     private:
-        static const size_t Max_Stream_Buffer_size = 65536;
+        static const size_t Stream_Buffer_Size  = 8192;
 
-        Heap buffer;
+        Heap<uint8_t> buffer;
 
         size_t sz_total     = 0;
         size_t left         = 0;
         size_t cap          = 0;
-        size_t max_cap      = 0;
         size_t segs_flushed = 0;
 
         uint8_t* crr_mem   = nullptr;

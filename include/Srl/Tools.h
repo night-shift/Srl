@@ -47,6 +47,7 @@ namespace Tools {
     std::basic_string<TChar> convert_charset (const String& string_wrap, bool throw_error);
 
     void trim_space (const uint8_t*& str, size_t& str_len);
+    void trim_space (Lib::MemBlock& block);
 
     constexpr bool is_space(uint8_t token);
 } }

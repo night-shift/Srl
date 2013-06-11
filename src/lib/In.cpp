@@ -39,7 +39,7 @@ bool In::fetch_data(size_t nbytes)
 
     auto left = this->end - this->current_pos;
 
-    auto read_len = (nbytes < this->chunk_size ? this->chunk_size : nbytes) - left;
+    auto read_len = (nbytes < Stream_Buffer_Size ? Stream_Buffer_Size : nbytes) - left;
 
 
     auto preserve_pos = this->buffer_mark != nullptr
@@ -73,9 +73,14 @@ bool In::fetch_data(size_t nbytes)
     this->start = &buffer[0];
     this->end   = &buffer[0] + bytes_read + preserve_sz;
 
-    if(bytes_read + left < nbytes && this->stream->eof()) {
+    if(bytes_read + left < nbytes) {
+
+        assert(this->stream->eof());
         this->eof_reached = true;
+
+        return false;
     }
 
     return true;
 }
+

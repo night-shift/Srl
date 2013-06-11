@@ -1,4 +1,5 @@
 #include "Srl/Srl.h"
+#include "Srl/Internal.h"
 
 using namespace std;
 using namespace Srl;
@@ -13,12 +14,12 @@ namespace {
     typedef uint8_t Option;
 
     const Option None            = 0;
-    const Option Hash            = 1 << 0; /* access and compare by name hash */
-    const Option Address         = 1 << 1; /* access and compare by address */
-    const Option Index           = 1 << 2; /* access and compare by Index */
+    const Option Hash            = 1 << 0; /* compare by name hash */
+    const Option Address         = 1 << 1; /* compare by address */
+    const Option Index           = 1 << 2; /* access  by Index */
     const Option Iterator        = 1 << 3; /* return the iterator, not the link */
     const Option Throw           = 1 << 4; /* throw exception on not found or multiple findings */
-    const Option Check_Duplicate = 1 << 5; /* check for multiple find_linkings */
+    const Option Check_Duplicate = 1 << 5; /* check for multiple results */
 
     constexpr bool enabled(Option options, Option option)
     {
@@ -228,32 +229,29 @@ void Node::parse_in(In& source, Parser& parser)
     }
 }
 
-void Node::to_source(const String& name)
+void Node::to_source()
 {
     Value scope_start = Value(this->scope_type);
-    this->tree->parse_value(scope_start, name);
+    this->tree->parse_value(scope_start, *this->name_ptr);
 
     for(auto v : this->values) {
-        auto str = String(v->name, Storage::Name_Encoding);
-        this->tree->parse_value(v->field, str);
+        this->tree->parse_value(v->field, *v->field.name());
     }
 
     for(auto n : this->nodes) {
-        auto str = String(n->name, Storage::Name_Encoding);
-        n->field.to_source(str);
+        n->field.to_source();
     }
 
     Value scope_end = Value(Type::Scope_End);
-    this->tree->parse_value(scope_end, name);
+    this->tree->parse_value(scope_end, *this->name_ptr);
 }
 
-void Node::forall_nodes(const function<void(String, Node*)>& fnc, bool recursive) const
+void Node::forall_nodes(const function<void(Node*)>& fnc, bool recursive) const
 {
     auto cpy = this->nodes;
     for(auto link : this->nodes) {
 
-        auto wrap = String(link->name, Storage::Name_Encoding);
-        fnc(wrap, &link->field);
+        fnc(&link->field);
 
         if(recursive) {
             link->field.forall_nodes(fnc, recursive);
@@ -261,15 +259,14 @@ void Node::forall_nodes(const function<void(String, Node*)>& fnc, bool recursive
     }
 }
 
-void Node::forall_values(const function<void(String, Value*)>& fnc, bool recursive) const
+void Node::forall_values(const function<void(Value*)>& fnc, bool recursive) const
 {
     for(auto link : this->values) {
-        auto wrap = String(link->name, Storage::Name_Encoding);
-        fnc(wrap, &link->field);
+        fnc(&link->field);
     }
 
     if(recursive) {
-        this->forall_nodes([&fnc](String, Node* node) {
+        this->forall_nodes([&fnc](Node* node) {
             node->forall_values(fnc);
         }, true);
     }
@@ -280,8 +277,8 @@ deque<Node*> Node::find_nodes(const String& name, bool recursive) const
     deque<Node*> rslt;
     auto hash = this->tree->storage.hash_string(name);
 
-    this->forall_nodes([&rslt, this, hash] (String str, Node* node) {
-        if(this->tree->storage.hash_string(str) == hash) {
+    this->forall_nodes([&rslt, this, hash] (Node* node) {
+        if(this->tree->storage.hash_string(*node->name_ptr) == hash) {
             rslt.push_back(node);
         }
     }, recursive);
@@ -294,8 +291,8 @@ deque<Value*> Node::find_values(const String& name, bool recursive) const
     deque<Value*> rslt;
     auto hash = this->tree->storage.hash_string(name);
 
-    this->forall_values([&rslt, this, hash] (String str, Value* value) {
-        if(this->tree->storage.hash_string(str) == hash) {
+    this->forall_values([&rslt, this, hash] (Value* value) {
+        if(this->tree->storage.hash_string(*value->name()) == hash) {
             rslt.push_back(value);
         }
     }, recursive);
@@ -303,23 +300,23 @@ deque<Value*> Node::find_values(const String& name, bool recursive) const
     return move(rslt);
 }
 
-deque<pair<String, Node*>> Node::all_nodes(bool recursive) const
+deque<Node*> Node::all_nodes(bool recursive) const
 {
-    deque<pair<String, Node*>> rslt;
+    deque<Node*> rslt;
 
-    this->forall_nodes([&rslt] (String name, Node* node) {
-        rslt.push_back({ name, node });
+    this->forall_nodes([&rslt] (Node* node) {
+        rslt.push_back(node);
     }, recursive);
 
     return move(rslt);
 }
 
-deque<pair<String, Value*>> Node::all_values(bool recursive) const
+deque<Value*> Node::all_values(bool recursive) const
 {
-    deque<pair<String, Value*>> rslt;
+    deque<Value*> rslt;
 
-    this->forall_values([&rslt] (String name, Value* value) {
-        rslt.push_back({ name, value });
+    this->forall_values([&rslt] (Value* value) {
+        rslt.push_back(value);
     }, recursive);
 
     return move(rslt);

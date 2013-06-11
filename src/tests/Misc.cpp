@@ -57,10 +57,10 @@ bool test_node_api()
         root.remove_value("field0");
         TEST(root.num_values() == (before - 1))
 
-        root.forall_nodes([](String, Node* node) {
+        root.forall_nodes([](Node* node) {
             auto values = node->all_values();
-            for(auto& p : values) {
-                node->remove_value(p.second);
+            for(auto v : values) {
+                node->remove_value(*v->name());
             }
         }, recursive);
 
@@ -209,7 +209,7 @@ bool test_xml_attributes()
         tree.root()->paste_field("attribute2", attribute2);
         tree.root()->paste_field("attribute3", attribute3);
 
-        TEST(tree.name() == "node");
+        TEST(*tree.root()->name() == "node");
         TEST(attribute1 == 12.0)
         TEST(attribute2 == "value")
         TEST(attribute3 == -10)

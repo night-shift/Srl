@@ -363,7 +363,7 @@ bool test_serialize(const TParser& parser, const string& parser_name, const Tail
         target.test(original);
         print_log("ok.\n");
 
-        print_log("\tTree::to_source.....");
+        print_log("\tTree::to_stream.....");
         stringstream strm;
         tree = Tree::From_Type(original);
         tree.to_source(strm, parser);

@@ -1,14 +1,14 @@
 #include "Srl/Out.h"
+#include "Srl/Internal.h"
 
 using namespace Srl;
 using namespace Lib;
 
 void Out::inc_cap(size_t nbytes)
 {
-    auto alloc_sz = this->max_cap < nbytes ? nbytes : max_cap;
-    this->mem_start = this->buffer.get_mem(alloc_sz);
-    this->cap = alloc_sz;
-    this->left = alloc_sz;
+    this->cap = Stream_Buffer_Size < nbytes ? nbytes : Stream_Buffer_Size;
+    this->mem_start = this->buffer.get_mem(this->cap);
+    this->left = this->cap;
     this->crr_mem = this->mem_start;
 }
 

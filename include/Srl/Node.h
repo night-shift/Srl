@@ -63,14 +63,14 @@ namespace Srl {
         std::deque<Node*>  find_nodes  (const String& name, bool recursive = false) const;
         std::deque<Value*> find_values (const String& name, bool recursive = false) const;
 
-        std::deque<std::pair<String, Node*>>  all_nodes  (bool recursive = false) const;
-        std::deque<std::pair<String, Value*>> all_values (bool recursive = false) const;
+        std::deque<Node*>  all_nodes  (bool recursive = false) const;
+        std::deque<Value*> all_values (bool recursive = false) const;
 
         bool has_node  (const String& name) const;
         bool has_value (const String& name) const;
 
-        void forall_nodes  (const std::function<void(String, Node*)>& fnc, bool recursive = false) const;
-        void forall_values (const std::function<void(String, Value*)>& fnc, bool recursive = false) const;
+        void forall_nodes  (const std::function<void(Node*)>& fnc, bool recursive = false) const;
+        void forall_values (const std::function<void(Value*)>& fnc, bool recursive = false) const;
 
         void remove_node (Node* node);
         void remove_node (size_t index);
@@ -80,9 +80,10 @@ namespace Srl {
         void remove_value (size_t index);
         void remove_value (const String& name);
 
-        inline size_t num_nodes()  const;
-        inline size_t num_values() const;
-        inline Type   type()       const;
+        inline size_t num_nodes()   const;
+        inline size_t num_values()  const;
+        inline Type   type()        const;
+        inline const String* name() const;
 
     private:
         Node(Tree* tree_, Type type_ = Type::Object, bool just_parse_ = false)
@@ -90,9 +91,10 @@ namespace Srl {
 
         Node() : Node(nullptr) { }
 
-        Tree* tree;
-        Type  scope_type;
-        bool  just_parse;
+        Tree*         tree;
+        Type          scope_type;
+        bool          just_parse;
+        const String* name_ptr;
 
         std::vector<Lib::Link<Node>*>  nodes;
         std::vector<Lib::Link<Value>*> values;
@@ -105,7 +107,7 @@ namespace Srl {
         Node* insert_node  (Type type, const String& name);
         void  insert_value (const Value& value, const String& name);
 
-        void to_source (const String& name);
+        void to_source ();
         void parse_in  (Lib::In& source, Parser& parser);
 
         template<class T, class ID>
