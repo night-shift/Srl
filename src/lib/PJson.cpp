@@ -66,7 +66,7 @@ void PJson::parse_out(const Value& value, const MemBlock& name, Out& out)
     this->scope_closed = false;
 
     if(this->scope_type != Type::Null &&
-       this->scope_type != Type::Container &&
+       this->scope_type != Type::Array &&
        type != Type::Scope_End) {
 
         insert_in_quotes(out, name);
@@ -79,7 +79,7 @@ void PJson::parse_out(const Value& value, const MemBlock& name, Out& out)
 
     if(TpTools::is_scope(type)) {
 
-        auto c = type == Type::Container ? '[' : '{';
+        auto c = type == Type::Array ? '[' : '{';
 
         out.write(c);
         this->scope_stack.push(type);
@@ -93,7 +93,7 @@ void PJson::parse_out(const Value& value, const MemBlock& name, Out& out)
 
         assert(!this->scope_stack.empty());
 
-        auto c = this->scope_type == Type::Container ? ']' : '}';
+        auto c = this->scope_type == Type::Array ? ']' : '}';
 
         out.write(c);
         this->scope_stack.pop();
@@ -165,7 +165,7 @@ Parser::SourceSeg PJson::parse_in(In& source)
     while(!state.complete) {
 
         /* literals can be 'un-quoted', values in 'square-brackets' don't have a name */
-        if(!state.reading_value && this->scope_type != Type::Container) {
+        if(!state.reading_value && this->scope_type != Type::Array) {
 
             source.move_until(error, '\"', ':', '{', '[', '}', ']');
 
@@ -204,7 +204,7 @@ Parser::SourceSeg PJson::parse_in(In& source)
 void PJson::process_bracket(char bracket, State& state)
 {
     Type type = bracket == '{' ? Type::Object
-              : bracket == '[' ? Type::Container
+              : bracket == '[' ? Type::Array
               : Type::Scope_End;
 
     if(type == Type::Scope_End) {
@@ -243,7 +243,7 @@ void PJson::process_quote(In& source, State& state)
 void PJson::process_string(const MemBlock& content, State& state)
 {
     /* container elements don't have a name */
-    if(state.reading_value || this->scope_type == Type::Container) {
+    if(state.reading_value || this->scope_type == Type::Array) {
         state.parsed_value = Value(content, Encoding::UTF8);
         state.complete = true;
 

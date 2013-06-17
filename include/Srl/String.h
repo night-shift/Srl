@@ -30,7 +30,7 @@ namespace Srl {
         String(const uint8_t* ptr, size_t size_, Encoding encoding_)
             : block({ ptr, size_ }, Type::String, encoding_) { }
 
-        template<class TChar>
+        template<class TChar = char>
         std::basic_string<TChar> unwrap(bool throw_error = true) const;
 
         inline bool operator== (const String& a) const;

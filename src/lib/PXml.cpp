@@ -154,7 +154,7 @@ void PXml::parse_document(Lib::In& source)
         }
 
         auto tag = source.read_block_until(error, '=', '>');
-        tag = source.is_streaming() ? copy(this->data_buffer, tag) : tag;
+        tag = source.is_streaming() ? copy_block(this->data_buffer, tag) : tag;
 
         if(tag.size < 1) {
             error();
@@ -213,13 +213,13 @@ Lib::MemBlock PXml::read_content(Lib::In& source)
         source.move(9, error);
         auto block = source.read_block_until(error, ar(']', ']', '>'));
 
-        return source.is_streaming() ? copy(this->data_buffer, block) : block;
+        return source.is_streaming() ? copy_block(this->data_buffer, block) : block;
 
     } else {
         auto content = read_escape('<', source, this->escape_buffer);
         Tools::trim_space(content);
 
-        return copy(this->data_buffer, content);
+        return copy_block(this->data_buffer, content);
     }
 }
 
@@ -245,7 +245,7 @@ void PXml::process_tag_close(const MemBlock& block)
     auto& closing_tag = this->current_tag();
     this->process_scope(closing_tag, block);
 
-    /*root tag closed -> document is parsed */
+    /* root tag closed -> document is parsed */
     if(this->tag_index == 0) {
         this->document_parsed = true;
         return;
@@ -279,8 +279,8 @@ void PXml::process_scope(XmlTag& tag, const MemBlock& closing_tag)
     }
 
     tag.type = tag.n_child_tags > 0 || this->tag_index == 0
-        ? tag.child_names_consistent && tag.n_child_tags > 1 ? Type::Container : Type::Object
-        : closing_tag.size < 1  && tag.data.size < 1 ? Type::Container : Type::String;
+        ? tag.child_names_consistent && tag.n_child_tags > 1 ? Type::Array : Type::Object
+        : closing_tag.size < 1  && tag.data.size < 1 ? Type::Array : Type::String;
 
     if(TpTools::is_scope(tag.type)) {
         this->create_tag(tag.name, Type::Scope_End, this->tag_index);
@@ -306,7 +306,7 @@ void PXml::read_attributes(MemBlock& tag, In& source, bool& out_closed)
 
     const auto trim_save = [this, &source](MemBlock& block, bool save) {
         Tools::trim_space(block);
-        return save ? copy(this->data_buffer, block) : block;
+        return save ? copy_block(this->data_buffer, block) : block;
     };
 
     while(true) {

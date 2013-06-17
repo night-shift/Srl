@@ -16,16 +16,17 @@ namespace Srl {
     public :
         static const Mode mode = Mode::Insert;
 
-        Context(Node& node_) : node(&node_) { }
+        Context(Node& node_) : context_node(&node_) { }
 
         template<class T>
         Context& operator () (const T& o);
         template<class T>
         Context& operator () (const T& o, const String& name);
 
-    private :
-        Node* node;
+        Node* node() const { return this->context_node; }
 
+    private :
+        Node* context_node;
     };
 
     template<> class Context<Mode::Paste> {
@@ -33,17 +34,19 @@ namespace Srl {
     public :
         static const Mode mode = Mode::Paste;
 
-        Context(const Node& node_) : node(&node_) { }
+        Context(const Node& node_) : context_node(&node_) { }
 
         template<class T>
         Context& operator () (T& o);
         template<class T>
         Context& operator () (T& o, const String& name);
 
+        const Node* node() const { return this->context_node; }
+
     private :
-        const  Node* node;
-        size_t node_index  = 0;
-        size_t value_index = 0;
+        const  Node* context_node;
+        size_t nodes_index  = 0;
+        size_t values_index = 0;
     };
 }
 

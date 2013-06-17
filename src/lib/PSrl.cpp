@@ -76,7 +76,7 @@ MemBlock PSrl::read_string(In& source)
         auto block = source.read_block(size, error);
 
         if(source.is_streaming()) {
-            block = copy(this->string_buffer, block);
+            block = copy_block(this->string_buffer, block);
         }
 
         return *this->indexed_strings.insert(indexed_strings.end(), block);
@@ -95,7 +95,7 @@ void PSrl::parse_out(const Value& value, const MemBlock& name, Out& out)
         return;
     }
 
-    if(this->scope == Type::Null || this->scope != Type::Container) {
+    if(this->scope == Type::Null || this->scope != Type::Array) {
         /* write field name */
         this->write_string(name, out);
     }
@@ -146,7 +146,7 @@ Parser::SourceSeg PSrl::parse_in(In& source)
         return SourceSeg(Type::Scope_End);
     }
 
-    auto name = this->scope == Type::Null || this->scope != Type::Container
+    auto name = this->scope == Type::Null || this->scope != Type::Array
         ? this->read_string(source)
         : MemBlock();
 

@@ -48,7 +48,8 @@ namespace Srl { namespace Lib {
                       || is_basic_string<TString>::value
                       || is_cstr_pointer<TString>::value,
 
-        "Srl error. Invalid string type. Valid types are either character arrays, basic_string<T> types or single characters."
+        "Srl error. Invalid string type. Valid types are either character arrays,\
+        basic_string<T> types or single characters."
 
         );
         return Switch<TString>::Wrap(str);
@@ -65,6 +66,7 @@ namespace Srl { namespace Lib {
              : Encoding::Unknown;
     }
 
+    /* handle std::basic_string<T> types */
     template<class T>
     struct Switch<std::basic_string<T>> {
         static const Type type = Type::String;
@@ -131,7 +133,7 @@ namespace Srl { namespace Lib {
         }
     };
 
-    /* intercept character arrays */
+    /* intercept character arrays and handle those like strings */
     template<class T>
     struct Switch<T, typename std::enable_if<is_character_array<T>::value>::type> {
 
@@ -228,7 +230,7 @@ namespace Srl { namespace Lib {
 
             if(!conversion.success) {
                 auto msg = "Cannot convert string \'"
-                    + wrap.unwrap<char>(false) + "\' to numeric type " + TpTools::get_name(type) + ".";
+                    + wrap.unwrap(false) + "\' to numeric type " + TpTools::get_name(type) + ".";
                 Aux::throw_error(msg, id);
             }
 
@@ -252,7 +254,7 @@ namespace Srl { namespace Lib {
         }
     };
 
-    /* avoid that can of worms for now */
+    /* precision loss, so be aware */
     template<> struct Switch<long double> {
         static const Type type = Switch<double>::type;
 
@@ -300,7 +302,7 @@ namespace Srl { namespace Lib {
     /* stl-like container types */
     template<class T> struct
     Switch<T, typename std::enable_if<is_container<T>::value>::type> {
-        static const Type type = Type::Container;
+        static const Type type = Type::Array;
         typedef typename T::value_type E;
 
         static void Insert(const T& container, Node& node, const String& name)
@@ -378,7 +380,7 @@ namespace Srl { namespace Lib {
     /* Arrays are treated like containers */
     template<class T>
     struct Switch<T, typename std::enable_if<std::is_array<T>::value && !is_character_array<T>::value>::type> {
-        static const Type type = Type::Container;
+        static const Type type = Type::Array;
         typedef typename array_type<T>::type E;
 
         static void Insert(const T& ar, Node& node, const String& name)
@@ -438,6 +440,7 @@ namespace Srl { namespace Lib {
         }
     };
 
+    /* handle raw binary-data through Srl::BitWrap */
     template<> struct Switch<BitWrap> {
         static const Type type = Type::Binary;
 
@@ -445,7 +448,7 @@ namespace Srl { namespace Lib {
         {
             if(wrap.data.size > 0 && wrap.data.ptr == nullptr) {
                 auto msg = "Unable to insert value"
-                    + (name.size() < 1 ? "" : " " + name.unwrap<char>(false))
+                    + (name.size() < 1 ? "" : " " + name.unwrap(false))
                     + ". Data pointer in BitWrap is null.";
                 throw Exception(msg);
             }
@@ -518,7 +521,7 @@ namespace Srl { namespace Lib {
         inline void throw_error<String>(const std::string& msg, const String& field_id)
         {
             auto message = "Unable to set field" +
-                (field_id.size() > 0 ? " " + field_id.unwrap<char>(false) : "") + ". " + msg;
+                (field_id.size() > 0 ? " " + field_id.unwrap(false) : "") + ". " + msg;
             throw Exception(message);
         }
 
@@ -545,7 +548,7 @@ namespace Srl { namespace Lib {
         {
             if(!TpTools::is_scope(got)) {
                 throw_error("Type mismatch, expected: " + TpTools::get_name(Type::Object)
-                            + " or " + TpTools::get_name(Type::Container) + ", got: "
+                            + " or " + TpTools::get_name(Type::Array) + ", got: "
                             + TpTools::get_name(got) + ".", field_id);
             }
         }

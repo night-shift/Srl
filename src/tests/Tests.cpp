@@ -4,8 +4,8 @@
 using namespace std;
 using namespace Tests;
 
-bool Tests::Verbose = false;
-bool Tests::Run_Benchmarks = false;
+bool Tests::Verbose             = false;
+bool Tests::Run_Benchmarks      = false;
 size_t Tests::Benchmark_Objects = 20000;
 
 void Tests::print_source(const vector<uint8_t>& source)
@@ -13,13 +13,13 @@ void Tests::print_source(const vector<uint8_t>& source)
     for(auto c : source) {
         cout << (const char)c;
     }
-    cout<<endl;
+    cout << endl;
 }
 
 void Tests::print_log(const std::string& message)
 {
     if(Tests::Verbose) {
-        cout<<message;
+        cout << message;
     }
 }
 

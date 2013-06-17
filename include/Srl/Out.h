@@ -71,13 +71,11 @@ namespace Srl { namespace Lib {
 
         inline void substitute_token(uint8_t src);
 
-        template<size_t N, class TSub>
-        typename std::enable_if<N != 0, void>::type
-        write_substitute(uint8_t* dest, const TSub* sub);
+        template<size_t N, class Sub> typename std::enable_if<N != 0, void>::type
+        write_substitute(uint8_t* dest, const Sub* sub);
 
-        template<size_t N, class TSub>
-        typename std::enable_if<N == 0, void>::type
-        write_substitute(uint8_t*, const TSub*) { }
+        template<size_t N, class Sub> typename std::enable_if<N == 0, void>::type
+        write_substitute(uint8_t*, const Sub*) { }
     };
 } }
 

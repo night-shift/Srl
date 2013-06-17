@@ -74,7 +74,7 @@ namespace {
             if(compare<Opt, T>(itr, key)) {
 
                 if(enabled(Opt, Throw) && rslt != end) {
-                    auto msg = tp_name<T>() + " duplication: " + name.unwrap<char>(false) + ".";
+                    auto msg = tp_name<T>() + " duplication: " + name.unwrap(false) + ".";
                     throw Exception(msg);
                 }
 
@@ -89,7 +89,7 @@ namespace {
         bool found = rslt != end;
 
         if(enabled(Opt, Throw) && !found) {
-            auto msg = tp_name<T>() + " " + name.unwrap<char>(false) + " not found.";
+            auto msg = tp_name<T>() + " " + name.unwrap(false) + " not found.";
             throw Exception(msg);
         }
 
@@ -168,12 +168,13 @@ Node* Node::node(size_t index) const
                 throw Exception(msg);
             }
         }
-        auto* link = this->tree->storage.create_node(*this->tree, Type::Container, String());
+        auto* link = this->tree->storage.create_node(*this->tree, Type::Array, String());
 
         return &link->field;
     }
 
 }
+
 /* same for named nodes */
 Node* Node::node(const String& name) const
 {
@@ -186,10 +187,10 @@ Node* Node::node(const String& name) const
     } else {
         auto* link_value = find_link<Throw | Hash>(hash, this->values, name);
         if(link_value->field.size() > 0) {
-            auto msg = "Field " + name.unwrap<char>(false) + " not found.";
+            auto msg = "Field " + name.unwrap(false) + " not found.";
             throw Exception(msg);
         }
-        auto* new_link = this->tree->storage.create_node(*this->tree, Type::Container, name);
+        auto* new_link = this->tree->storage.create_node(*this->tree, Type::Array, name);
 
         return &new_link->field;
     }
@@ -272,9 +273,9 @@ void Node::forall_values(const function<void(Value*)>& fnc, bool recursive) cons
     }
 }
 
-deque<Node*> Node::find_nodes(const String& name, bool recursive) const
+vector<Node*> Node::find_nodes(const String& name, bool recursive) const
 {
-    deque<Node*> rslt;
+    vector<Node*> rslt;
     auto hash = this->tree->storage.hash_string(name);
 
     this->forall_nodes([&rslt, this, hash] (Node* node) {
@@ -286,9 +287,9 @@ deque<Node*> Node::find_nodes(const String& name, bool recursive) const
     return move(rslt);
 }
 
-deque<Value*> Node::find_values(const String& name, bool recursive) const
+vector<Value*> Node::find_values(const String& name, bool recursive) const
 {
-    deque<Value*> rslt;
+    vector<Value*> rslt;
     auto hash = this->tree->storage.hash_string(name);
 
     this->forall_values([&rslt, this, hash] (Value* value) {
@@ -300,9 +301,9 @@ deque<Value*> Node::find_values(const String& name, bool recursive) const
     return move(rslt);
 }
 
-deque<Node*> Node::all_nodes(bool recursive) const
+vector<Node*> Node::all_nodes(bool recursive) const
 {
-    deque<Node*> rslt;
+    vector<Node*> rslt;
 
     this->forall_nodes([&rslt] (Node* node) {
         rslt.push_back(node);
@@ -311,9 +312,9 @@ deque<Node*> Node::all_nodes(bool recursive) const
     return move(rslt);
 }
 
-deque<Value*> Node::all_values(bool recursive) const
+vector<Value*> Node::all_values(bool recursive) const
 {
-    deque<Value*> rslt;
+    vector<Value*> rslt;
 
     this->forall_values([&rslt] (Value* value) {
         rslt.push_back(value);
@@ -371,4 +372,3 @@ bool Node::has_value(const String& field_name) const
     auto hash = this->tree->storage.hash_string(field_name);
     return find_link<Hash>(hash, this->values, field_name) != nullptr;
 }
-

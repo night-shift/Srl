@@ -27,7 +27,7 @@ namespace Srl {
         FNC (String,     12, 0, 0) \
         FNC (Binary,     13, 0, 0) \
         FNC (Object,     14, 0, 0) \
-        FNC (Container,  15, 0, 0) \
+        FNC (Array,      15, 0, 0) \
         FNC (Scope_End,  16, 0, 0)
 
     enum class Type : uint8_t {

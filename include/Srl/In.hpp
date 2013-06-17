@@ -22,14 +22,14 @@ namespace Srl { namespace Lib {
             return n > 0 ? n - 1 : 0;
         }
 
-        template<size_t N, class T> bool comp(const uint8_t* a, const T* src)
+        template<size_t N, class T> bool comp(const uint8_t* a, const T* b)
         {
-            return N == 0 || (*a == *src && comp<dec_saturate(N)>(a + 1, src + 1));
+            return N == 0 || (*a == *b && comp<dec_saturate(N)>(a + 1, b + 1));
         }
     }
 
     template<class T>
-    T In::cast_move(const OffBound& out_of_bounds)
+    T In::cast_move(const OutOfBounds& out_of_bounds)
     {
         auto block = this->read_block(sizeof(T), out_of_bounds);
 
@@ -41,29 +41,29 @@ namespace Srl { namespace Lib {
     }
 
     template<class... Tokens>
-    size_t In::move_until(const OffBound& out_of_bounds, const Tokens&... tokens)
+    size_t In::move_until(const OutOfBounds& out_of_bounds, const Tokens&... tokens)
     {
         return this->move_until<false>(out_of_bounds, tokens...);
     }
 
     template<class... Tokens>
-    MemBlock In::read_block_until(const OffBound& out_of_bounds, const Tokens&... tokens)
+    MemBlock In::read_block_until(const OutOfBounds& out_of_bounds, const Tokens&... tokens)
     {
-        this->buffer_mark = this->current_pos;
+        this->buffer_anchor = this->current_pos;
         auto steps = this->move_until(out_of_bounds, tokens...);
-        this->buffer_mark = nullptr;
+        this->buffer_anchor = nullptr;
 
         return { this->current_pos - steps, steps };
     }
 
     template<class... Tokens>
-    size_t In::move_while(const OffBound& out_of_bounds, const Tokens&... tokens)
+    size_t In::move_while(const OutOfBounds& out_of_bounds, const Tokens&... tokens)
     {
         return this->move_until<true>(out_of_bounds, tokens...);
     }
 
     template<bool Not, class... Tokens>
-    size_t In::move_until(const OffBound& out_of_bounds, const Tokens&... tokens)
+    size_t In::move_until(const OutOfBounds& out_of_bounds, const Tokens&... tokens)
     {
         auto steps = 0U;
 
@@ -92,12 +92,12 @@ namespace Srl { namespace Lib {
         return false;
     }
 
-    inline void In::move(size_t steps, const OffBound& out_of_bounds)
+    inline void In::move(size_t steps, const OutOfBounds& out_of_bounds)
     {
         this->current_pos = this->peek(steps, out_of_bounds) + steps;
     }
 
-    inline const uint8_t* In::peek(size_t steps, const OffBound& out_of_bounds)
+    inline const uint8_t* In::peek(size_t steps, const OutOfBounds& out_of_bounds)
     {
         if(this->current_pos + steps >= this->end) {
             this->fetch_data(steps, out_of_bounds);
@@ -107,25 +107,25 @@ namespace Srl { namespace Lib {
 
     inline bool In::try_peek(size_t steps)
     {
-        return this->current_pos + steps < this->end || this->fetch_data(steps);
+        return this->current_pos + steps < this->end || this->try_fetch_data(steps);
     }
 
-    inline MemBlock In::read_block(size_t steps, const OffBound& out_of_bounds)
+    inline MemBlock In::read_block(size_t steps, const OutOfBounds& out_of_bounds)
     {
-        this->buffer_mark = this->current_pos;
+        this->buffer_anchor = this->current_pos;
         this->move(steps, out_of_bounds);
-        this->buffer_mark = nullptr;
+        this->buffer_anchor = nullptr;
 
         return { this->current_pos - steps, steps };
     }
 
-    inline void In::skip_space(const OffBound& out_of_bounds)
+    inline void In::skip_space(const OutOfBounds& out_of_bounds)
     {
         this->move_while(out_of_bounds, ' ', '\n', '\t', '\r', '\b', '\f', '\b');
     }
 
     template<class... Tokens>
-    size_t In::read_substitue(const OffBound& out_of_bounds, uint8_t delimiter,
+    size_t In::read_substitue(const OutOfBounds& out_of_bounds, uint8_t delimiter,
                               std::vector<uint8_t>& buffer, const Tokens&... tokens)
     {
         const size_t max = Aux::max_len<Tokens...>();
@@ -170,6 +170,7 @@ namespace Srl { namespace Lib {
     {
         buffer[idx] = substitute;
         this->current_pos += N;
+
         return 1;
     }
 

@@ -16,6 +16,7 @@ Tree& Tree::operator= (Tree&& g)
     this->root_node = move(g.root_node);
 
     auto& nodes = this->storage.nodes();
+
     for(auto& n : nodes) {
         n->tree = this;
     }
@@ -44,11 +45,10 @@ void Tree::parse_out(Parser& parser, Lib::Out& out, const function<void()>& stor
     this->parse_value(Value(Type::Scope_End), *this->root_node->name());
 }
 
-void Tree::parse_out(Parser& parser, Out& out)
+void Tree::set_output (Parser& parser, Lib::Out& out)
 {
     this->temp_parser = &parser;
     this->temp_stream = &out;
-    this->root_node->to_source();
 }
 
 void Tree::parse_in(Parser& parser, In& source, bool just_parse)

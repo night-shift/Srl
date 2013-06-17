@@ -60,11 +60,11 @@ namespace Srl {
         Value* value (const String& name) const;
         Value* value (size_t index) const;
 
-        std::deque<Node*>  find_nodes  (const String& name, bool recursive = false) const;
-        std::deque<Value*> find_values (const String& name, bool recursive = false) const;
+        std::vector<Node*>  find_nodes  (const String& name, bool recursive = false) const;
+        std::vector<Value*> find_values (const String& name, bool recursive = false) const;
 
-        std::deque<Node*>  all_nodes  (bool recursive = false) const;
-        std::deque<Value*> all_values (bool recursive = false) const;
+        std::vector<Node*>  all_nodes  (bool recursive = false) const;
+        std::vector<Value*> all_values (bool recursive = false) const;
 
         bool has_node  (const String& name) const;
         bool has_value (const String& name) const;
@@ -84,6 +84,12 @@ namespace Srl {
         inline size_t num_values()  const;
         inline Type   type()        const;
         inline const String* name() const;
+
+        template<class TParser>
+        std::vector<uint8_t> to_source(const TParser& parser = TParser());
+
+        template<class TParser>
+        void to_source(std::ostream& stream, const TParser& parser = TParser());
 
     private:
         Node(Tree* tree_, Type type_ = Type::Object, bool just_parse_ = false)

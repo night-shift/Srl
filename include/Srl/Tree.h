@@ -53,9 +53,9 @@ namespace Srl {
         Lib::Out* temp_stream = nullptr;
 
         void parse_value (const Value& value, const String& name);
-
         void parse_out (Parser& parser, Lib::Out& out, const std::function<void()>& store_switch);
-        void parse_out (Parser& parser, Lib::Out& out);
+
+        void set_output (Parser& parser, Lib::Out& out);
 
         void parse_out_convert (const Value& value, const String& name, Parser& parser);
         Value convert_type (const Value& value);

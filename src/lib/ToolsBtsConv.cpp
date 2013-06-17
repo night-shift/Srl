@@ -83,6 +83,7 @@ size_t Tools::get_base64_decoded_size(const char* str, size_t str_len)
     if(str_len < 4) {
         return 0;
     }
+
     auto rem  = str[str_len - 1] == '=' ? 1 : 0;
          rem += str[str_len - 2] == '=' ? 1 : 0;
 

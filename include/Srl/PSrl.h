@@ -6,6 +6,8 @@
 #include "Blocks.h"
 #include "TpTools.hpp"
 
+#include <map>
+
 namespace Srl {
 
     class PSrl : public Parser {

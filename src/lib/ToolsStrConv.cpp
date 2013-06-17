@@ -8,132 +8,228 @@ using namespace Srl;
 using namespace Lib;
 using namespace Tools;
 
-const char str_true[]  = "true";
-const char str_false[] = "false";
-const char str_null[]  = "null";
+namespace {
 
-tuple<double, bool> string_to_double(const uint8_t* str, size_t str_len)
-{
-    const size_t buffer_size = 16;
-    char buffer[buffer_size];
+    const char str_true[]  = "true";
+    const char str_false[] = "false";
+    const char str_null[]  = "null";
 
-    double val;
+    tuple<double, bool> string_to_double(const uint8_t* str, size_t str_len)
+    {
+        const size_t buffer_size = 16;
+        char buffer[buffer_size];
 
-    const auto apply = [&val, str, str_len](char* ptr_mem) -> bool {
-        char* end;
-        memcpy(ptr_mem, str, str_len);
-        ptr_mem[str_len] = '\0';
-        val = strtod(ptr_mem, &end);
+        double val;
 
-        return end == ptr_mem + str_len;
-    };
+        const auto apply = [&val, str, str_len](char* ptr_mem) -> bool {
+            char* end;
+            memcpy(ptr_mem, str, str_len);
+            ptr_mem[str_len] = '\0';
+            val = strtod(ptr_mem, &end);
 
-    if(str_len + 1 < buffer_size) {
-        return make_tuple(val, apply(buffer));
+            return end == ptr_mem + str_len;
+        };
 
-    } else {
-        vector<char> vec_buffer(str_len + 1);
-        return make_tuple(val, apply(&vec_buffer[0]));
-    }
-}
+        if(str_len + 1 < buffer_size) {
+            return make_tuple(val, apply(buffer));
 
-tuple<uint64_t, bool, bool> string_to_int(const uint8_t* str, size_t str_len)
-{
-    size_t   idx = 0;
-    uint64_t val = 0;
-    bool is_signed = false;
-
-    if(str_len > 0 && *str == '-') {
-        if(str_len < 2) {
-            /* invalid string */
-            return make_tuple(val, false, false);
+        } else {
+            vector<char> vec_buffer(str_len + 1);
+            return make_tuple(val, apply(&vec_buffer[0]));
         }
-        is_signed = true;
-        idx = 1;
-        str++;
-
     }
 
-    uint64_t tmp = 0;
-    for(char c = *str; idx < str_len;
-        c = *++str, idx++) {
+    tuple<uint64_t, bool, bool> string_to_int(const uint8_t* str, size_t str_len)
+    {
+        size_t   idx = 0;
+        uint64_t val = 0;
+        bool is_signed = false;
 
-        if(c >= '0' && c <= '9') {
-            tmp = val * 10 + c - '0';
-            if(tmp < val) {
-                /* overflow */
+        if(str_len > 0 && *str == '-') {
+            if(str_len < 2) {
+                /* invalid string */
+                return make_tuple(val, false, false);
+            }
+            is_signed = true;
+            idx = 1;
+            str++;
+
+        }
+
+        uint64_t tmp = 0;
+        for(char c = *str; idx < str_len;
+            c = *++str, idx++) {
+
+            if(c >= '0' && c <= '9') {
+                tmp = val * 10 + c - '0';
+                if(tmp < val) {
+                    /* overflow */
+                    break;
+                }
+                val = tmp;
+            } else {
                 break;
             }
-            val = tmp;
-        } else {
-            break;
         }
+
+        bool success = idx >= str_len && (!is_signed || val <= numeric_limits<int64_t>::max());
+
+        return make_tuple(val, is_signed, success);
     }
 
-    bool success = idx >= str_len && (!is_signed || val <= numeric_limits<int64_t>::max());
+    template<typename TCharAr>
+    bool compare_strings(const uint8_t* str, size_t str_len, const TCharAr& to_compare, size_t offset = 0)
+    {
+        assert(str_len >= offset);
 
-    return make_tuple(val, is_signed, success);
-}
+        return str_len == sizeof(TCharAr) - 1 &&
+            memcmp(to_compare + offset, str + offset, str_len - offset) == 0;
+    }
 
-template<typename TCharAr>
-bool compare_strings(const uint8_t* str, size_t str_len, const TCharAr& to_compare, size_t offset = 0)
-{
-    assert(str_len >= offset);
+    StringToTypeResult string_to_type_converted(const uint8_t* str, size_t str_len, Type hint)
+    {
+        StringToTypeResult rslt;
 
-    return str_len == sizeof(TCharAr) - 1 &&
-           memcmp(to_compare + offset, str + offset, str_len - offset) == 0;
-}
+        Tools::trim_space(str, str_len);
 
-StringToTypeResult string_to_type_converted(const uint8_t* str, size_t str_len, Type hint)
-{
-    StringToTypeResult rslt;
+        if(str_len < 1) {
+            return rslt;
+        }
 
-    Tools::trim_space(str, str_len);
+        if(str_len >= 4 && str[0] >= 'f') {
+            /* being optimistic */
+            rslt.success = true;
 
-    if(str_len < 1) {
+            if((str[0] == 't' || str[0] == 'T') && compare_strings(str, str_len, str_true, 1)) {
+                rslt.type = Type::Bool;
+                rslt.bool_value = true;
+                return rslt;
+            }
+
+            if((str[0] == 'f' || str[0] == 'F') && compare_strings(str, str_len, str_false, 1)) {
+                rslt.type = Type::Bool;
+                rslt.bool_value = false;
+                return rslt;
+            }
+
+            if((str[0] == 'n' || str[0] == 'N') && compare_strings(str, str_len, str_null, 1)) {
+                rslt.type = Type::Null;
+                return rslt;
+            }
+
+            rslt.success = false;
+        }
+
+        if(!TpTools::is_fp(hint)) {
+            bool is_signed;
+            tie(rslt.int_value, is_signed, rslt.success) = string_to_int(str, str_len);
+
+            if(is_signed && rslt.success) {
+                rslt.int_value = -rslt.int_value;
+            }
+            rslt.type = is_signed ? Type::I64 : Type::UI64;
+        }
+
+        if(!rslt.success) {
+            tie(rslt.fp_value, rslt.success) = string_to_double(str, str_len);
+            rslt.type = rslt.success ? Type::FP64 : Type::Null;
+        }
+
         return rslt;
     }
 
-    if(str_len >= 4 && str[0] >= 'f') {
-        /* being optimistic */
-        rslt.success = true;
-
-        if((str[0] == 't' || str[0] == 'T') && compare_strings(str, str_len, str_true, 1)) {
-            rslt.type = Type::Bool;
-            rslt.bool_value = true;
-            return rslt;
+    void copy_to_vector(vector<uint8_t>& vec, const uint8_t* data, size_t size)
+    {
+        if(vec.size() < size) {
+            vec.resize(size);
         }
-
-        if((str[0] == 'f' || str[0] == 'F') && compare_strings(str, str_len, str_false, 1)) {
-            rslt.type = Type::Bool;
-            rslt.bool_value = false;
-            return rslt;
-        }
-
-        if((str[0] == 'n' || str[0] == 'N') && compare_strings(str, str_len, str_null, 1)) {
-            rslt.type = Type::Null;
-            return rslt;
-        }
-
-        rslt.success = false;
+        memcpy(&vec[0], data, size);
     }
 
-    if(!TpTools::is_fp(hint)) {
-        bool is_signed;
-        tie(rslt.int_value, is_signed, rslt.success) = string_to_int(str, str_len);
+    template<Type type>
+    typename enable_if<TpTools::is_integral(type) && type != Type::Bool, size_t>::type
+    to_string_switch(const uint8_t* pointer, vector<uint8_t>& out)
+    {
+        typedef typename TpTools::Real<type>::type T;
 
-        if(is_signed && rslt.success) {
-            rslt.int_value = -rslt.int_value;
+        auto val_in = Read_Cast<T>(pointer);
+        if(val_in == 0) {
+            out.insert(out.begin(), '0');
+            return 1;
         }
-        rslt.type = is_signed ? Type::I64 : Type::UI64;
+
+        const auto buffer_size = size_t(numeric_limits<T>::digits10) + 1 + TpTools::is_signed(type);
+
+        uint8_t buffer[buffer_size];
+
+        uint64_t val = val_in;
+        bool negative = false;
+        /* testing if msb is set instead of val < 0 avoids a logical compare warning for unsigned types */
+        if(TpTools::is_signed(type) && val_in >> (sizeof(T) - 1) * 8 & 0x80) {
+            /* the signed integer might overflow on negation, negating the unsigned type
+            * instead avoids the possible overflow */
+            val = -val;
+            negative = true;
+        }
+
+        size_t str_len = 0;
+        auto* ptr = buffer + buffer_size - 1;
+
+        for(; val > 0U;
+            val /= 10U, ptr--, str_len++) {
+
+            *ptr = '0' + val % 10;
+        }
+
+        if(negative) {
+            *(ptr) = '-';
+            str_len++;
+        } else {
+            ptr++;
+        }
+
+        copy_to_vector(out, ptr, str_len);
+
+        return str_len;
     }
 
-    if(!rslt.success) {
-        tie(rslt.fp_value, rslt.success) = string_to_double(str, str_len);
-        rslt.type = rslt.success ? Type::FP64 : Type::Null;
+    template<Type type>
+    typename enable_if<TpTools::is_fp(type), size_t>::type
+    to_string_switch(const uint8_t* pointer, vector<uint8_t>& out)
+    {
+        double val = type == Type::FP64 ? Read_Cast<double>(pointer) : Read_Cast<float>(pointer);
+
+        if(floor(val) == val && val < numeric_limits<int64_t>::max()) {
+            auto integral = (int64_t)val;
+            return to_string_switch<Type::I64>((const uint8_t*)&integral, out);
+        }
+
+        auto str = to_string(val);
+        copy_to_vector(out, (const uint8_t*)str.c_str(), str.size() - 1);
+
+        return str.size() - 1;
+
     }
 
-    return rslt;
+    template<Type type>
+    typename enable_if<type == Type::Bool, size_t>::type
+    to_string_switch(const uint8_t* pointer, vector<uint8_t>& out)
+    {
+        const char* str = *pointer ? str_true : str_false;
+        size_t size = (*pointer ? sizeof(str_true) : sizeof(str_false)) - 1;
+
+        copy_to_vector(out, (const uint8_t*)str, size);
+
+        return size;
+    }
+
+    template<Type type>
+    typename enable_if<type == Type::Null, size_t>::type
+    to_string_switch(const uint8_t*, vector<uint8_t>& out)
+    {
+        copy_to_vector(out, (const uint8_t*)str_null, sizeof(str_null) - 1);
+        return sizeof(str_null) - 1;
+    }
 }
 
 void Tools::trim_space(Lib::MemBlock& block)
@@ -170,99 +266,6 @@ StringToTypeResult Tools::string_to_type(const String& string_wrap, Type hint)
 
         return string_to_type_converted(&vec[0], vec.size(), hint);
     }
-}
-
-void copy_to_vector(vector<uint8_t>& vec, const uint8_t* data, size_t size)
-{
-    if(vec.size() < size) {
-        vec.resize(size);
-    }
-    memcpy(&vec[0], data, size);
-}
-
-template<Type type>
-typename enable_if<TpTools::is_integral(type) && type != Type::Bool, size_t>::type
-to_string_switch(const uint8_t* pointer, vector<uint8_t>& out)
-{
-    typedef typename TpTools::Real<type>::type T;
-
-    auto val_in = Read_Cast<T>(pointer);
-    if(val_in == 0) {
-        out.insert(out.begin(), '0');
-        return 1;
-    }
-
-    const auto buffer_size = size_t(numeric_limits<T>::digits10) + 1 + TpTools::is_signed(type);
-
-    uint8_t buffer[buffer_size];
-
-    uint64_t val = val_in;
-    bool negative = false;
-    /* testing if msb is set instead of val < 0 avoids a logical compare warning for unsigned types */
-    if(TpTools::is_signed(type) && val_in >> (sizeof(T) - 1) * 8 & 0x80) {
-        /* the signed integer might overflow on negation, negating the unsigned type
-         * instead avoids the possible overflow */
-        val = -val;
-        negative = true;
-    }
-
-    size_t str_len = 0;
-    auto* ptr = buffer + buffer_size - 1;
-
-    for(; val > 0U;
-        val /= 10U, ptr--, str_len++) {
-
-        *ptr = '0' + val % 10;
-    }
-
-    if(negative) {
-        *(ptr) = '-';
-        str_len++;
-    } else {
-        ptr++;
-    }
-
-    copy_to_vector(out, ptr, str_len);
-
-    return str_len;
-}
-
-template<Type type>
-typename enable_if<TpTools::is_fp(type), size_t>::type
-to_string_switch(const uint8_t* pointer, vector<uint8_t>& out)
-{
-    double val = type == Type::FP64 ? Read_Cast<double>(pointer) : Read_Cast<float>(pointer);
-
-    if(floor(val) == val && val < numeric_limits<int64_t>::max()) {
-        auto integral = (int64_t)val;
-        return to_string_switch<Type::I64>((const uint8_t*)&integral, out);
-    }
-
-    auto str = to_string(val);
-    copy_to_vector(out, (const uint8_t*)str.c_str(), str.size() - 1);
-
-    return str.size() - 1;
-
-}
-
-template<Type type>
-typename enable_if<type == Type::Bool, size_t>::type
-to_string_switch(const uint8_t* pointer, vector<uint8_t>& out)
-{
-    const char* str = *pointer ? str_true : str_false;
-    size_t size = (*pointer ? sizeof(str_true) : sizeof(str_false)) - 1;
-
-    copy_to_vector(out, (const uint8_t*)str, size);
-
-    return size;
-}
-
-template<Type type>
-typename enable_if<type == Type::Null, size_t>::type
-to_string_switch(const uint8_t*, vector<uint8_t>& out)
-{
-    copy_to_vector(out, (const uint8_t*)str_null, sizeof(str_null) - 1);
-    return sizeof(str_null) - 1;
 }
 
 #define SRL_TYPE_TO_STR(id, value, real, size) \
@@ -303,21 +306,23 @@ vector<uint8_t> Tools::convert_charset(Encoding target_encoding, const String& s
 /* At time of writing standard code conversion facets aren't implemented in libstdc++, so:
  * TODO convert with codecvt */
 #include <iconv.h>
+namespace {
 
-const char* get_charset_string(Encoding encoding)
-{
-    static const char str_utf8[] = "UTF-8", str_utf16[] = "UTF-16LE", str_utf32[] = "UTF-32LE";
+    const char* get_charset_string(Encoding encoding)
+    {
+        static const char str_utf8[] = "UTF-8", str_utf16[] = "UTF-16LE", str_utf32[] = "UTF-32LE";
 
-    const char* rslt = nullptr;
+        const char* rslt = nullptr;
 
-    switch(encoding) {
-        case Encoding::UTF8    : rslt = str_utf8;  break;
-        case Encoding::UTF16   : rslt = str_utf16; break;
-        case Encoding::UTF32   : rslt = str_utf32; break;
-        case Encoding::Unknown : rslt = nullptr;   break;
+        switch(encoding) {
+            case Encoding::UTF8    : rslt = str_utf8;  break;
+            case Encoding::UTF16   : rslt = str_utf16; break;
+            case Encoding::UTF32   : rslt = str_utf32; break;
+            case Encoding::Unknown : rslt = nullptr;   break;
+        }
+
+        return rslt;
     }
-
-    return rslt;
 }
 
 size_t Tools::convert_charset(Encoding target_encoding, const String& str_wrap,

@@ -37,6 +37,7 @@ namespace Srl {
 
         if(a.block.encoding == this->block.encoding) {
             return cmp(a.block.data(), a.block.size);
+
         } else {
             auto tmp = Tools::convert_charset(this->block.encoding, a, false);
             return cmp(&tmp[0], tmp.size());

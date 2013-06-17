@@ -12,21 +12,13 @@ namespace Srl {
     template<class TParser>
     std::vector<uint8_t> Tree::to_source(const TParser& parser)
     {
-        TParser copy = parser;
-        Lib::Out out;
-        this->parse_out(copy, out);
-
-        return out.extract();
+        return this->root_node->to_source(parser);
     }
 
     template<class TParser>
     void Tree::to_source(std::ostream& out_stream, const TParser& parser)
     {
-        TParser copy = parser;
-        Lib::Out out(out_stream);
-        this->parse_out(copy, out);
-
-        out.flush();
+        this->root_node->to_source(out_stream, parser);
     }
 
     template<class TParser>

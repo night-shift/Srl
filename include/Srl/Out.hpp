@@ -98,9 +98,8 @@ namespace Srl { namespace Lib {
 
     inline void Out::substitute_token(uint8_t src) { this->write(src); }
 
-    template<size_t N, class TSub>
-    typename std::enable_if<N != 0, void>::type
-    Out::write_substitute(uint8_t* dest, const TSub* sub)
+    template<size_t N, class Sub> typename std::enable_if<N != 0, void>::type
+    Out::write_substitute(uint8_t* dest, const Sub* sub)
     {
         *dest = *sub;
         write_substitute<N - 1>(dest + 1, sub + 1);

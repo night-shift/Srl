@@ -43,6 +43,8 @@ Storage& Storage::operator= (Storage&& s)
     return *this;
 }
 
+/* For performance reasons Srl::Heap destructor only frees allocated memory segments,
+ * no destructors being called, so clear the nodes' vectors by hand. */
 void Storage::clear_nodes()
 {
     for(auto n : this->stored_nodes) {
@@ -75,11 +77,11 @@ Link<T>* Storage::create_link(const T& val, const String& name, Heap<Link<T>>& h
         auto* mem = this->str_heap.get_mem(1);
 
         auto* ptr = new(mem) String(name_conv, Storage::Name_Encoding);
-        if(name_conv.size <= max_packed_block_size()) {
+        if(ptr->block.can_store_local()) {
             ptr->block.move_to_local();
 
         } else {
-            ptr->block.extern_data = copy(this->data_heap, name_conv).ptr;
+            ptr->block.extern_data = copy_block(this->data_heap, name_conv).ptr;
         }
         str_ptr = ptr;
 
@@ -99,12 +101,14 @@ Link<Node>* Storage::store_node(const Node& node, Tree& tree, const String& name
 {
     if(node.tree != &tree) {
         auto* link = this->create_node(tree, node.scope_type, name);
+
         for(auto n : node.nodes) {
             link->field.insert_node(n->field, *n->field.name());
         }
         for(auto v : node.values) {
             link->field.insert_value(v->field, *v->field.name());
         }
+
         return link;
 
     } else {
@@ -119,7 +123,6 @@ Link<Node>* Storage::store_node(const Node& node, Tree& tree, const String& name
 Link<Node>* Storage::create_node(Tree& tree, Type type, const String& name, bool store_data)
 {
     auto* link = this->create_link(Node(&tree, type), name, this->node_heap, store_data);
-
     this->stored_nodes.push_back(&link->field);
 
     return link;
@@ -132,11 +135,11 @@ Link<Value>* Storage::store_value(const Value& value, const String& name, bool s
     auto& block = link->field.block;
 
     if(store_data) {
-        if(block.size <= max_packed_block_size()) {
+        if(block.can_store_local()) {
             block.move_to_local();
 
         } else {
-            block.extern_data = copy(this->data_heap, { block.extern_data, block.size }).ptr;
+            block.extern_data = copy_block(this->data_heap, { block.extern_data, block.size }).ptr;
         }
     }
 

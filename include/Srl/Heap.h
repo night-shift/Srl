@@ -14,25 +14,21 @@ namespace Srl { namespace Lib {
 
     public:
         T* get_mem (size_t n_elems);
-
-        void clear();
+        void clear ();
 
     private:
         static const size_t Max_Cap_Size  = 524288 / sizeof(T);
 
-        size_t   cap             = 0;
-        size_t   mem_left        = 0;
-        T*       mem             = nullptr;
-        Segment* crr_seg         = nullptr;
+        size_t   cap     = 0;
+        Segment* crr_seg = nullptr;
 
         std::deque<Segment> segments;
 
-        void alloc        (size_t n_elems);
-        void set_seg_fill ();
+        Segment* alloc (size_t n_elems);
 
         struct Segment {
 
-            Segment(size_t size_) : size(size_) { }
+            Segment(size_t size_);
             ~Segment();
             Segment (Segment&& s)      { *this = std::move(s); }
             Segment (const Segment& s) { *this = s; }
@@ -40,12 +36,14 @@ namespace Srl { namespace Lib {
             Segment& operator= (Segment&&);
             Segment& operator= (const Segment&);
 
-            size_t  fill = 0;
+            size_t  left = 0;
             T*      data = nullptr;
             size_t  size;
         };
 
     };
+
+    inline MemBlock copy_block(Heap<uint8_t>& heap, const MemBlock& block);
 
 } }
 

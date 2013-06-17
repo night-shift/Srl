@@ -6,8 +6,6 @@
 #include <cstdint>
 #include <string>
 #include <vector>
-#include <map>
-#include <deque>
 #include <utility>
 #include <cassert>
 #include <stack>

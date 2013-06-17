@@ -18,15 +18,13 @@ namespace Srl {
             size_t         size;
         };
 
-        constexpr size_t max_packed_block_size() { return sizeof(size_t); }
-
         struct PackedBlock {
 
             PackedBlock(const Lib::MemBlock& block, Type type_, Encoding encoding_)
                 : extern_data(block.ptr), size(block.size), type(type_), encoding(encoding_) { }
 
             union {
-                uint8_t        local_data[max_packed_block_size()];
+                uint8_t        local_data[sizeof(size_t)];
                 const uint8_t* extern_data;
             };
 
@@ -43,7 +41,7 @@ namespace Srl {
 
             void move_to_local()
             {
-                assert(this->size <= max_packed_block_size() && !this->stored_local);
+                assert(this->can_store_local() && !this->stored_local);
 
                 auto* tmp = this->extern_data;
                 for(auto i = 0U; i < this->size; i++) {
@@ -51,6 +49,8 @@ namespace Srl {
                 }
                 this->stored_local = true;
             }
+
+            bool can_store_local() { return this->size <= sizeof(size_t); }
         };
     }
 }

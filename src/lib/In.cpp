@@ -1,28 +1,29 @@
 #include "Srl/In.h"
 #include "Srl/Internal.h"
 
+using namespace std;
 using namespace Srl;
 using namespace Lib;
 
-In::In(std::istream& stream_) : streaming(true), stream(&stream_)
+In::In(istream& stream_) : streaming(true), stream(&stream_)
 {
-    this->fetch_data(0);
+    this->try_fetch_data(0);
 }
 
-void In::fetch_data(size_t nbytes, const std::function<void()>& out_of_bounds)
+void In::fetch_data(size_t nbytes, const OutOfBounds& out_of_bounds)
 {
-    if(!this->streaming || !this->fetch_data(nbytes)) {
+    if(!this->streaming || !this->try_fetch_data(nbytes)) {
         out_of_bounds();
     }
 }
 
-bool In::fetch_data(size_t nbytes)
+bool In::try_fetch_data(size_t nbytes)
 {
     /*           (   <--------->   ) -> this needs to be preserved
      * [.........*.............*...] -> buffer
      *           |             |->  current pos
      *           |
-     *           |-> possible buffer mark
+     *           |-> possible buffer anchor
      *
      * after reading new chunk:
      *
@@ -30,7 +31,7 @@ bool In::fetch_data(size_t nbytes)
      * [*.............*..............................]
      *  |             |-> new current pos
      *  |
-     *  |-> new buffer mark
+     *  |-> new buffer anchor
      */
 
     if(this->eof_reached || !this->streaming) {
@@ -42,10 +43,11 @@ bool In::fetch_data(size_t nbytes)
     auto read_len = (nbytes < Stream_Buffer_Size ? Stream_Buffer_Size : nbytes) - left;
 
 
-    auto preserve_pos = this->buffer_mark != nullptr
-        ? this->buffer_mark - start
+    auto preserve_pos = this->buffer_anchor != nullptr
+        ? this->buffer_anchor - start
         : (this->end - start) - left;
 
+    /* small extra margin to make sure memory around the current position will be preserved in any case */
     const auto margin_sz = 32;
     auto margin = preserve_pos < margin_sz ? margin_sz - (margin_sz - preserve_pos) : margin_sz;
 
@@ -68,7 +70,7 @@ bool In::fetch_data(size_t nbytes)
     auto bytes_read = (size_t)this->stream->gcount();
 
     this->current_pos = &buffer[preserve_sz - left];
-    buffer_mark  = buffer_mark == nullptr ? nullptr : &buffer[margin];
+    buffer_anchor  = buffer_anchor == nullptr ? nullptr : &buffer[margin];
 
     this->start = &buffer[0];
     this->end   = &buffer[0] + bytes_read + preserve_sz;
@@ -83,4 +85,3 @@ bool In::fetch_data(size_t nbytes)
 
     return true;
 }
-

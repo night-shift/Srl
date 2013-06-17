@@ -1,6 +1,7 @@
 #include "Srl/Out.h"
 #include "Srl/Internal.h"
 
+using namespace std;
 using namespace Srl;
 using namespace Lib;
 
@@ -25,18 +26,19 @@ void Out::flush()
     this->segs_flushed++;
 }
 
-std::vector<uint8_t> Out::extract()
+vector<uint8_t> Out::extract()
 {
-    this->buffer.set_seg_fill();
-
-    std::vector<uint8_t> vec(this->sz_total);
+    vector<uint8_t> vec(this->sz_total);
 
     auto pos = 0U;
     for(auto& s : this->buffer.segments) {
-        memcpy(&vec[pos], s.data, s.fill);
-        pos += s.fill;
+        auto fill = s.size - s.left;
+        memcpy(&vec[pos], s.data, fill);
+        pos += fill;
     }
 
-    return std::move(vec);
+    this->buffer.clear();
+
+    return move(vec);
 }
 

@@ -35,7 +35,7 @@ namespace {
         { Type::Bool,      0x08 }, /* 0x08 [name] 0x00 -> false / 0x01 -> true */
         { Type::Null,      0x0A },
         { Type::Object,    0x03 },
-        { Type::Container, 0x04 },
+        { Type::Array,     0x04 },
         { Type::String,    0x02 },
         { Type::Binary,    0x05 },
         { Type::Scope_End, 0x09 }
@@ -46,7 +46,7 @@ namespace {
         /*double             0x01 */ Type::FP64,
         /*string             0x02 */ Type::String,
         /*document           0x03 */ Type::Object,
-        /*array              0x04 */ Type::Container,
+        /*array              0x04 */ Type::Array,
         /*binary             0x05 */ Type::Binary,
         /*undefined          0x06 */ Type::Null,
         /*Object-id          0x07 */ Type::Null, /* not supported */
@@ -82,7 +82,7 @@ namespace {
 void PBson::parse_out(const Value& value, const MemBlock& name, Out& out)
 {
     if(TpTools::is_scope(value.type())) {
-        auto prefix = value.type() == Type::Container ? Bson_Scope_Container : Bson_Scope_Object;
+        auto prefix = value.type() == Type::Array ? Bson_Scope_Container : Bson_Scope_Object;
         if(this->scope_stack.size() > 0) {
             this->insert_prefix(prefix, name, out);
         }
@@ -142,7 +142,7 @@ void PBson::insert_prefix(uint8_t prefix, const MemBlock& name, Out& out)
 {
     this->insert(&prefix, 1, out);
     /* Bson array elements are string-indexed */
-    if(this->scope_stack.size() > 0 && this->scope_stack.top().type == Type::Container) {
+    if(this->scope_stack.size() > 0 && this->scope_stack.top().type == Type::Array) {
 
         uint32_t n_elems = this->scope_stack.top().elements++;
         auto str_len = Tools::type_to_string(Type::UI32, (const uint8_t*)&n_elems, this->buffer);
@@ -259,7 +259,7 @@ Parser::SourceSeg PBson::parse_in(In& source)
 
     auto name = source.read_block_until(error, '\0');
 
-    if(this->type_stack.top() == Type::Container) {
+    if(this->type_stack.top() == Type::Array) {
         /* discard Bson array index */
         name.size = 0;
     }
@@ -277,7 +277,7 @@ Parser::SourceSeg PBson::parse_in(In& source)
 
     /* new scope */
     if(bson_prefix == Bson_Scope_Container || bson_prefix == Bson_Scope_Object) {
-        Type type = bson_prefix == Bson_Scope_Container ? Type::Container : Type::Object;
+        Type type = bson_prefix == Bson_Scope_Container ? Type::Array : Type::Object;
         this->type_stack.push(type);
         /* skip document size */
         source.move(4, error);

@@ -13,7 +13,7 @@ namespace Srl { namespace Lib {
     class In {
 
     public :
-        typedef std::function<void()>  OffBound;
+        typedef std::function<void()>  OutOfBounds;
         typedef std::function<size_t(In&, std::vector<uint8_t>&, size_t idx)> Substitute;
 
         In(const uint8_t* data, size_t data_size)
@@ -24,28 +24,28 @@ namespace Srl { namespace Lib {
         inline bool           is_streaming() const;
         inline const uint8_t* pointer()      const;
 
-        inline void move           (size_t steps, const OffBound& out_of_bounds);
-        inline const uint8_t* peek (size_t steps, const OffBound& out_of_bounds);
+        inline void move           (size_t steps, const OutOfBounds& out_of_bounds);
+        inline const uint8_t* peek (size_t steps, const OutOfBounds& out_of_bounds);
         inline bool try_peek       (size_t steps);
-        inline MemBlock read_block (size_t steps, const OffBound& out_of_bounds);
+        inline MemBlock read_block (size_t steps, const OutOfBounds& out_of_bounds);
 
         template<class T>
-        T cast_move (const OffBound& out_of_bounds);
+        T cast_move (const OutOfBounds& out_of_bounds);
 
         template<class... Tokens>
-        size_t move_until (const OffBound& out_of_bounds, const Tokens&... tokens);
+        size_t move_until (const OutOfBounds& out_of_bounds, const Tokens&... tokens);
 
         template<class... Tokens>
-        MemBlock read_block_until (const OffBound& out_of_bounds, const Tokens&... tokens);
+        MemBlock read_block_until (const OutOfBounds& out_of_bounds, const Tokens&... tokens);
 
         template<class... Tokens>
-        size_t read_substitue (const OffBound& out_of_bounds, uint8_t delimiter,
+        size_t read_substitue (const OutOfBounds& out_of_bounds, uint8_t delimiter,
                                std::vector<uint8_t>& buffer, const Tokens&... tokens);
 
         template<class... Tokens>
-        size_t move_while (const OffBound& out_of_bounds, const Tokens&... tokens);
+        size_t move_while (const OutOfBounds& out_of_bounds, const Tokens&... tokens);
 
-        inline void skip_space(const OffBound& out_of_bounds);
+        inline void skip_space(const OutOfBounds& out_of_bounds);
 
         template<size_t N = 1, class... Tokens>
         bool is_at_token (const char head, const Tokens&... tokens);
@@ -69,7 +69,7 @@ namespace Srl { namespace Lib {
         int buffer_acc = 0;
         std::vector<uint8_t> buffers[2];
 
-        const uint8_t* buffer_mark = nullptr;
+        const uint8_t* buffer_anchor = nullptr;
 
 
         template<class Sub, class Token, class... Tail>
@@ -88,10 +88,10 @@ namespace Srl { namespace Lib {
 
 
         template<bool Not, class... Tokens>
-        size_t move_until (const OffBound& out_of_bounds, const Tokens&... tokens);
+        size_t move_until (const OutOfBounds& out_of_bounds, const Tokens&... tokens);
 
-        bool fetch_data(size_t nbytes);
-        void fetch_data(size_t nbytes, const OffBound& out_of_bounds);
+        bool try_fetch_data(size_t nbytes);
+        void fetch_data(size_t nbytes, const OutOfBounds& out_of_bounds);
     };
 
 } }

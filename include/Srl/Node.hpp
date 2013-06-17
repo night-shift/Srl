@@ -23,7 +23,7 @@ namespace Srl {
     template<class T>
     Node& Node::insert(const String& field_name, const std::initializer_list<T>& elements)
     {
-        auto* new_node = this->insert_node(Type::Container, field_name);
+        auto* new_node = this->insert_node(Type::Array, field_name);
         for(auto& e : elements) {
            new_node->insert(e);
         }
@@ -131,6 +131,28 @@ namespace Srl {
     Node::find(const ID& id) const
     {
         return this->value(id);
+    }
+
+    template<class TParser>
+    std::vector<uint8_t> Node::to_source(const TParser& parser)
+    {
+        TParser copy = parser;
+        Lib::Out out;
+        this->tree->set_output(copy, out);
+        this->to_source();
+
+        return out.extract();
+    }
+
+    template<class TParser>
+    void Node::to_source(std::ostream& out_stream, const TParser& parser)
+    {
+        TParser copy = parser;
+        Lib::Out out(out_stream);
+        this->tree->set_output(copy, out);
+        this->to_source();
+
+        out.flush();
     }
 
     inline size_t Node::num_nodes() const

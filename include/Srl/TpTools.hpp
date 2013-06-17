@@ -47,7 +47,7 @@ namespace Srl { namespace TpTools {
 
     inline const std::string& get_name (Type type) { return Aux::type_name_lookup[(size_t)type]; }
 
-    constexpr bool is_scope    (Type type)     { return type == Type::Object || type == Type::Container; }
+    constexpr bool is_scope    (Type type)     { return type == Type::Object || type == Type::Array; }
     constexpr bool is_literal  (Type type)     { return type < Type::String; }
     constexpr bool is_integral (Type type)     { return type < Type::FP32; }
     constexpr bool is_fp       (Type type)     { return type == Type::FP32 || type == Type::FP64; }
@@ -138,7 +138,7 @@ namespace Srl { namespace TpTools {
         return true;
     }
 
-    #define SRL_PASTE_TYPE_ENTRY(type, value, real, size) \
+    #define SRL_PASTE_TYPE_TEMPLATE(type, value, real, size) \
         case Type::type : return paste_type_switch<T, Type::type>(target, src_mem);
 
     template<class T>
@@ -147,7 +147,7 @@ namespace Srl { namespace TpTools {
         static_assert(is_literal(SrlType<T>::type), "Cannot paste non-literal type.");
 
         switch(src_type) {
-            SRL_TYPES_LITERAL(SRL_PASTE_TYPE_ENTRY)
+            SRL_TYPES_LITERAL(SRL_PASTE_TYPE_TEMPLATE)
 
             default : assert("Incomplete literal-type entries."); return false;
         }
