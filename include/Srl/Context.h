@@ -21,7 +21,7 @@ namespace Srl {
         template<class T>
         Context& operator () (const T& o);
         template<class T>
-        Context& operator () (const T& o, const String& name);
+        Context& operator () (const String& name, const T& o);
 
         Node* node() const { return this->context_node; }
 
@@ -39,7 +39,7 @@ namespace Srl {
         template<class T>
         Context& operator () (T& o);
         template<class T>
-        Context& operator () (T& o, const String& name);
+        Context& operator () (const String& name, T& o);
 
         const Node* node() const { return this->context_node; }
 

@@ -7,8 +7,9 @@ using namespace Lib;
 
 namespace {
 
-    const Srl::String empty_name = "item";
-    const MemBlock empty_name_tag = MemBlock(empty_name.data(), empty_name.size());
+    const uint8_t str_name[] = "value", str_name_root[] = "tree";
+    const MemBlock empty_name(str_name, sizeof(str_name)),
+                   empty_name_root(str_name_root, sizeof(str_name_root));
 
     const std::string exception_message = "Unable to parse XML document. Document malformed.";
 
@@ -46,40 +47,35 @@ namespace {
         return MemBlock(&buffer[0], len);
     }
 
-    void insert_spacing(Out& buffer, int depth)
+    void insert_tag(Out& out, const MemBlock& name, bool end_tag)
     {
-        buffer.write_times(depth, '\t');
-    }
-
-    void insert_tag(Out& buffer, const MemBlock& name, bool end_tag)
-    {
-        auto& name_n = name.size < 1 ? empty_name_tag : name;
-        buffer.write('<');
+        out.write('<');
         if(end_tag) {
-            buffer.write('/');
+            out.write('/');
         }
-        buffer.write(name_n);
-        buffer.write('>');
+        out.write(name);
+        out.write('>');
     }
 
-    void insert_value(Out& out, const Value& value, const MemBlock& name)
+    void insert_inner_value(Out& out, const Value& value, const MemBlock& name)
     {
         insert_tag(out, name, false);
         write_escape({ value.data(), value.size() }, out);
         insert_tag(out, name, true);
     }
 
-    bool test_name_tags(MemBlock& opening_tag, MemBlock closing_tag)
+    bool test_name_tags(const MemBlock& opening_tag, const MemBlock& closing_tag)
     {
-        Tools::trim_space(closing_tag);
+        auto trimmed = closing_tag;
+        Tools::trim_space(trimmed);
 
         /* empty closing tags are allowed */
-        if(closing_tag.size == 0U) {
+        if(trimmed.size == 0U) {
             return true;
         }
 
-        return opening_tag.size == closing_tag.size &&
-               memcmp(opening_tag.ptr, closing_tag.ptr, closing_tag.size) == 0;
+        return opening_tag.size == trimmed.size &&
+               memcmp(opening_tag.ptr, trimmed.ptr, trimmed.size) == 0;
     }
 }
 
@@ -89,19 +85,23 @@ void PXml::parse_out(const Value& value, const MemBlock& name, Out& out)
 {
     auto type = value.type();
 
-    if(this->insert_whitespace) {
-        insert_spacing(out, this->scope_depth - (type == Type::Scope_End ? 1 : 0));
+    if(!this->skip_whitespace) {
+        out.write_times(this->scope_depth - (type == Type::Scope_End ? 1 : 0), '\t');
     }
+
+    auto name_block = name.size > 0 ? name
+           : this->scope_depth == 0 || (this->scope_depth == 1 && type == Type::Scope_End)
+           ? empty_name_root : empty_name;
 
     if(TpTools::is_scope(type) || type == Type::Scope_End) {
-        insert_tag(out, name, type == Type::Scope_End);
+        insert_tag(out, name_block, type == Type::Scope_End);
         this->scope_depth += type == Type::Scope_End ? -1 : 1;
 
-    } else {
-        insert_value(out, value, name);
+   } else {
+        insert_inner_value(out, value, name_block);
     }
 
-    if(this->insert_whitespace) {
+    if(!this->skip_whitespace) {
         out.write('\n');
     }
 }

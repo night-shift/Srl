@@ -13,17 +13,20 @@ namespace Srl {
     class PXml : public Parser {
 
     public :
-        PXml(bool insert_whitespace_ = true)
-            : insert_whitespace(insert_whitespace_) {  }
+        PXml(bool skip_whitespace_ = false)
+            : skip_whitespace(skip_whitespace_) {  }
 
-        Format get_format() const { return Format::Text; }
+        Format get_format() const     { return Format::Text; }
+
+        void set_skip_whitespace(bool val) { this->skip_whitespace = val; }
+        void set_insert_attributes(bool val) { this->skip_whitespace = val; }
 
         virtual void
         parse_out(const Value& value, const Lib::MemBlock& name, Lib::Out& out) override;
         virtual SourceSeg parse_in(Lib::In& source) override;
 
     private :
-        bool insert_whitespace,
+        bool skip_whitespace,
              document_parsed = false;
 
         size_t scope_depth  = 0,

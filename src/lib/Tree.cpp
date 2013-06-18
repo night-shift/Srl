@@ -138,7 +138,7 @@ void Tree::srl_resolve(Context<Insert>& ctx)
 
     auto wrap = BitWrap(&source[0], source.size());
 
-    ctx(wrap, "binary");
+    ctx("binary", wrap);
 
 }
 
@@ -151,7 +151,7 @@ void Tree::srl_resolve(Context<Paste>& ctx)
         return &vec[0];
     });
 
-    ctx(wrap, "binary");
+    ctx("binary", wrap);
 
     *this = Tree::From_Source<PSrl>(vec);
 }

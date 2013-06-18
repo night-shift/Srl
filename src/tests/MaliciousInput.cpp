@@ -12,7 +12,7 @@ struct TestStruct {
     template<Mode M>
     void srl_resolve(Context<M>& ctx)
     {
-        ctx (vec, "vec");
+        ctx ("vec", vec);
     }
 };
 

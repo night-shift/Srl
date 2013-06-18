@@ -21,7 +21,7 @@ namespace Tests {
         T N = P;
 
     #define RESOLVE_FIELD(N, T, P) \
-        ctx(N, #N);
+        ctx(#N, N);
 
     #define COMPARE_FIELD(N, T, P) \
         TEST(N == P.N)

@@ -293,7 +293,6 @@ string Tools::type_to_string(Type type, const uint8_t* pointer)
     return size > 0 ? string((const char*)&buffer[0], size) : string();
 }
 
-
 vector<uint8_t> Tools::convert_charset(Encoding target_encoding, const String& string_wrap, bool throw_error)
 {
     vector<uint8_t> buffer;

@@ -78,12 +78,12 @@ struct TestClassD {
     template<Mode M>
     void srl_resolve (Context<M>& ctx)
     {
-        ctx (list_integer, "list_integer")
-            (deque_string, "deque_string")
-            (map_class, "map_class")
-            (class_e, "class_e")
-            (vector_class, "vector_class")
-            (class_f, "class_f");
+        ctx ("list_integer", list_integer)
+            ("deque_string", deque_string)
+            ("map_class", map_class)
+            ("class_e", class_e)
+            ("vector_class", vector_class)
+            ("class_f", class_f);
     }
 
     void shuffle()
@@ -132,9 +132,9 @@ struct TestClassC {
     template<Mode M>
     void srl_resolve (Context<M>& ctx)
     {
-        ctx (map_class, "map_class")
-            (vector_nested, "vector_nested")
-            (set_string, "set_string");
+        ctx ("map_class", map_class)
+            ("vector_nested", vector_nested)
+            ("set_string", set_string);
     }
 
     void shuffle()
@@ -188,14 +188,14 @@ public :
             return &huge_binary[0];
         });
 
-        ctx (wrap_huge, "huge_binary")
-            (string_, "string")
-            (string_u16, u"string_u16")
-            (string_u32, U"string_u32")
-            (char_u16, "char_u16")
-            (char_u32, "char_u32")
-            (char_w, "char_w")
-            (wrap, "raw_binary");
+        ctx ("huge_binary", wrap_huge)
+            ("string", string_)
+            (u"string_u16", string_u16)
+            (U"string_u32", string_u32)
+            ("char_u16", char_u16)
+            ("char_u32", char_u32)
+            ("char_w", char_w)
+            ("raw_binary", wrap);
     }
 
     void shuffle()
@@ -269,14 +269,14 @@ struct TestClassA {
     template<Mode M>
     void srl_resolve (Context<M>& ctx)
     {
-        ctx (array, "array")
-            (basic_struct, "basic_struct")
-            (nested_class_b, "nested_class_b")
-            (nested_class_c, "nested_class_c")
-            (long_double, "long_double")
-            (bool_, "bool") (u_char, "u_char")
-            (s_int64_n, "uint64") (s_int64, "sint64")
-            (s_int16, "int16");
+        ctx ("array", array)
+            ("basic_struct", basic_struct)
+            ("nested_class_b", nested_class_b)
+            ("nested_class_c", nested_class_c)
+            ("long_double", long_double)
+            ("bool", bool_) ("u_char", u_char)
+            ("s_int64_n", s_int64_n) ("s_int64", s_int64)
+            ("s_int16", s_int16);
     }
 
     void shuffle()

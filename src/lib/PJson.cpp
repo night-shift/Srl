@@ -72,7 +72,7 @@ void PJson::parse_out(const Value& value, const MemBlock& name, Out& out)
         insert_in_quotes(out, name);
         out.write(':');
 
-        if(this->insert_whitespace) {
+        if(!this->skip_whitespace) {
             out.write(' ');
         }
     }
@@ -118,7 +118,7 @@ void PJson::insert_spacing(Type type, Out& out)
     if(!this->scope_closed && type != Type::Scope_End) {
         out.write(',');
     }
-    if(!this->insert_whitespace) {
+    if(this->skip_whitespace) {
         return;
     }
     auto depth = type == Type::Scope_End

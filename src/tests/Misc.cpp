@@ -138,7 +138,6 @@ bool test_document_building()
 
         auto source = tree.to_source<PJson>();
         tree = Tree::From_Source<PJson>(tree.to_source<PJson>());
-
         auto& node = *tree.root();
 
         auto value = node.value("int");

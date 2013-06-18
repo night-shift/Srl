@@ -39,7 +39,9 @@ namespace Tools {
     void                 base64_to_bytes (uint8_t* dest, size_t dest_size, const char* str, size_t str_len);
     size_t               get_base64_decoded_size (const char* str, size_t str_len);
 
-    std::vector<uint8_t> convert_charset (Encoding target_encoding, const String& string_wrap, bool throw_error);
+    std::vector<uint8_t> convert_charset (Encoding target_encoding, const String& string_wrap, bool throw_error = true);
+
+    std::vector<uint8_t> convert_charset (Encoding target_encoding, const char* str, size_t str_len, bool throw_error = true);
 
     size_t               convert_charset (Encoding target_encoding, const String& string_wrap,
                                           std::vector<uint8_t>& buffer, bool throw_error, size_t buffer_index = 0);

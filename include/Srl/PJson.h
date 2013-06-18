@@ -14,17 +14,19 @@ namespace Srl {
     class PJson : public Parser {
 
     public :
-        PJson(bool insert_whitespace_ = true)
-            : insert_whitespace(insert_whitespace_) {  }
+        PJson(bool skip_whitespace_ = false)
+            : skip_whitespace(skip_whitespace_) {  }
 
-        Format get_format() const { return Format::Text; }
+        Format get_format() const     { return Format::Text; }
+
+        void set_skip_whitespace (bool val) { this->skip_whitespace = val; }
 
         virtual void
         parse_out(const Value& value, const Lib::MemBlock& name, Lib::Out& out) override;
         virtual SourceSeg parse_in(Lib::In& source) override;
 
     private :
-        bool             insert_whitespace;
+        bool             skip_whitespace;
         uint8_t          conversion_buffer[TpTools::Literal_Max_Size];
         std::stack<Type> scope_stack;
         Type             scope_type   = Type::Null;

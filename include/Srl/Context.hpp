@@ -10,24 +10,24 @@ namespace Srl {
     template<class T>
     Context<Paste>& Context<Paste>::operator () (T& o)
     {
-        return this->operator()(o, String());
+        return this->operator()(String(), o);
     }
 
     template<class T>
     Context<Insert>& Context<Insert>::operator () (const T& o)
     {
-        return this->operator()(o, String());
+        return this->operator()(String(), o);
     }
 
     template<class T>
-    Context<Insert>& Context<Insert>::operator () (const T& o, const String& name)
+    Context<Insert>& Context<Insert>::operator () (const String& name, const T& o)
     {
         this->context_node->insert(name, o);
         return *this;
     }
 
     template<class T>
-    Context<Paste>& Context<Paste>::operator () (T& o, const String& name)
+    Context<Paste>& Context<Paste>::operator () (const String& name, T& o)
     {
         auto type   = Lib::Switch<T>::type;
         auto& index = TpTools::is_scope(type) ? this->nodes_index : this->values_index;
