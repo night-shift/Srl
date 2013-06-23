@@ -125,9 +125,10 @@ struct DerivedA : Base {
     int field = 10;
 
     const Srl::TypeID* srl_type_id() override;
+    
     void srl_resolve(Srl::Context& ctx) override { 
         Base::srl_resolve(ctx);
-        ctx ("derived_field", field); 
+        ctx ("derived_a_field", field); 
     }
 };
 const auto derived_a_id = Srl::register_type<DerivedA>("DerivedA");
@@ -137,9 +138,10 @@ struct DerivedB : Base {
     int field = 15;
 
     const Srl::TypeID* srl_type_id() override;
+    
     void srl_resolve(Srl::Context& ctx) override { 
         Base::srl_resolve(ctx);
-        ctx ("derived_field", field); 
+        ctx ("derived_b_field", field); 
     }
 };
 const auto derived_b_id = Srl::register_type<DerivedB>("DerivedB");
@@ -149,48 +151,56 @@ class Composite {
     // make private constructor accessible
     friend struct Srl::Ctor<Composite>;
 public:
-    unique_ptr<Base> one, two;
-
-    Composite(Base* one_, Base* two_) : one(one_), two(two_) { }
+    list<unique_ptr<Base>> bases;
+    
+    Composite(initializer_list<Base*> bases_) {
+        for(auto* b : bases_) {
+            this->bases.emplace_back(b);
+        }
+    }
     // cruise control
     void srl_resolve(Srl::Context& ctx) {
-        ctx ("one", one) ("two", two);
+        ctx ("bases", bases);
     }
 
 private:
-    Composite() : one(nullptr), two(nullptr) { }
+    Composite() { }
 };
+
 // running...
-Composite composite(new DerivedA(), new DerivedB());
+Composite composite { new DerivedA(), new DerivedB() };
 Srl::Store<PJson>(cout, composite);
 // ...will print...
 ```
 ```json
 {
-    "one": {
-    	"srl_type_id": "DerivedA",
-		"base_field": 5,
-		"derived_field": 10
-	},
-	"two": {
-		"srl_type_id": "DerivedB",
-		"base_field": 5,
-		"derived_field": 15
-	}
+    "bases": [
+    	{
+			"srl_type_id": "DerivedA",
+			"base_field": 5,
+			"derived_a_field": 10
+		},
+		{
+			"srl_type_id": "DerivedB",
+			"base_field": 5,
+			"derived_b_field": 15
+		}
+	]
 }
 ```
 ```cpp
 /// access a polymorphic type 
 auto tree = Tree::From_Type(composite);
-auto derived_a = tree.root()->node("one")->unwrap<unique_ptr<Base>>();
+auto* bases = tree.root()->node("bases");
+auto derived_a = bases->node(0)->unwrap<unique_ptr<Base>>();
 // or
-auto* derived_b = ree.root()->node("two")->unwrap<Base*>();
+auto* derived_b = bases->node(1)->unwrap<Base*>();
 assert(derived_b->srl_type_id()->name() == "DerivedB");
 // you are responsible for derived_b
 delete derived_b;
 
 composite = tree.root()->unwrap<Composite>();
-assert(composite.one->srl_type_id()->name() == "DerivedA");
+assert(composite.bases[0]->srl_type_id()->name() == "DerivedA");
 ```
 #### Handling binary data
 Use Srl::BitWrap to serialize raw binary data...
