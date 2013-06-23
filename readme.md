@@ -100,7 +100,7 @@ auto lang = tree.root()->unwrap<Lang>();
 #### Handling non-default constructors
 Objects are instantiated through a factory ```struct Srl::Ctor<T>```. As default parameterless constructors are required. You can declare
 ```friend struct Srl::Ctor<YourClass>``` if you don't want to expose public default constructors. Or specialize
-```Srl::Ctor\<T>``` and define a custom T Create() method.
+```Srl::Ctor<T>``` and define a custom T Create() method.
 #### Handling polymorphic types
 ```cpp
 struct Base {
