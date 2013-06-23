@@ -36,7 +36,7 @@ int main() {
 #### Processing documents
 ```cpp
 string json = "{ "
-    "\"name\"    : \"cpp\","
+    "\"name\"    : \"cpp\","
     "\"version\" : 11"
 "}";
 // create Srl::Tree from a source
@@ -188,6 +188,9 @@ auto* derived_b = ree.root()->node("two")->unwrap<Base*>();
 assert(derived_b->srl_type_id()->name() == "DerivedB");
 // you are responsible for derived_b
 delete derived_b;
+
+composite = tree.root()->unwrap<Composite>();
+assert(composite->one->srl_type_id()->name() == "DerivedA");
 ```
 #### Handling binary data
 Use Srl::BitWrap to serialize raw binary data...
