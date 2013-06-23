@@ -33,7 +33,7 @@ int main() {
 }
 ```
 ### Long Story
-#### Process documents
+#### Processing documents
 ```cpp
 string json = "{ "
     "\"name\"    : \"cpp\","
