@@ -11,7 +11,7 @@ namespace Srl {
     namespace Lib { namespace Aux {
 
         template<class T, class = void> struct StoreSwitch {
-            static std::function<void()> Insert(T& o, Tree& tree) {
+            static std::function<void()> Insert(const T& o, Tree& tree) {
                 return [&o, &tree] { tree.root()->insert(o); };
             }
             static void Paste(Tree& tree, T& target) {
@@ -20,10 +20,9 @@ namespace Srl {
         };
         template<class T>
         struct StoreSwitch<T, typename std::enable_if<has_resolve_method<T>::value>::type> {
-            static std::function<void()> Insert(T& o, Tree& tree) {
+            static std::function<void()> Insert(const T& o, Tree& tree) {
                 return [&o, &tree] {
-                    Context<Mode::Insert> ctx(*tree.root());
-                    o.srl_resolve(ctx);
+                    Switch<T>::Insert(*tree.root(), o);
                 };
             }
             static void Paste(Tree& tree, T& target) {
@@ -32,7 +31,7 @@ namespace Srl {
         };
 
         template<class TParser, typename Data>
-        void Store(Data& data, Lib::Out& out, const TParser& parser, const std::string& name)
+        void Store(const Data& data, Lib::Out& out, const TParser& parser, const std::string& name)
         {
             TParser copy = parser;
             Tree tree(name);
@@ -41,7 +40,7 @@ namespace Srl {
     } }
 
     template<class TParser, class Data>
-    std::vector<uint8_t> Store(Data& data, const TParser& parser, const std::string& name)
+    std::vector<uint8_t> Store(const Data& data, const TParser& parser, const std::string& name)
     {
         Lib::Out out;
         Lib::Aux::Store(data, out, parser, name);
@@ -49,7 +48,7 @@ namespace Srl {
     }
 
     template<class TParser, typename Data>
-    void Store(std::ostream& out_stream, Data& data, const TParser& parser, const std::string& name)
+    void Store(std::ostream& out_stream, const Data& data, const TParser& parser, const std::string& name)
     {
         Lib::Out out(out_stream);
         Lib::Aux::Store(data, out, parser, name);

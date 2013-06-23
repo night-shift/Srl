@@ -16,7 +16,7 @@ namespace {
         }
         auto size = Tools::convert_charset(encoding, in, buffer, true);
 
-        return MemBlock(&buffer[0], size);
+        return MemBlock(buffer.data(), size);
     }
 }
 

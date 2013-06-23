@@ -9,8 +9,7 @@ struct TestStruct {
 
     vector<BasicStruct> vec { BasicStruct() };
 
-    template<Mode M>
-    void srl_resolve(Context<M>& ctx)
+    void srl_resolve(Context& ctx)
     {
         ctx ("vec", vec);
     }

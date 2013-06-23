@@ -35,7 +35,7 @@ namespace {
 
         } else {
             vector<char> vec_buffer(str_len + 1);
-            return make_tuple(val, apply(&vec_buffer[0]));
+            return make_tuple(val, apply(vec_buffer.data()));
         }
     }
 
@@ -143,7 +143,7 @@ namespace {
         if(vec.size() < size) {
             vec.resize(size);
         }
-        memcpy(&vec[0], data, size);
+        memcpy(vec.data(), data, size);
     }
 
     template<Type type>
@@ -264,7 +264,7 @@ StringToTypeResult Tools::string_to_type(const String& string_wrap, Type hint)
             return StringToTypeResult();
         }
 
-        return string_to_type_converted(&vec[0], vec.size(), hint);
+        return string_to_type_converted(vec.data(), vec.size(), hint);
     }
 }
 
@@ -290,7 +290,7 @@ string Tools::type_to_string(Type type, const uint8_t* pointer)
     vector<uint8_t> buffer;
     auto size = Tools::type_to_string(type, pointer, buffer);
 
-    return size > 0 ? string((const char*)&buffer[0], size) : string();
+    return size > 0 ? string((const char*)buffer.data(), size) : string();
 }
 
 vector<uint8_t> Tools::convert_charset(Encoding target_encoding, const String& string_wrap, bool throw_error)
@@ -327,6 +327,10 @@ namespace {
 size_t Tools::convert_charset(Encoding target_encoding, const String& str_wrap,
                               vector<uint8_t>& buffer,  bool throw_error, size_t buffer_index)
 {
+    if(str_wrap.size() < 1) {
+        return 0;
+    }
+
     auto src_encoding = str_wrap.encoding();
 
     auto* cs_from = get_charset_string(src_encoding);

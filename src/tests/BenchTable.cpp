@@ -24,8 +24,7 @@ struct BStruct {
         }
     }
 
-    template<Mode M>
-    void srl_resolve(Context<M>& ctx)
+    void srl_resolve(Context& ctx)
     {
         ctx ("struct", strct) ("vec", str_vec);
     }

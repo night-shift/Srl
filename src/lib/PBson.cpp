@@ -268,7 +268,7 @@ Parser::SourceSeg PBson::parse_in(In& source)
         if(this->buffer.size() < name.size) {
             this->buffer.resize(name.size);
         }
-        memcpy(&buffer[0], name.ptr, name.size);
+        memcpy(buffer.data(), name.ptr, name.size);
         name.ptr = &buffer[0];
     }
 

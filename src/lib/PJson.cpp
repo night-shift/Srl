@@ -41,7 +41,7 @@ namespace {
             '\t', ar('t'), '\r',  ar('r'), '\b',  ar('b'), '\f', ar('f'), unescape_uc_literal, ar('u')
         );
 
-        return { &buffer[0], len };
+        return { buffer.data(), len };
     }
 
     void insert_in_quotes(Out& out, const MemBlock& txt, bool escape = false)

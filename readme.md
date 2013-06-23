@@ -1,6 +1,5 @@
 ## Srl
-### Serializes.
-#### Short story
+###Short story
 ```cpp
 #include "Srl/Srl.h"
 
@@ -13,8 +12,7 @@ class YourClass {
 
 public :
     // implement a srl_resolve method
-    template<Srl::Mode M>
-    void srl_resolve(Srl::Context<M>& ctx) {
+    void srl_resolve(Srl::Context& ctx) {
         // tell the context what to serialize, field names are optional
         ctx ("m_int", m_int)
             ("m_string", m_string)
@@ -28,9 +26,8 @@ int main() {
     // serialize with Srl::Store
     vector<uint8_t> bytes = Srl::Store<Srl::PSrl>(original);
     //                                     |-> choose a parser
-    YourClass restored;
     // deserialize with Srl::Restore
-    Srl::Restore<Srl::PSrl>(restored, bytes);
+    YourClass restored = Srl::Restore<YourClass, Srl::PSrl>(bytes);
     // Thats it.
     return 0;
 }
@@ -58,7 +55,7 @@ Node* extensions = root->node("extensions");
 extensions->insert(".hpp");
 // access by index
 auto extension = extensions->value(2)->unwrap<string>();
-// or just unwrap the whole node
+// unwrap nodes
 auto vec = extensions->unwrap<vector<string>>();
 // translate the tree - to plain bytes...
 vector<uint8_t> bytes = tree.to_source<PJson>();
@@ -84,13 +81,13 @@ Implement a resolve method to tell Srl how to handle your types:
 struct Lang {
     string name; int version; list<string> extensions;
 
-    template<Mode M> void srl_resolve (Context<M>& ctx) {
+    void srl_resolve (Context& ctx) {
         ctx ("name", name) ("version", version) ("extensions", extensions);
     }
 };
 ```
-What Context basically does is, depending on Mode, calling insert or paste on a given Srl::Node.
-Mode is either ::Insert or ::Paste, specialize if you want something different to be done for each case.
+What Context basically does is, depending on Srl::Mode, calling insert or paste on a given Srl::Node.
+Mode is either ::Insert or ::Paste, you can query the current mode with ```ctx.mode()```.
 Taking the vector of bytes from above, you can call:
 ```cpp
 auto lang = Srl::Restore<Lang, PJson>(bytes);
@@ -100,33 +97,113 @@ Which is actually the short form for:
 auto tree = Tree::From_Source<PJson>(bytes);
 auto lang = tree.root()->unwrap<Lang>();
 ```
-#### Handling binary data
-Use Srl::BitWrap helper to serialize raw binary data:
+#### Handling non-default constructors
+Objects are instantiated through a factory ```struct Srl::Ctor<T>```. As default parameterless constructors are required. You can declare
+```friend struct Srl::Ctor<YourClass>``` if you don't want to expose public default constructors. Or specialize
+```Srl::Ctor\<T>``` and define a custom T Create() method.
+#### Handling polymorphic types
 ```cpp
-// in a srl_resolve method
-struct SomeStruct {
+struct Base {
+    int field = 5;
+    // declare a srl_type_id method
+    virtual const Srl::TypeID* srl_type_id();
 
-    vector<uint8_t> data;
-
-    template<Mode M> void srl_resolve(Context<M>& ctx) {
-        BitWrap wrap(
-            // Pass a pointer to memory along with the size.
-            // This data will be stored on Mode M == Mode::Insert.
-            &data[0], data.size(),
-            // Pass a function f(size)->*mem, the function will be called on Mode M == Mode::Paste
-            // with the restored size of the memory block as parameter. The restored data will be
-            // copied to the returned pointer.
-            [this](size_t size) -> uint8_t* {
-                data.resize(size);
-                return &data[0];
-            }
-        );
-        // pass the bit-wrap
-        ctx ("data", wrap);
+    virtual void srl_resolve(Srl::Context& ctx) {
+        ctx ("base_field", field); 
     }
 };
+// register a type in your implementation.cpp to avoid duplicate registrations of the same type
+// this will force a registration on program initialization
+const auto base_id = Srl::register_type<Base>("Base");
+// return the ID
+const Srl::TypeID* Base::srl_type_id() { return &base_id; }
 
-// directly access binary data from a tree
+// same for derived types
+struct DerivedA : Base {
+    int field = 10;
+
+    const Srl::TypeID* srl_type_id() override;
+    void srl_resolve(Srl::Context& ctx) override { 
+        Base::srl_resolve(ctx);
+        ctx ("derived_field", field); 
+    }
+};
+const auto derived_a_id = Srl::register_type<DerivedA>("DerivedA");
+const Srl::TypeID* DerivedA::srl_type_id() { return &derived_a_id; }
+
+struct DerivedB : Base {
+    int field = 15;
+
+    const Srl::TypeID* srl_type_id() override;
+    void srl_resolve(Srl::Context& ctx) override { 
+        Base::srl_resolve(ctx);
+        ctx ("derived_field", field); 
+    }
+};
+const auto derived_b_id = Srl::register_type<DerivedB>("DerivedB");
+const Srl::TypeID* DerivedB::srl_type_id() { return &derived_b_id; }
+
+class Composite {
+    // make private constructor accessible
+    friend struct Srl::Ctor<Composite>;
+public:
+    unique_ptr<Base> one, two;
+
+    Composite(Base* one_, Base* two_) : one(one_), two(two_) { }
+    // cruise control
+    void srl_resolve(Srl::Context& ctx) {
+        ctx ("one", one) ("two", two);
+    }
+
+private:
+    Composite() : one(nullptr), two(nullptr) { }
+};
+// running...
+Composite composite(new DerivedA(), new DerivedB());
+Srl::Store<PJson>(cout, composite);
+// ...will print...
+```
+```json
+{
+    "one": {
+    	"srl_type_id": "DerivedA",
+		"base_field": 5,
+		"derived_field": 10
+	},
+	"two": {
+		"srl_type_id": "DerivedB",
+		"base_field": 5,
+		"derived_field": 15
+	}
+}
+```
+#### Handling binary data
+Use Srl::BitWrap to serialize raw binary data...
+```cpp
+// ...in a srl_resolve method
+struct SomeStruct {
+
+  vector<uint8_t> binary;
+
+  void srl_resolve(Context& ctx) {
+    BitWrap wrap(
+        // Pass a pointer to memory along with the size.
+        // This data will be stored on ctx.mode() == Mode::Insert.
+        binary.data(), binary.size(),
+        // Pass a function f(size)->*mem, the function will be called on ctx.mode() == Mode::Paste
+        // with the restored size of the memory block as parameter. The restored data will be
+        // copied to the returned pointer.
+        [this](size_t size) -> uint8_t* {
+            binary.resize(size);
+            return binary.data();
+        }
+    );
+    // pass the bit-wrap
+    ctx ("data", wrap);
+  }
+};
+
+// ...to directly access binary data from a tree
 static uint8_t binary[] { 2, 4, 6, 8 };
 Tree tree;
 
@@ -137,7 +214,12 @@ BitWrap wrap_paste( [](size_t sz) { assert(sz == 4); return binary; } );
 tree.root()->value("data")->paste(wrap_paste);
 ```
 For text-based serialization formats binary data will be converted to a base64 string. So calling
-```tree.to_source<PJson>(cout)``` on the Srl::Tree from above will yield ```{ "data": "AgQGCA==" }```.
+```tree.to_source<PJson>(cout)``` on the Srl::Tree from above will yield...
+```json
+{
+    "data": "AgQGCA=="
+}
+```
 
 #### Serialization formats
 Srl supports 4 serialization formats. Json, Xml, Bson and [Srl](https://github.com/night-shift/Srl/blob/master/src/lib/PSrl.cpp), a custom space efficient binary format.
@@ -156,7 +238,7 @@ correct encoding before parsing.
 You can use ```convert_charset``` from Srl::Tools:: for converting to the appropriate character set.
 
 #### Compiler support
-At least gcc 4.8 or clang 3.2 is needed. I recommend using gcc since it produces significantly faster code. Especially json/xml parsers
-lead up to a two-fold performance increase.
+At least GCC 4.8 or Clang 3.2 is required. MSVC is lacking some vital C++11 features, so no support as of now.
 
-At time of writing MSVC is missing some vital C++11 features for compiling the project.
+#### License
+MIT License.

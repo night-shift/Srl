@@ -113,34 +113,34 @@ namespace {
     }
 }
 
-void Node::insert_value(const Value& new_value, const String& name)
+void Node::insert_value(const Value& new_value, const String& name_)
 {
     if(this->just_parse) {
-        this->tree->parse_value(new_value, name);
+        this->tree->parse_value(new_value, name_);
 
     } else {
-        auto* link = this->tree->storage.store_value(new_value, name);
+        auto* link = this->tree->storage.store_value(new_value, name_);
         insert_link(link, this->values);
     }
 }
 
-Node* Node::insert_node(const Node& new_node, const String& name)
+Node* Node::insert_node(const Node& new_node, const String& name_)
 {
-    auto* link = this->tree->storage.store_node(new_node, *this->tree, name);
+    auto* link = this->tree->storage.store_node(new_node, *this->tree, name_);
     insert_link(link, this->nodes);
 
     return &link->field;
 }
 
-Node* Node::insert_node(Type node_type, const String& name)
+Node* Node::insert_node(Type node_type, const String& name_)
 {
-    return this->insert_node(Node(this->tree, node_type), name);
+    return this->insert_node(Node(this->tree, node_type), name_);
 }
 
-Value* Node::value(const String& name) const
+Value* Node::value(const String& name_) const
 {
-    auto hash = this->tree->storage.hash_string(name);
-    auto* link = find_link<Throw | Hash>(hash, this->values, name);
+    auto hash = this->tree->storage.hash_string(name_);
+    auto* link = find_link<Throw | Hash>(hash, this->values, name_);
 
     return &link->field;
 }
@@ -176,21 +176,21 @@ Node* Node::node(size_t index) const
 }
 
 /* same for named nodes */
-Node* Node::node(const String& name) const
+Node* Node::node(const String& name_) const
 {
-    auto hash = this->tree->storage.hash_string(name);
-    auto* link = find_link<Hash>(hash, this->nodes, name);
+    auto hash = this->tree->storage.hash_string(name_);
+    auto* link = find_link<Hash>(hash, this->nodes, name_);
 
     if (link != nullptr) {
         return &link->field;
 
     } else {
-        auto* link_value = find_link<Throw | Hash>(hash, this->values, name);
+        auto* link_value = find_link<Throw | Hash>(hash, this->values, name_);
         if(link_value->field.size() > 0) {
-            auto msg = "Field " + name.unwrap(false) + " not found.";
+            auto msg = "Field " + name_.unwrap(false) + " not found.";
             throw Exception(msg);
         }
-        auto* new_link = this->tree->storage.create_node(*this->tree, Type::Array, name);
+        auto* new_link = this->tree->storage.create_node(*this->tree, Type::Array, name_);
 
         return &new_link->field;
     }
@@ -207,7 +207,7 @@ void Node::parse_in(In& source, Parser& parser)
             break;
         }
 
-        auto name = String(seg.name, Encoding::UTF8);
+        auto field_name = String(seg.name, Encoding::UTF8);
         /* in direct parse mode the whole tree is discarded afterwards,
          * so storing data blocks is unnecessary */
         bool store_data = !this->just_parse || seg.data_buffered;
@@ -215,13 +215,13 @@ void Node::parse_in(In& source, Parser& parser)
         if(!TpTools::is_scope(val.type())) {
             /* new value */
             auto* link = this->tree->storage.store_value(
-                val, name, store_data
+                val, field_name, store_data
             );
             insert_link(link, this->values);
 
         } else {
             /* new node */
-            auto* link = this->tree->storage.create_node(*this->tree, val.type(), name, store_data);
+            auto* link = this->tree->storage.create_node(*this->tree, val.type(), field_name, store_data);
             link->field.just_parse = this->just_parse;
             insert_link(link, this->nodes);
 
@@ -273,10 +273,10 @@ void Node::forall_values(const function<void(Value*)>& fnc, bool recursive) cons
     }
 }
 
-vector<Node*> Node::find_nodes(const String& name, bool recursive) const
+vector<Node*> Node::find_nodes(const String& name_, bool recursive) const
 {
     vector<Node*> rslt;
-    auto hash = this->tree->storage.hash_string(name);
+    auto hash = this->tree->storage.hash_string(name_);
 
     this->forall_nodes([&rslt, this, hash] (Node* node) {
         if(this->tree->storage.hash_string(*node->name_ptr) == hash) {
@@ -287,10 +287,10 @@ vector<Node*> Node::find_nodes(const String& name, bool recursive) const
     return move(rslt);
 }
 
-vector<Value*> Node::find_values(const String& name, bool recursive) const
+vector<Value*> Node::find_values(const String& name_, bool recursive) const
 {
     vector<Value*> rslt;
-    auto hash = this->tree->storage.hash_string(name);
+    auto hash = this->tree->storage.hash_string(name_);
 
     this->forall_values([&rslt, this, hash] (Value* value) {
         if(this->tree->storage.hash_string(*value->name()) == hash) {
@@ -323,10 +323,10 @@ vector<Value*> Node::all_values(bool recursive) const
     return move(rslt);
 }
 
-void Node::remove_node(const String& name)
+void Node::remove_node(const String& name_)
 {
-    auto hash = this->tree->storage.hash_string(name);
-    auto itr = find_link<Iterator | Hash>(hash, this->nodes, name);
+    auto hash = this->tree->storage.hash_string(name_);
+    auto itr = find_link<Iterator | Hash>(hash, this->nodes, name_);
     remove_link(itr, this->nodes);
 }
 
@@ -342,10 +342,10 @@ void Node::remove_node(Node* to_remove)
     remove_link(itr, this->nodes);
 }
 
-void Node::remove_value(const String& name)
+void Node::remove_value(const String& name_)
 {
-    auto hash = this->tree->storage.hash_string(name);
-    auto itr = find_link<Iterator | Hash>(hash, this->values, name);
+    auto hash = this->tree->storage.hash_string(name_);
+    auto itr = find_link<Iterator | Hash>(hash, this->values, name_);
     remove_link(itr, this->values);
 }
 

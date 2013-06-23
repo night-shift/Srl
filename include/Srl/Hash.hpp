@@ -17,10 +17,17 @@ namespace Srl { namespace Tools {
         template<> inline void fnv1a_unfold<0>(const uint8_t*, size_t&) { }
     }
 
-    template<size_t NBytes> size_t hash_fnv1a(const uint8_t* bytes, size_t hash_base)
+    template<size_t NBytes>
+    size_t hash_fnv1a(const uint8_t* bytes, size_t hash_base)
     {
         Aux::fnv1a_unfold<NBytes>(bytes, hash_base);
         return hash_base;
+    }
+
+    template<size_t N>
+    constexpr size_t hash_fnv1a (const char(&str)[N], size_t hash_base)
+    {
+        return hash_fnv1a<N>(str, hash_base);
     }
 
     inline size_t hash_fnv1a(const uint8_t* bytes, size_t nbytes, size_t hash_base)

@@ -31,7 +31,6 @@ namespace Srl {
 
         virtual void parse_out(const Value& value, const Lib::MemBlock& name, Lib::Out& out) = 0;
         virtual SourceSeg parse_in(Lib::In& source) = 0;
-
     };
 }
 

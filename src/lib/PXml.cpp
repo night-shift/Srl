@@ -44,7 +44,7 @@ namespace {
             '\"', ar_sub('q','o','u','t'), '\'', ar_sub('a','p','o','s')
         );
 
-        return MemBlock(&buffer[0], len);
+        return MemBlock(buffer.data(), len);
     }
 
     void insert_tag(Out& out, const MemBlock& name, bool end_tag)

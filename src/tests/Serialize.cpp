@@ -27,8 +27,7 @@ struct TestClassF  {
     vector<char32_t> vec_char { U'5' };
     vector<BasicStruct> vec_struct { };
 
-    template<Mode M>
-    void srl_resolve (Context<M>& ctx)
+    void srl_resolve (Context& ctx)
     {
         ctx(vec_struct)(integer_2)(some_string)
            (vec_char)(integer_0)(integer_1);
@@ -59,8 +58,7 @@ struct TestClassF  {
 };
 
 struct TestClassE {
-    template<Mode M>
-    void srl_resolve (Context<M>&) { }
+    void srl_resolve (Context&) { }
 };
 
 struct TestClassD {
@@ -75,8 +73,7 @@ struct TestClassD {
     map<string, TestClassE> map_class;
     vector<TestClassE> vector_class { TestClassE() };
 
-    template<Mode M>
-    void srl_resolve (Context<M>& ctx)
+    void srl_resolve (Context& ctx)
     {
         ctx ("list_integer", list_integer)
             ("deque_string", deque_string)
@@ -129,8 +126,7 @@ struct TestClassC {
 
     set<string> set_string { "a" };
 
-    template<Mode M>
-    void srl_resolve (Context<M>& ctx)
+    void srl_resolve (Context& ctx)
     {
         ctx ("map_class", map_class)
             ("vector_nested", vector_nested)
@@ -172,10 +168,9 @@ class TestClassB {
     const string SCOPE = "TestClassB";
 
 public :
-    const size_t binary_sz = 1000000;
+    const size_t binary_sz = 100000;
 
-    template<Mode M>
-    void srl_resolve (Context<M>& ctx)
+    void srl_resolve (Context& ctx)
     {
         auto wrap = BitWrap(raw_binary, 10, [this](size_t size) {
             TEST(size == 10)
@@ -263,11 +258,10 @@ struct TestClassA {
 
     BasicStruct basic_struct;
 
-    TestClassB nested_class_b;
+    unique_ptr<TestClassB> nested_class_b = unique_ptr<TestClassB>(new TestClassB());
     TestClassC nested_class_c;
 
-    template<Mode M>
-    void srl_resolve (Context<M>& ctx)
+    void srl_resolve (Context& ctx)
     {
         ctx ("array", array)
             ("basic_struct", basic_struct)
@@ -282,7 +276,7 @@ struct TestClassA {
     void shuffle()
     {
         basic_struct.shuffle();
-        nested_class_b.shuffle();
+        nested_class_b->shuffle();
         nested_class_c.shuffle();
         long_double *= 2.139;
         u_char *= 3;
@@ -314,7 +308,7 @@ struct TestClassA {
         TEST(s_int64 == n.s_int64);
         TEST(s_int16 == n.s_int16);
 
-        nested_class_b.test(n.nested_class_b);
+        nested_class_b->test(*n.nested_class_b);
         nested_class_c.test(n.nested_class_c);
     }
 };

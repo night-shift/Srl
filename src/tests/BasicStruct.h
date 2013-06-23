@@ -41,8 +41,7 @@ namespace Tests {
 
         FIELDS_FNC(DECLARE_FIELD, 120)
 
-        template<Srl::Mode M>
-        void srl_resolve(Srl::Context<M>& ctx)
+        void srl_resolve(Srl::Context& ctx)
         {
             FIELDS_FNC(RESOLVE_FIELD, 0)
         }

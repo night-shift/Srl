@@ -23,11 +23,16 @@ namespace Srl { namespace Tools {
     template<size_t NBytes> size_t
     hash_fnv1a (const uint8_t* bytes, size_t hash_base = HashParamsFnv1<sizeof(size_t)>::Base);
 
+    template<size_t N> constexpr size_t
+    hash_fnv1a (const char(&str)[N], size_t hash_base = HashParamsFnv1<sizeof(size_t)>::Base);
+
     inline size_t
     hash_fnv1a (const uint8_t* bytes, size_t nbytes, size_t hash_base = HashParamsFnv1<sizeof(size_t)>::Base);
 
     template<typename T> struct HashFnv1a;
 
 } }
+
+#include "Hash.hpp"
 
 #endif

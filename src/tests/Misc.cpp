@@ -1,6 +1,7 @@
 #include "Tests.h"
 #include "BasicStruct.h"
 #include <list>
+#include <memory>
 
 using namespace std;
 using namespace Srl;
@@ -223,6 +224,113 @@ bool test_xml_attributes()
     }
 }
 
+struct Base {
+
+    virtual int get() = 0;
+    virtual const Srl::TypeID* srl_type_id() = 0;
+    virtual void srl_resolve(Context& ctx) = 0;
+
+    virtual ~Base() { }
+};
+
+struct Root : Base {
+
+    int m = 0;
+    int get() override { return m; }
+
+    const Srl::TypeID* srl_type_id() override;
+
+    virtual void srl_resolve(Context& ctx) override
+    {
+        ctx ("root_field", m);
+    }
+
+    virtual ~Root() { }
+};
+
+const auto reg_root = Srl::register_type<Root>("Root");
+const Srl::TypeID* Root::srl_type_id() { return &reg_root; }
+
+struct DerivedA : Root {
+
+    DerivedA(int i = 1) : a(i) { }
+
+    int a;
+    int get() override { return a; }
+
+    const Srl::TypeID* srl_type_id() override;
+
+    void srl_resolve(Context& ctx) override
+    {
+        Root::srl_resolve(ctx);
+        ctx ("a_field", a);
+    }
+};
+
+const auto reg_a = Srl::register_type<DerivedA>("DerivedA");
+const Srl::TypeID* DerivedA::srl_type_id() { return &reg_a; }
+
+class DerivedB : public Root {
+
+    friend struct Srl::Ctor<DerivedB>;
+
+public:
+    DerivedB(int i) : b(i) { }
+
+    int get() override { return b; }
+
+    const Srl::TypeID* srl_type_id() override;
+
+    void srl_resolve(Context& ctx) override
+    {
+        Root::srl_resolve(ctx);
+        ctx ("b_field", b);
+    }
+
+private:
+    int b;
+    DerivedB() :b(0) { }
+};
+
+const auto reg_b = Srl::register_type<DerivedB>("DerivedB");
+const Srl::TypeID* DerivedB::srl_type_id() { return &reg_b; }
+
+struct TestClass {
+    unique_ptr<Base> one;
+    unique_ptr<Base> two;
+
+    TestClass(Base* one_ = nullptr, Base* two_ = nullptr) : one(one_), two(two_) { }
+
+    void srl_resolve(Context& ctx)
+    {
+        ctx ("one", one) ("two", two);
+    }
+};
+
+bool test_polymorphic_classes()
+{
+    const string SCOPE = "Serializing polymorhpic classes";
+
+    print_log("\tSerializing polymorhpic classes...");
+    try {
+
+        TestClass cl(new DerivedB(12), new DerivedA(6));
+        cl = Srl::Restore<TestClass, PJson>(Srl::Store<PJson>(cl));
+
+        TEST(strcmp(cl.one->srl_type_id()->name(), "DerivedB") == 0);
+        TEST(strcmp(cl.two->srl_type_id()->name(), "DerivedA") == 0);
+        TEST(cl.one->get() == 12);
+        TEST(cl.two->get() == 6);
+
+    } catch(Exception& ex) {
+        print_log(string(ex.what()) + "\n");
+        return false;
+    }
+
+    print_log("ok.\n");
+    return true;
+}
+
 bool Tests::test_misc()
 {
     print_log("\nTest misc\n");
@@ -231,6 +339,7 @@ bool Tests::test_misc()
     success &= test_document_building();
     success &= test_string_escaping();
     success &= test_node_api();
+    success &= test_polymorphic_classes();
 
     return success;
 }

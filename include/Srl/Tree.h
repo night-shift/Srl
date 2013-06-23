@@ -20,7 +20,7 @@ namespace Srl {
             : root_node(&storage.create_node(*this, Type::Object, name)->field) { }
 
         template<class T>
-        static Tree From_Type(T& type, const std::string name = "");
+        static Tree From_Type(const T& type, const std::string name = "");
 
         template<class TParser>
         static Tree From_Source (const std::vector<uint8_t>& source, const TParser& parser = TParser());
@@ -42,8 +42,7 @@ namespace Srl {
 
         Node* root();
 
-        void srl_resolve(Context<Insert>& ctx);
-        void srl_resolve(Context<Paste>& ctx);
+        void srl_resolve(Context& ctx);
 
     private:
         Lib::Storage storage;
@@ -66,7 +65,7 @@ namespace Srl {
         static Tree From_Source (Lib::In& source, const TParser& parser);
 
         template<class TParser, typename Data>
-        friend void Lib::Aux::Store(Data& data, Lib::Out& out, const TParser& parser, const std::string& name);
+        friend void Lib::Aux::Store(const Data& data, Lib::Out& out, const TParser& parser, const std::string& name);
 
         template<typename Data, class TParser>
         friend void Restore(Data& data, const uint8_t* source, size_t size, const TParser& parser);

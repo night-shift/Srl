@@ -78,7 +78,7 @@ void Tree::parse_out_convert(const Value& value, const String& val_name, Parser&
     } else {
         auto& buffer = this->storage.str_conv_buffer();
         auto size = Tools::convert_charset(Encoding::UTF8, val_name, buffer, true);
-        name_conv = MemBlock(&buffer[0], size);
+        name_conv = MemBlock(buffer.data(), size);
     }
 
     auto type = value.type();
@@ -123,7 +123,7 @@ Value Tree::convert_type(const Value& value)
         data_size = Tools::bytes_to_base64(value.data(), value.size(), buffer);
     }
 
-    return Value( { &buffer[0], data_size }, value.type());
+    return Value( { buffer.data(), data_size }, value.type());
 
 }
 
@@ -132,26 +132,18 @@ Node* Tree::root()
     return this->root_node;
 }
 
-void Tree::srl_resolve(Context<Insert>& ctx)
+void Tree::srl_resolve(Context& ctx)
 {
-    vector<uint8_t> source = this->to_source<PSrl>();
+    vector<uint8_t> source;
 
-    auto wrap = BitWrap(&source[0], source.size());
+    if(ctx.mode() == Mode::Insert) {
+        source = this->to_source<PSrl>();
+    }
+
+    auto wrap = BitWrap(
+        source.data(), source.size(),
+        [&source](size_t sz) { source.resize(sz); return source.data(); }
+    );
 
     ctx("binary", wrap);
-
-}
-
-void Tree::srl_resolve(Context<Paste>& ctx)
-{
-    vector<uint8_t> vec;
-
-    auto wrap = BitWrap([&vec](size_t size) {
-        vec.resize(size);
-        return &vec[0];
-    });
-
-    ctx("binary", wrap);
-
-    *this = Tree::From_Source<PSrl>(vec);
 }

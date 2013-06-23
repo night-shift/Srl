@@ -11,16 +11,17 @@
 #include "Tools.h"
 #include "Cast.hpp"
 #include "TpTools.hpp"
+#include "Hash.h"
+
+#include <memory>
 
 namespace Srl { namespace Lib {
 
     namespace Aux {
 
-        const char Chr_Key[] = "key", Chr_Value[] = "value", Chr_First[] = "first", Chr_Second[] = "second";
-
-        const String Str_Key(Chr_Key),     Str_First (Chr_First),
-                     Str_Value(Chr_Value), Str_Second(Chr_Second),
-                     Str_Empty;
+        const String Str_Key("key"),     Str_First ("first"),
+                     Str_Value("value"), Str_Second("second"),
+                     Str_type_id("srl_type_id"), Str_Empty;
 
         template<class ID>
         void throw_error(const std::string& msg, const ID& field_id);
@@ -166,9 +167,11 @@ namespace Srl { namespace Lib {
     };
 
     /* character arrays which decayed to pointers somewhere along the way,
-     * usually through std::initializer_list, so no paste function provided */
+     * usually through std::initializer_list */
     template<class T>
     struct Switch<T, typename std::enable_if<is_cstr_pointer<T>::value>::type> {
+
+        static const Type type = Type::String;
 
         static void Insert(const T& pointer, Node& node, const String& name)
         {
@@ -186,8 +189,26 @@ namespace Srl { namespace Lib {
                 MemBlock(reinterpret_cast<const uint8_t*>(pointer), size)
             );
         }
+
+        template<class ID = String>
+        static void Paste(T&, const Value&, const ID&) { }
     };
 
+    template<> struct Switch<String> {
+        static const Type type = Type::String;
+
+        static void Insert(const String& s, Node& node, const String& name)
+        {
+            node.insert_value(Value({ s.data(), s.size() }, s.encoding()), name);
+        }
+
+        template<class ID = String>
+        static void Paste(String& s, const Value& value, const ID& id = Aux::Str_Empty)
+        {
+            Aux::check_type(Type::String, value.type(), id);
+            s = String({ value.data(), value.size() }, value.encoding());
+        }
+    };
     /* integer / floating point / bool types */
     template<class T>
     struct Switch<T, typename std::enable_if<is_numeric<T>::value ||
@@ -272,7 +293,7 @@ namespace Srl { namespace Lib {
         }
     };
 
-    /* Classes / structs which have a srl_resolve method */
+    /* Classes / structs which have a srl_resolve method but no type_id method */
     template<class T>
     struct Switch<T, typename std::enable_if<has_resolve_method<T>::value>::type> {
         static const Type type = Type::Object;
@@ -284,8 +305,8 @@ namespace Srl { namespace Lib {
 
         static void Insert(Node& node, const T& o)
         {
-            Context<Mode::Insert> ctx(node);
             /* ugly const-cast, but necessary for making a single resolve function possible */
+            Context ctx(node, Mode::Insert);
             const_cast<T*>(&o)->srl_resolve(ctx);
         }
 
@@ -294,8 +315,50 @@ namespace Srl { namespace Lib {
         {
             Aux::check_type_scope(node.type(), id);
 
-            Context<Mode::Paste> ctx(node);
+            Context ctx(*const_cast<Node*>(&node), Mode::Paste);
             o.srl_resolve(ctx);
+        }
+    };
+
+    /* polymorphic classes / structs with a srl_type_id method */
+    template<class T>
+    struct Switch<T, typename std::enable_if<is_polymorphic<T>::value>::type> {
+        static const Type type = Type::Object;
+
+        static void Insert(const T& o, Node& node, const String& name)
+        {
+            if(o == nullptr) {
+                Aux::throw_error("Trying to serialize object pointed by nullptr.", name);
+            }
+
+            node.open_scope(&Insert, type, name, o);
+        }
+
+        static void Insert(Node& node, const T& o)
+        {
+            Context ctx(node, Mode::Insert);
+            auto* id = o->srl_type_id()->name();
+            ctx(Aux::Str_type_id, id);
+
+            const_cast<T>(o)->srl_resolve(ctx);
+        }
+
+        template<class ID = String>
+        static void Paste(T& o, const Node& node, const ID& id = Aux::Str_Empty)
+        {
+            Aux::check_type_scope(node.type(), id);
+
+            Context ctx(*const_cast<Node*>(&node), Mode::Paste);
+            String type_id;
+            ctx(Aux::Str_type_id, type_id);
+
+            /* be aware, non nullptr pointers will be deleted */
+            if(o != nullptr) {
+                delete o;
+            }
+
+            o = Lib::registrations()->create<typename std::remove_pointer<T>::type>(type_id);
+            o->srl_resolve(ctx);
         }
     };
 
@@ -409,7 +472,7 @@ namespace Srl { namespace Lib {
         }
     };
 
-    template<typename F, typename S> struct Switch<std::pair<F,S>> {
+    template<class F, class S> struct Switch<std::pair<F,S>> {
         static const Type type = Type::Object;
 
         static void Insert(const std::pair<F,S>& p, Node& node, const String& name)
@@ -437,6 +500,42 @@ namespace Srl { namespace Lib {
 
             node.paste_field(Aux::Str_First, p.first);
             node.paste_field(Aux::Str_Second, p.second);
+        }
+    };
+
+    /* unique_ptr<T>, special case for polymorphic types */
+    template<class T> struct Switch<std::unique_ptr<T>> {
+        static const Type type = Switch<T>::type;
+
+        template<class C>
+        static typename std::enable_if<!is_polymorphic<C*>::value, void>::type
+        Insert(const std::unique_ptr<C>& p, Node& node, const String& name)
+        {
+            Switch<C>::Insert(*p.get(), node, name);
+        }
+
+        template<class C>
+        static typename std::enable_if<is_polymorphic<C*>::value, void>::type
+        Insert(const std::unique_ptr<C>& p, Node& node, const String& name)
+        {
+            Switch<C*>::Insert(p.get(), node, name);
+        }
+
+        template<class C, class ID = String>
+        static typename std::enable_if<!is_polymorphic<C*>::value, void>::type
+        Paste(std::unique_ptr<C>& p, const Node& node, const ID& id = Aux::Str_Empty)
+        {
+            p = std::unique_ptr<C>(Ctor<C>::Create_New());
+            Switch<C>::Paste(*p.get(), node, id);
+        }
+
+        template<class C, class ID = String>
+        static typename std::enable_if<is_polymorphic<C*>::value, void>::type
+        Paste(std::unique_ptr<C>& p, const Node& node, const ID& id = Aux::Str_Empty)
+        {
+            C* ptr = p.get();
+            Switch<C*>::Paste(ptr, node, id);
+            p = std::unique_ptr<C>(ptr);
         }
     };
 

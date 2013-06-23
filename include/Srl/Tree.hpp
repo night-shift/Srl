@@ -60,19 +60,18 @@ namespace Srl {
 
     namespace Lib { namespace Aux {
         template<class T, class = void> struct InsertSwitch {
-            static void Insert(T& o, Tree& tree) { tree.root()->insert(o); };
+            static void Insert(const T& o, Tree& tree) { tree.root()->insert(o); };
         };
         template<class T> struct
         InsertSwitch<T, typename std::enable_if<has_resolve_method<T>::value>::type> {
-            static void Insert(T& o, Tree& tree) {
-                Context<Mode::Insert> ctx(*tree.root());
-                o.srl_resolve(ctx);
+            static void Insert(const T& o, Tree& tree) {
+                Switch<T>::Insert(*tree.root(), o);
             }
         };
     } }
 
     template<class T>
-    Tree Tree::From_Type(T& type, const std::string name)
+    Tree Tree::From_Type(const T& type, const std::string name)
     {
         Tree tree(name);
         Lib::Aux::InsertSwitch<T>::Insert(type, tree);

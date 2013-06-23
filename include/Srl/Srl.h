@@ -7,6 +7,7 @@
 #include "PJson.h"
 #include "PBson.h"
 #include "PXml.h"
+#include "Registration.h"
 
 #include "Tree.hpp"
 #include "Node.hpp"

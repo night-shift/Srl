@@ -3,7 +3,6 @@
 
 #include "In.hpp"
 #include "Out.hpp"
-#include "Hash.hpp"
 #include "Storage.hpp"
 
 #endif

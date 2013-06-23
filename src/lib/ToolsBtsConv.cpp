@@ -95,7 +95,7 @@ vector<uint8_t> Tools::base64_to_bytes(const char* str, size_t str_len)
     auto vsize = get_base64_decoded_size(str, str_len);
 
     vector<uint8_t> bytesv(vsize);
-    base64_to_bytes(&bytesv[0], vsize, str, str_len);
+    base64_to_bytes(bytesv.data(), vsize, str, str_len);
 
     return move(bytesv);
 }
@@ -155,7 +155,7 @@ vector<uint8_t> Tools::bytes_to_hex(const uint8_t* bytes, size_t nbytes)
 vector<uint8_t> Tools::hex_to_bytes(const uint8_t* str, size_t str_len)
 {
     vector<uint8_t> bytesv(str_len * 2);
-    Tools::hex_to_bytes(&bytesv[0], bytesv.size(), str, str_len);
+    Tools::hex_to_bytes(bytesv.data(), bytesv.size(), str, str_len);
 
     return move(bytesv);
 }

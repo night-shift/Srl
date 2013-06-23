@@ -7,9 +7,9 @@
 namespace Srl {
 
     template<class T>
-    Node& Node::insert(const String& name, const T& val)
+    Node& Node::insert(const String& field_name, const T& val)
     {
-        Lib::Switch<T>::Insert(val, *this, name);
+        Lib::Switch<T>::Insert(val, *this, field_name);
         return *this;
     }
 
@@ -37,16 +37,16 @@ namespace Srl {
     }
 
     template<>
-    inline Node& Node::insert<Node>(const String& name, const Node& new_node)
+    inline Node& Node::insert<Node>(const String& field_name, const Node& new_node)
     {
-        this->insert_node(new_node, name);
+        this->insert_node(new_node, field_name);
         return *this;
     }
 
     template<>
-    inline Node& Node::insert<Value>(const String& name, const Value& new_value)
+    inline Node& Node::insert<Value>(const String& field_name, const Value& new_value)
     {
-        this->insert_value(new_value, name);
+        this->insert_value(new_value, field_name);
         return *this;
     }
 
@@ -104,17 +104,17 @@ namespace Srl {
 
     template<class... Args>
     void Node::open_scope(void (*Insert)(Node& node, const Args&... args),
-                          Type node_type, const String& name, const Args&... args)
+                          Type node_type, const String& scope_name, const Args&... args)
     {
         if(this->just_parse) {
-            this->tree->parse_value(Value(node_type), name);
+            this->tree->parse_value(Value(node_type), scope_name);
 
             Insert(*this, args...);
 
-            this->tree->parse_value(Value(Type::Scope_End), name);
+            this->tree->parse_value(Value(Type::Scope_End), scope_name);
 
         } else {
-           auto* new_node = this->insert_node(node_type, name);
+           auto* new_node = this->insert_node(node_type, scope_name);
            Insert(*new_node, args...);
         }
     }

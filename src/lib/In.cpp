@@ -63,7 +63,7 @@ bool In::try_fetch_data(size_t nbytes)
     }
 
     if(preserve_sz > 0) {
-        memcpy(&buffer[0], &buffer_prev[preserve_pos - margin], preserve_sz);
+        memcpy(buffer.data(), &buffer_prev[preserve_pos - margin], preserve_sz);
     }
 
     this->stream->read((char*)&buffer[preserve_sz], read_len);
@@ -72,8 +72,8 @@ bool In::try_fetch_data(size_t nbytes)
     this->current_pos = &buffer[preserve_sz - left];
     buffer_anchor  = buffer_anchor == nullptr ? nullptr : &buffer[margin];
 
-    this->start = &buffer[0];
-    this->end   = &buffer[0] + bytes_read + preserve_sz;
+    this->start = buffer.data();
+    this->end   = buffer.data() + bytes_read + preserve_sz;
 
     if(bytes_read + left < nbytes) {
 

@@ -10,7 +10,7 @@ namespace Srl {
     namespace Lib { namespace Aux {
 
         template<class TParser, typename Data>
-        void Store(Data& data, Out& out, const TParser& parser, const std::string& name);
+        void Store(const Data& data, Out& out, const TParser& parser, const std::string& name);
 
         template<class TParser, typename Data>
         void Restore(Data& data, In& source, const TParser& parser);
@@ -32,10 +32,10 @@ namespace Srl {
     void Restore(Data& data, const std::vector<uint8_t>& source, const TParser& parser = TParser());
 
     template<class TParser, typename Data>
-    void Store(std::ostream& stream, Data& data, const TParser& parser = TParser(), const std::string& name = "");
+    void Store(std::ostream& stream, const Data& data, const TParser& parser = TParser(), const std::string& name = "");
 
     template<class TParser, typename Data>
-    std::vector<uint8_t> Store(Data& data, const TParser& parser = TParser(), const std::string& name = "");
+    std::vector<uint8_t> Store(const Data& data, const TParser& parser = TParser(), const std::string& name = "");
 }
 
 #endif

@@ -8,22 +8,21 @@
 namespace Srl {
 
     /* Restored types are created with this template. As default parameterless
-     * constructors are required. You can make Ctor your classes's
-     * friend if you don't want to expose public default constructors.
+     * constructors are required. You can make Ctor a friend class
+     * if you don't want to expose public default constructors.
      * Or make your own type-specific routines by defining a specialized
      * namespace Srl { template<>struct Srl::Ctor<your_namespace::your_type>...
      * template in your project. */
-    template<class T, class = void> struct Ctor {
-        static T Create()
-        {
-            static_assert(std::is_default_constructible<T>::value,
-                "Srl error. Type must be default constructible."
-            );
-            return T();
-        }
+    template<class T, typename = void> struct Ctor {
+
+        static T* Create_New() { return new T(); }
+        static T  Create()     { return T(); }
     };
 
-    template<Mode M> class Context;
+    class Context;
+    class String;
+    class Node;
+    struct TypeID;
 
 namespace Lib {
 
@@ -35,20 +34,26 @@ namespace Lib {
 
     template<class T> struct has_resolve_method {
 
-        template <class U, U> struct test_sig { };
+        template<class U, U> struct test_sig { };
 
         template <class U>
-        static char test_store(test_sig<void(U::*)(Srl::Context<Srl::Insert>&), &U::srl_resolve>*);
+        static char test(test_sig<void(U::*)(Srl::Context&), &U::srl_resolve>*);
         template <class U>
-        static long test_store(...);
+        static long test(...);
 
-        template <class U>
-        static char test_restore(test_sig<void(U::*)(Srl::Context<Srl::Paste>&), &U::srl_resolve>*);
-        template <class U>
-        static long test_restore(...);
+        static const bool value = sizeof(test<T>(0)) == sizeof(char);
+    };
 
-        static const bool value = sizeof(test_store<T>(0)) == sizeof(char) ||
-                                  sizeof(test_restore<T>(0)) == sizeof(char);
+    template<class T> struct has_type_id_method {
+
+        template<class U, U> struct test_sig { };
+
+        template<class U>
+        static char test(test_sig<const Srl::TypeID*(U::*)(void), &U::srl_type_id>*);
+        template<class U>
+        static long test(...);
+
+        static const bool value = sizeof(test<T>(0)) == sizeof(char);
     };
 
     /* Switch<T> resolves types. Basically it tells Srl::Node how to dismantle,
@@ -58,12 +63,15 @@ namespace Lib {
     template<class T, class = void> struct Switch {
         static const Type type = Type::Null;
 
-        static void Store(...)
-        {
-            static_assert(has_resolve_method<T>::value,
-            "Srl error. Unable to resolve type. Did you implement a srl_resolve(Srl::Context<Mode>&) -> void method?"
-            );
-        }
+        static_assert(has_resolve_method<T>::value,
+        "Srl error. Unable to resolve type. Did you implement a srl_resolve(Srl::Context<Mode>&) -> void method?"
+        );
+    };
+
+    template<class T> struct is_polymorphic {
+        static const bool value = std::is_pointer<T>::value &&
+                                  has_resolve_method<typename std::remove_pointer<T>::type>::value &&
+                                  has_type_id_method<typename std::remove_pointer<T>::type>::value;
     };
 
     /* type-trait templates */
