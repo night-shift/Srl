@@ -238,7 +238,7 @@ correct encoding before parsing.
 You can use ```convert_charset``` from Srl::Tools:: for converting to the appropriate character set.
 
 #### Compiler support
-At least GCC 4.8 or Clang 3.2 is required. MSVC is lacking some vital C++11 features, so no support as of now.
+At least GCC 4.8 or Clang 3.2 are required. MSVC is lacking some vital C++11 features, so no support as of now.
 
 #### License
 MIT License.
