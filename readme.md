@@ -111,6 +111,8 @@ struct Base {
     virtual void srl_resolve(Srl::Context& ctx) {
         ctx ("base_field", field); 
     }
+    
+    virtual ~Base { }
 };
 // register a type in your implementation.cpp to avoid duplicate registrations of the same type
 // this will force a registration on program initialization
@@ -176,6 +178,16 @@ Srl::Store<PJson>(cout, composite);
 		"derived_field": 15
 	}
 }
+```
+```cpp
+/// access a polymorphic type 
+auto tree = Tree::From_Type(composite);
+auto derived_a = tree.root()->node("one")->unwrap<unique_ptr<Base>>();
+// or
+auto* derived_b = ree.root()->node("two")->unwrap<Base*>();
+assert(derived_b->srl_type_id()->name() == "DerivedB");
+// you are responsible for derived_b
+delete derived_b;
 ```
 #### Handling binary data
 Use Srl::BitWrap to serialize raw binary data...
