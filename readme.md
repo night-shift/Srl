@@ -190,7 +190,7 @@ assert(derived_b->srl_type_id()->name() == "DerivedB");
 delete derived_b;
 
 composite = tree.root()->unwrap<Composite>();
-assert(composite->one->srl_type_id()->name() == "DerivedA");
+assert(composite.one->srl_type_id()->name() == "DerivedA");
 ```
 #### Handling binary data
 Use Srl::BitWrap to serialize raw binary data...
