@@ -130,7 +130,7 @@ struct Derived : Base {
     }
 };
 
-const auto derived_a_id = Srl::register_type<Derived>("Derived");
+const auto derived_id = Srl::register_type<Derived>("Derived");
 const Srl::TypeID* Derived::srl_type_id() { return derived_id; }
 
 class Composite {
