@@ -1,5 +1,4 @@
 ## Srl
-###Short story
 ```cpp
 #include "Srl/Srl.h"
 
@@ -30,7 +29,6 @@ int main() {
     return 0;
 }
 ```
-### Long Story
 #### Processing documents
 ```cpp
 string json = "{ "
@@ -165,13 +163,13 @@ Srl::Store<PJson>(cout, composite);
     "bases": [
         {
             "srl_type_id": "Derived",
-	    "frombase": 5,
-	    "fromderived": 10
-	},
-	{
-	    "srl_type_id": "Base",
-	    "frombase": 5
-	}
+            "frombase": 5,
+            "fromderived": 10
+        },
+        {
+            "srl_type_id": "Base",
+            "frombase": 5
+        }
     ]
 }
 ```
