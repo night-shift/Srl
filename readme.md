@@ -5,19 +5,17 @@
 
 class YourClass {
 
-    int m_int = 10;  // handles basic data types
-    u32string m_string = U"string";  // strings
-    vector<double> m_vector = { 1.0, 2.0, 3.0 };  // aswell as stl-containers
-    map<string, short> m_map = { { "A", 0 }, { "B", 1 } };  // including maps
+    int a = 10;  // handles basic data types
+    u32string b = U"string";  // strings
+    vector<double> c = { 1.0, 2.0, 3.0 };  // aswell as stl-containers
+    map<string, short> d = { { "A", 0 }, { "B", 1 } };  // including maps
 
 public :
     // implement a srl_resolve method
     void srl_resolve(Srl::Context& ctx) {
         // tell the context what to serialize, field names are optional
-        ctx ("m_int", m_int)
-            ("m_string", m_string)
-            ("m_vector", m_vector)
-            ("m_map", m_map);
+        ctx ("fielda", a) ("fieldb", b)
+            ("fieldc", c) ("fieldd", d);
     }
 };
 
@@ -108,8 +106,8 @@ struct Base {
     // declare a srl_type_id method
     virtual const Srl::TypeID* srl_type_id();
 
-    virtual void srl_resolve(Srl::Context& ctx) {
-        ctx ("base_field", field); 
+    virtual void srl_resolve (Srl::Context& ctx) {
+        ctx ("frombase", field); 
     }
     
     virtual ~Base { }
@@ -121,86 +119,75 @@ const auto base_id = Srl::register_type<Base>("Base");
 const Srl::TypeID* Base::srl_type_id() { return &base_id; }
 
 // same for derived types
-struct DerivedA : Base {
+struct Derived : Base {
     int field = 10;
 
     const Srl::TypeID* srl_type_id() override;
     
-    void srl_resolve(Srl::Context& ctx) override { 
+    void srl_resolve (Srl::Context& ctx) override { 
         Base::srl_resolve(ctx);
-        ctx ("derived_a_field", field); 
+        ctx ("fromderived", field); 
     }
 };
-const auto derived_a_id = Srl::register_type<DerivedA>("DerivedA");
-const Srl::TypeID* DerivedA::srl_type_id() { return &derived_a_id; }
 
-struct DerivedB : Base {
-    int field = 15;
-
-    const Srl::TypeID* srl_type_id() override;
-    
-    void srl_resolve(Srl::Context& ctx) override { 
-        Base::srl_resolve(ctx);
-        ctx ("derived_b_field", field); 
-    }
-};
-const auto derived_b_id = Srl::register_type<DerivedB>("DerivedB");
-const Srl::TypeID* DerivedB::srl_type_id() { return &derived_b_id; }
+const auto derived_a_id = Srl::register_type<Derived>("Derived");
+const Srl::TypeID* Derived::srl_type_id() { return derived_id; }
 
 class Composite {
     // make private constructor accessible
     friend struct Srl::Ctor<Composite>;
+
 public:
-    list<unique_ptr<Base>> bases;
-    
-    Composite(initializer_list<Base*> bases_) {
+    Composite (initializer_list<Base*> bases_) {
         for(auto* b : bases_) {
             this->bases.emplace_back(b);
         }
     }
     // cruise control
-    void srl_resolve(Srl::Context& ctx) {
+    void srl_resolve (Srl::Context& ctx) {
         ctx ("bases", bases);
     }
 
+    Base* at (size_t idx) { return bases[idx].get(); }
+
 private:
     Composite() { }
+    vector<unique_ptr<Base>> bases;
 };
 
 // running...
-Composite composite { new DerivedA(), new DerivedB() };
+Composite composite { new Derived(), new Base() };
 Srl::Store<PJson>(cout, composite);
 // ...will print...
 ```
 ```json
 {
     "bases": [
-    	{
-			"srl_type_id": "DerivedA",
-			"base_field": 5,
-			"derived_a_field": 10
-		},
-		{
-			"srl_type_id": "DerivedB",
-			"base_field": 5,
-			"derived_b_field": 15
-		}
-	]
+        {
+            "srl_type_id": "Derived",
+	    "frombase": 5,
+	    "fromderived": 10
+	},
+	{
+	    "srl_type_id": "Base",
+	    "frombase": 5
+	}
+    ]
 }
 ```
 ```cpp
 /// access a polymorphic type 
 auto tree = Tree::From_Type(composite);
 auto* bases = tree.root()->node("bases");
-auto derived_a = bases->node(0)->unwrap<unique_ptr<Base>>();
+auto derived = bases->node(0)->unwrap<unique_ptr<Base>>();
 // or
-auto* derived_b = bases->node(1)->unwrap<Base*>();
-assert(derived_b->srl_type_id()->name() == "DerivedB");
-// you are responsible for derived_b
-delete derived_b;
-
+auto* base = bases->node(1)->unwrap<Base*>();
+assert(base->srl_type_id()->name() == "Base");
+// you are responsible for base*
+delete base;
+// unwrap as Composite
 composite = tree.root()->unwrap<Composite>();
-assert(composite.bases[0]->srl_type_id()->name() == "DerivedA");
+assert(composite.at(0)->srl_type_id()->name() == "Derived");
 ```
 #### Handling binary data
 Use Srl::BitWrap to serialize raw binary data...
@@ -228,7 +215,7 @@ struct SomeStruct {
   }
 };
 
-// ...to directly access binary data from a tree
+// access binary data from a tree
 static uint8_t binary[] { 2, 4, 6, 8 };
 Tree tree;
 
