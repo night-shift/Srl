@@ -3,11 +3,14 @@
 #include "Srl/Srl.h"
 
 class YourClass {
-
-    int a = 10;  // handles basic data types
-    u32string b = U"string";  // strings
-    vector<double> c = { 1.0, 2.0, 3.0 };  // aswell as stl-containers
-    map<string, short> d = { { "A", 0 }, { "B", 1 } };  // including maps
+    // handles basic data types
+    int a = 10;
+    // strings
+    u32string b = U"string";
+    // stl-containers
+    vector<double> c = { 1.0, 2.0, 3.0 };
+    // shared_ / unique_ptrs
+    shared_ptr<int> d = make_shared<int>(5);
 
 public :
     // implement a srl_resolve method
@@ -21,10 +24,15 @@ public :
 int main() {
     YourClass original;
     // serialize with Srl::Store
-    vector<uint8_t> bytes = Srl::Store<Srl::PSrl>(original);
+    vector<uint8_t> bytes = Srl::Store<Srl::PJson>(original);
     //                                     |-> choose a parser
     // deserialize with Srl::Restore
-    YourClass restored = Srl::Restore<YourClass, Srl::PSrl>(bytes);
+    YourClass restored = Srl::Restore<YourClass, Srl::PJson>(bytes);
+    // or use streams
+    ofstream fso("file");
+    Srl::Store<Srl::PJson>(fso, original);
+    ifstream fsi("file");
+    Srl::Restore<Srl::PJson>(restored, fsi);
     // Thats it.
     return 0;
 }
@@ -32,7 +40,7 @@ int main() {
 #### Processing documents
 ```cpp
 string json = "{ "
-    "\"name\"    : \"cpp\","
+    "\"name\"    : \"cpp\","
     "\"version\" : 11"
 "}";
 // create Srl::Tree from a source
@@ -77,7 +85,7 @@ Implement a resolve method to tell Srl how to handle your types:
 struct Lang {
     string name; int version; list<string> extensions;
 
-    void srl_resolve (Context& ctx) {
+    void srl_resolve (Srl::Context& ctx) {
         ctx ("name", name) ("version", version) ("extensions", extensions);
     }
 };
@@ -105,9 +113,9 @@ struct Base {
     virtual const Srl::TypeID* srl_type_id();
 
     virtual void srl_resolve (Srl::Context& ctx) {
-        ctx ("frombase", field); 
+        ctx ("frombase", field);
     }
-    
+
     virtual ~Base { }
 };
 // register a type in your implementation.cpp to avoid duplicate registrations of the same type
@@ -121,10 +129,10 @@ struct Derived : Base {
     int field = 10;
 
     const Srl::TypeID* srl_type_id() override;
-    
-    void srl_resolve (Srl::Context& ctx) override { 
+
+    void srl_resolve (Srl::Context& ctx) override {
         Base::srl_resolve(ctx);
-        ctx ("fromderived", field); 
+        ctx ("fromderived", field);
     }
 };
 
@@ -134,6 +142,10 @@ const Srl::TypeID* Derived::srl_type_id() { return derived_id; }
 class Composite {
     // make private constructor accessible
     friend struct Srl::Ctor<Composite>;
+
+private:
+    Composite() { }
+    vector<unique_ptr<Base>> bases;
 
 public:
     Composite (initializer_list<Base*> bases_) {
@@ -147,10 +159,6 @@ public:
     }
 
     Base* at (size_t idx) { return bases[idx].get(); }
-
-private:
-    Composite() { }
-    vector<unique_ptr<Base>> bases;
 };
 
 // running...
@@ -237,14 +245,14 @@ Srl supports 4 serialization formats. Json, Xml, Bson and [Srl](https://github.c
 Select a format by...
 ```cpp
 // ...passing the corresponding type as a template parameter
-auto tree = Tree::From_Source<PBson>(source);
+auto tree = Tree::From_Source<Srl::PBson>(source);
 // ...or by passing an instance
-PXml xml;
+Srl::PXml xml;
 xml.set_skip_whitespace(true);
 tree.to_source(xml);
 ```
 Output encoding for text-based formats is UTF-8. Input is also expected to be UTF-8. As of now no BOM-checking is done, so make sure text documents have the 
-correct encoding before parsing. 
+correct encoding before parsing.
 You can use ```convert_charset``` from Srl::Tools:: for converting to the appropriate character set.
 
 #### Compiler support

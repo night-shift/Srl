@@ -1,10 +1,11 @@
-#ifndef SRL_SUBSCRIPTION_H
-#define SRL_SUBSCRIPTION_H
+#ifndef SRL_REGISTRATION_H
+#define SRL_REGISTRATION_H
 
 #include "String.h"
 #include "Hash.h"
 #include "Exception.h"
 #include "Resolve.h"
+
 #include <map>
 #include <functional>
 

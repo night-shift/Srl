@@ -68,7 +68,7 @@ namespace Srl {
         friend void Lib::Aux::Store(const Data& data, Lib::Out& out, const TParser& parser, const std::string& name);
 
         template<typename Data, class TParser>
-        friend void Restore(Data& data, const uint8_t* source, size_t size, const TParser& parser);
+        friend void Restore(Data& data, Lib::In& source, const TParser& parser);
     };
 }
 

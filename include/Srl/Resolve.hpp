@@ -12,8 +12,7 @@
 #include "Cast.hpp"
 #include "TpTools.hpp"
 #include "Hash.h"
-
-#include <memory>
+#include "Registration.h"
 
 namespace Srl { namespace Lib {
 
@@ -503,40 +502,52 @@ namespace Srl { namespace Lib {
         }
     };
 
-    /* unique_ptr<T>, special case for polymorphic types */
-    template<class T> struct Switch<std::unique_ptr<T>> {
-        static const Type type = Switch<T>::type;
+    /* shared / unique_ptr, special case for polymorphic types */
+    template<class T> struct Switch<T, typename std::enable_if<is_ptr_wrap<T>::value>::type> {
+        typedef typename T::element_type E;
+        static const Type type = Switch<E>::type;
+
+        template<class Wrap>
+        static void Insert(const T& p, Wrap& wrap, const String& name)
+        {
+            ElemSwitch<E>::Insert(p, wrap, name);
+        }
+
+        template<class Wrap, class ID = String>
+        static void Paste(T& p, const Wrap& wrap, const ID& id = Aux::Str_Empty)
+        {
+            ElemSwitch<E>::Paste(p, wrap, id);
+        }
+
+        template<class C, class = void>
+        struct ElemSwitch {
+            template<class Wrap>
+            static void Insert(const T& p, Wrap& wrap, const String& name)
+            {
+                Switch<E>::Insert(*p.get(), wrap, name);
+            }
+            template<class Wrap, class ID>
+            static void Paste(T& p, const Wrap& wrap, const ID& id)
+            {
+                p = T(Ctor<C>::Create_New());
+                Switch<E>::Paste(*p.get(), wrap, id);
+            }
+        };
 
         template<class C>
-        static typename std::enable_if<!is_polymorphic<C*>::value, void>::type
-        Insert(const std::unique_ptr<C>& p, Node& node, const String& name)
-        {
-            Switch<C>::Insert(*p.get(), node, name);
-        }
-
-        template<class C>
-        static typename std::enable_if<is_polymorphic<C*>::value, void>::type
-        Insert(const std::unique_ptr<C>& p, Node& node, const String& name)
-        {
-            Switch<C*>::Insert(p.get(), node, name);
-        }
-
-        template<class C, class ID = String>
-        static typename std::enable_if<!is_polymorphic<C*>::value, void>::type
-        Paste(std::unique_ptr<C>& p, const Node& node, const ID& id = Aux::Str_Empty)
-        {
-            p = std::unique_ptr<C>(Ctor<C>::Create_New());
-            Switch<C>::Paste(*p.get(), node, id);
-        }
-
-        template<class C, class ID = String>
-        static typename std::enable_if<is_polymorphic<C*>::value, void>::type
-        Paste(std::unique_ptr<C>& p, const Node& node, const ID& id = Aux::Str_Empty)
-        {
-            C* ptr = p.get();
-            Switch<C*>::Paste(ptr, node, id);
-            p = std::unique_ptr<C>(ptr);
-        }
+        struct ElemSwitch<C, typename std::enable_if<is_polymorphic<C*>::value>::type> {
+            static void Insert(const T& p, Node& node, const String& name)
+            {
+                Switch<E*>::Insert(p.get(), node, name);
+            }
+            template<class ID>
+            static void Paste(T& p, const Node& node, const ID& id)
+            {
+                C* ptr = p.get();
+                Switch<C*>::Paste(ptr, node, id);
+                p = T(ptr);
+            }
+        };
     };
 
     /* handle raw binary-data through Srl::BitWrap */
@@ -605,7 +616,7 @@ namespace Srl { namespace Lib {
                 auto conv_size = Tools::convert_charset(encoding, wrap, buffer, true);
 
                 check_size(size, conv_size, id);
-                memcpy(dst, &buffer[0], size);
+                memcpy(dst, buffer.data(), size);
             }
         }
 

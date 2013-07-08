@@ -309,9 +309,9 @@ struct TestClass {
 
 bool test_polymorphic_classes()
 {
-    const string SCOPE = "Serializing polymorhpic classes";
+    const string SCOPE = "Serializing polymorphic classes";
 
-    print_log("\tSerializing polymorhpic classes...");
+    print_log("\t" + SCOPE + "...");
     try {
 
         TestClass cl(new DerivedB(12), new DerivedA(6));

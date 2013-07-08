@@ -5,6 +5,8 @@
 #include "Enums.h"
 #include "Type.h"
 
+#include <memory>
+
 namespace Srl {
 
     /* Restored types are created with this template. As default parameterless
@@ -79,6 +81,18 @@ namespace Lib {
         template <class U> static char test(typename U::const_iterator*);
         template <class U> static long test(...);
         static const bool value = sizeof(test<T>(0)) == sizeof(char);
+    };
+
+    template<class T> struct is_ptr_wrap {
+        static const bool value = false;
+    };
+
+    template<class T> struct is_ptr_wrap<std::unique_ptr<T>> {
+        static const bool value = true;
+    };
+
+    template<class T> struct is_ptr_wrap<std::shared_ptr<T>> {
+        static const bool value = true;
     };
 
     template<class T> struct is_basic_string {

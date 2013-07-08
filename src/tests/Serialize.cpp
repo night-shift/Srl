@@ -259,7 +259,7 @@ struct TestClassA {
     BasicStruct basic_struct;
 
     unique_ptr<TestClassB> nested_class_b = unique_ptr<TestClassB>(new TestClassB());
-    TestClassC nested_class_c;
+    shared_ptr<TestClassC> nested_class_c = shared_ptr<TestClassC>(new TestClassC());
 
     void srl_resolve (Context& ctx)
     {
@@ -277,7 +277,7 @@ struct TestClassA {
     {
         basic_struct.shuffle();
         nested_class_b->shuffle();
-        nested_class_c.shuffle();
+        nested_class_c->shuffle();
         long_double *= 2.139;
         u_char *= 3;
         bool_ = !bool_;
@@ -309,7 +309,7 @@ struct TestClassA {
         TEST(s_int16 == n.s_int16);
 
         nested_class_b->test(*n.nested_class_b);
-        nested_class_c.test(n.nested_class_c);
+        nested_class_c->test(*n.nested_class_c);
     }
 };
 
