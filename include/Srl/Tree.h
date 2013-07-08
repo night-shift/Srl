@@ -64,11 +64,11 @@ namespace Srl {
         template<class TParser>
         static Tree From_Source (Lib::In& source, const TParser& parser);
 
-        template<class TParser, typename Data>
-        friend void Lib::Aux::Store(const Data& data, Lib::Out& out, const TParser& parser, const std::string& name);
+        template<class TParser, typename Object>
+        friend void Store(const Object& object, Lib::Out& out, const TParser& parser, const std::string& name);
 
-        template<typename Data, class TParser>
-        friend void Restore(Data& data, Lib::In& source, const TParser& parser);
+        template<typename Object, class TParser>
+        friend void Restore(Object& object, Lib::In& source, const TParser& parser);
     };
 }
 
