@@ -260,6 +260,7 @@ struct TestClassA {
 
     unique_ptr<TestClassB> nested_class_b = unique_ptr<TestClassB>(new TestClassB());
     shared_ptr<TestClassC> nested_class_c = shared_ptr<TestClassC>(new TestClassC());
+    tuple<int, vector<double>, string> tpl { 0, vector<double> { 0.0 }, "s" };
 
     void srl_resolve (Context& ctx)
     {
@@ -269,8 +270,11 @@ struct TestClassA {
             ("nested_class_c", nested_class_c)
             ("long_double", long_double)
             ("bool", bool_) ("u_char", u_char)
-            ("s_int64_n", s_int64_n) ("s_int64", s_int64)
-            ("s_int16", s_int16);
+            ("s_int64_n", s_int64_n)
+            ("s_int64", s_int64)
+            ("s_int16", s_int16)
+            ("tpl", tpl);
+
     }
 
     void shuffle()
@@ -289,6 +293,10 @@ struct TestClassA {
         for(auto& e : array) {
             e *= -3;
         }
+
+        get<0>(tpl) = 10;
+        get<1>(tpl) = { 1.0, 2.0 };
+        get<2>(tpl) = "str";
     }
 
     void test(TestClassA& n)
@@ -310,6 +318,8 @@ struct TestClassA {
 
         nested_class_b->test(*n.nested_class_b);
         nested_class_c->test(*n.nested_class_c);
+
+        TEST(tpl == n.tpl);
     }
 };
 

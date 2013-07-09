@@ -99,6 +99,14 @@ namespace Lib {
         static const bool value = false;
     };
 
+    template<class T> struct is_tuple {
+        static const bool value = false;
+    };
+
+    template<class... T> struct is_tuple<std::tuple<T...>> {
+        static const bool value = true;
+    };
+
     template<class T> struct is_basic_string<std::basic_string<T>> {
         static const bool value = true;
     };

@@ -502,6 +502,46 @@ namespace Srl { namespace Lib {
         }
     };
 
+    /* tuples */
+    template<class... T> struct Switch<std::tuple<T...>> {
+        static const Type type = Type::Array;
+        static constexpr size_t Size = sizeof...(T);
+
+        static void Insert(const std::tuple<T...>& tpl, Node& node, const String& name)
+        {
+            node.open_scope(&Insert<0>, type, name, tpl);
+        }
+
+        template<size_t N> static typename std::enable_if<N < Size, void>::type
+        Insert(Node& node, const std::tuple<T...>& tpl)
+        {
+            node.insert(std::get<N>(tpl));
+            Insert<N + 1>(node, tpl);
+        }
+
+        template<class ID = String>
+        static void Paste(std::tuple<T...>& tpl, const Node& node, const ID& id = Aux::Str_Empty)
+        {
+            Aux::check_type_scope(node.type(), id);
+
+            Context ctx(*const_cast<Node*>(&node), Mode::Paste);
+            Paste<0>(ctx, tpl);
+        }
+
+        template<size_t N> static typename std::enable_if<N < Size, void>::type
+        Paste(Context& ctx, std::tuple<T...>& tpl)
+        {
+            ctx(std::get<N>(tpl));
+            Paste<N + 1>(ctx, tpl);
+        }
+
+        template<size_t N> static typename std::enable_if<N >= Size, void>::type
+        Paste(Context&, std::tuple<T...>&) { }
+
+        template<size_t N> static typename std::enable_if<N >= Size, void>::type
+        Insert(Node&, const std::tuple<T...>&) { }
+    };
+
     /* shared / unique_ptr, special case for polymorphic types */
     template<class T> struct Switch<T, typename std::enable_if<is_ptr_wrap<T>::value>::type> {
         typedef typename T::element_type E;
