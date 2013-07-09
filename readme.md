@@ -8,16 +8,19 @@ class YourClass {
     // strings
     u32string b = U"string";
     // stl-containers
-    vector<double> c = { 1.0, 2.0, 3.0 };
+    vector<double> c  { 1.0, 2.0, 3.0 };
     // shared_ / unique_ptrs
     shared_ptr<int> d = make_shared<int>(5);
+    // tuples
+    tuple<bool, string, char> e { false, "tuple", 'N' };
 
 public :
     // implement a srl_resolve method
     void srl_resolve(Srl::Context& ctx) {
         // tell the context what to serialize, field names are optional
         ctx ("fielda", a) ("fieldb", b)
-            ("fieldc", c) ("fieldd", d);
+            ("fieldc", c) ("fieldd", d)
+            ("fielde", e);
     }
 };
 

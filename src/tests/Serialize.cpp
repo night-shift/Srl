@@ -274,7 +274,6 @@ struct TestClassA {
             ("s_int64", s_int64)
             ("s_int16", s_int16)
             ("tpl", tpl);
-
     }
 
     void shuffle()
