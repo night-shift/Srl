@@ -8,7 +8,7 @@ class YourClass {
     // strings
     u32string b = U"string";
     // stl-containers
-    vector<double> c  { 1.0, 2.0, 3.0 };
+    vector<double> c { 1.0, 2.0, 3.0 };
     // shared_ / unique_ptrs
     shared_ptr<int> d = make_shared<int>(5);
     // tuples
@@ -228,11 +228,11 @@ struct SomeStruct {
 static uint8_t binary[] { 2, 4, 6, 8 };
 Tree tree;
 
-BitWrap wrap_insert(binary, 4);
-tree.root()->insert("data", wrap_insert);
+BitWrap wrap(binary, 4);
+tree.root()->insert("data", wrap);
 
-BitWrap wrap_paste( [](size_t sz) { assert(sz == 4); return binary; } );
-tree.root()->value("data")->paste(wrap_paste);
+wrap = BitWrap( [](size_t sz) { assert(sz == 4); return binary; } );
+tree.root()->value("data")->paste(wrap);
 ```
 For text-based serialization formats binary data will be converted to a base64 string. So calling
 ```tree.to_source<PJson>(cout)``` on the Srl::Tree from above will yield...

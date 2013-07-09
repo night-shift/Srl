@@ -54,6 +54,42 @@ namespace {
         }
         out.write('\"');
     }
+
+    template<size_t C> void fill_table(uint8_t* table, uint8_t char_valid, uint8_t char_invalid)
+    {
+        bool valid = (C >= '0' && C <= '9') ||
+            C == 't' || C == 'r' || C == 'u' ||
+            C == 'e' || C == 'f' || C == 'a' ||
+            C == 'l' || C == 's' || C == 'T' ||
+            C == 'F' || C == 'n' || C == 'N' ||
+            C == '+' || C == '.' || C == '-' ||
+            C == 'E' || C == 'i';
+
+        table[C] = valid ? char_valid : char_invalid;
+
+        fill_table<C + 1>(table, char_valid, char_invalid);
+    }
+
+    template<> void fill_table<256>(uint8_t*, uint8_t, uint8_t) { }
+
+    void skip_comment(Lib::In& source)
+    {
+        assert(*source.pointer() == '/');
+
+        if(!source.try_peek(1)) {
+            return;
+        }
+
+        if(*(source.pointer() + 1) == '*') {
+            source.move_until(error, array<const char, 2> { { '*', '/' } });
+            return;
+        }
+
+        if(*(source.pointer() + 1) == '/') {
+            source.move_until(error, '\n', '\r');
+            return;
+        }
+    }
 }
 
 /* Parse out ****************************************************/
@@ -133,26 +169,6 @@ void PJson::insert_spacing(Type type, Out& out)
 }
 
 /* Parse in ****************************************************/
-namespace {
-
-    template<size_t C> void fill_table(uint8_t* table, uint8_t char_valid, uint8_t char_invalid)
-    {
-        bool valid = (C >= '0' && C <= '9') ||
-            C == 't' || C == 'r' || C == 'u' ||
-            C == 'e' || C == 'f' || C == 'a' ||
-            C == 'l' || C == 's' || C == 'T' ||
-            C == 'F' || C == 'n' || C == 'N' ||
-            C == '+' || C == '.' || C == '-' ||
-            C == 'E' || C == 'i';
-
-        table[C] = valid ? char_valid : char_invalid;
-
-        fill_table<C + 1>(table, char_valid, char_invalid);
-    }
-
-    template<> void fill_table<256>(uint8_t*, uint8_t, uint8_t) { }
-}
-
 
 PJson::LiteralTable::LiteralTable()
 {
@@ -167,7 +183,7 @@ Parser::SourceSeg PJson::parse_in(In& source)
         /* literals can be 'un-quoted', values in 'square-brackets' don't have a name */
         if(!state.reading_value && this->scope_type != Type::Array) {
 
-            source.move_until(error, '\"', ':', '{', '[', '}', ']');
+            source.move_until(error, '\"', ':', '{', '[', '}', ']', '/');
 
         } else {
             source.move_while(error, ' ', ',', '\n', '\t', '\r');
@@ -188,6 +204,8 @@ Parser::SourceSeg PJson::parse_in(In& source)
             case '}' :
             case '[' :
             case ']' : this->process_bracket(c, state);
+                       break;
+            case '/' : skip_comment(source);
                        break;
 
             default  : this->process_char(source, state, move);
