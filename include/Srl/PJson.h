@@ -17,7 +17,7 @@ namespace Srl {
         PJson(bool skip_whitespace_ = false)
             : skip_whitespace(skip_whitespace_) {  }
 
-        Format get_format() const     { return Format::Text; }
+        Format get_format() const           { return Format::Text; }
 
         void set_skip_whitespace (bool val) { this->skip_whitespace = val; }
 
