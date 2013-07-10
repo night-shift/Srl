@@ -18,7 +18,7 @@ class YourClass {
 
 public :
     // implement a srl_resolve method
-    void srl_resolve(Srl::Context& ctx) {
+    void srl_resolve (Srl::Context& ctx) {
         // tell the context what to serialize, field names are optional
         ctx ("a", a) ("b", b) ("c", c)
             ("d", d) ("e", e) ("f", f);
@@ -94,8 +94,8 @@ struct Lang {
     }
 };
 ```
-What Context basically does is, depending on Srl::Mode, calling insert or paste on a given Srl::Node.
-Mode is either ::Insert or ::Paste, you can query the current mode with ```ctx.mode()```.
+What Context basically does is, depending on ```Srl::Mode```, calling insert or paste on a given ```Srl::Node```.
+Mode is either ```::Insert``` or ```::Paste```, you can query the current mode with ```ctx.mode()```.
 Taking the vector of bytes from above, you can call:
 ```cpp
 auto lang = Srl::Restore<Lang, PJson>(bytes);
@@ -162,7 +162,7 @@ public:
         ctx ("bases", bases);
     }
 
-    Base* at (size_t idx) { return bases[idx].get(); }
+    Base& at (size_t idx) { return *bases[idx].get(); }
 };
 
 // running...
@@ -197,10 +197,10 @@ assert(base->srl_type_id().name() == "Base");
 delete base;
 // unwrap as Composite
 composite = tree.root().unwrap<Composite>();
-assert(composite.at(0)->srl_type_id().name() == "Derived");
+assert(composite.at(0).srl_type_id().name() == "Derived");
 ```
 #### Handling binary data
-Use Srl::BitWrap to serialize raw binary data...
+Use ```Srl::BitWrap``` to serialize raw binary data...
 ```cpp
 // ...in a srl_resolve method
 struct SomeStruct {
@@ -225,7 +225,7 @@ struct SomeStruct {
   }
 };
 
-// access binary data from a tree
+// access binary data from a Srl::Tree
 static uint8_t binary[] { 2, 4, 6, 8 };
 Tree tree;
 
@@ -236,7 +236,7 @@ wrap = BitWrap( [](size_t sz) { assert(sz == 4); return binary; } );
 tree.root().value("data").paste(wrap);
 ```
 For text-based serialization formats binary data will be converted to a base64 string. So calling
-```tree.to_source<PJson>(cout)``` on the Srl::Tree from above will yield...
+```tree.to_source<PJson>(cout)``` on the ```Srl::Tree``` from above will yield...
 ```json
 {
     "data": "AgQGCA=="
@@ -257,7 +257,7 @@ tree.to_source(xml);
 ```
 Output encoding for text-based formats is UTF-8. Input is also expected to be UTF-8. As of now no BOM-checking is done, so make sure text documents have the 
 correct encoding before parsing.
-You can use ```convert_charset``` from Srl::Tools:: for converting to the appropriate character set.
+You can use ```convert_charset``` from ```Srl::Tools::``` for converting to the appropriate character set.
 
 #### Compiler support
 At least GCC 4.8 or Clang 3.2 are required. MSVC is lacking some vital C++11 features, so no support as of now.
