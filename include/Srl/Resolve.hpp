@@ -336,7 +336,7 @@ namespace Srl { namespace Lib {
         static void Insert(Node& node, const T& o)
         {
             Context ctx(node, Mode::Insert);
-            auto* id = o->srl_type_id()->name();
+            auto* id = o->srl_type_id().name();
             ctx(Aux::Str_type_id, id);
 
             const_cast<T>(o)->srl_resolve(ctx);
@@ -428,13 +428,13 @@ namespace Srl { namespace Lib {
             }
 
             static void Insert(Cont& c, const Node& node, size_t index) {
-                auto* pair_node = node.node(index);
+                auto& pair_node = node.node(index);
 
                 auto key = Ctor<KeyNC>::Create();
-                pair_node->paste_field(Aux::Str_Key, key);
+                pair_node.paste_field(Aux::Str_Key, key);
 
                 auto itr = c.insert(c.end(), { key, Ctor<Value>::Create() });
-                pair_node->paste_field(Aux::Str_Value, itr->second);
+                pair_node.paste_field(Aux::Str_Value, itr->second);
             }
         };
     };

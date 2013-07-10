@@ -124,39 +124,39 @@ void Node::insert_value(const Value& new_value, const String& name_)
     }
 }
 
-Node* Node::insert_node(const Node& new_node, const String& name_)
+Node& Node::insert_node(const Node& new_node, const String& name_)
 {
     auto* link = this->tree->storage.store_node(new_node, *this->tree, name_);
     insert_link(link, this->nodes);
 
-    return &link->field;
+    return link->field;
 }
 
-Node* Node::insert_node(Type node_type, const String& name_)
+Node& Node::insert_node(Type node_type, const String& name_)
 {
     return this->insert_node(Node(this->tree, node_type), name_);
 }
 
-Value* Node::value(const String& name_) const
+Value& Node::value(const String& name_) const
 {
     auto hash = this->tree->storage.hash_string(name_);
     auto* link = find_link<Throw | Hash>(hash, this->values, name_);
 
-    return &link->field;
+    return link->field;
 }
 
-Value* Node::value(size_t index) const
+Value& Node::value(size_t index) const
 {
     auto* link = find_link<Throw | Index>(index, this->values);
-    return &link->field;
+    return link->field;
 }
 
 /* In rare cases empty document nodes can't be distinguished
  * from empty plain values, try to detect such a case, create an empty node and forward it. */
-Node* Node::node(size_t index) const
+Node& Node::node(size_t index) const
 {
     if(this->nodes.size() > 0) {
-        return &find_link<Throw | Index>(index, this->nodes)->field;
+        return find_link<Throw | Index>(index, this->nodes)->field;
 
     } else {
         /* check if a value at given index exists */
@@ -170,19 +170,19 @@ Node* Node::node(size_t index) const
         }
         auto* link = this->tree->storage.create_node(*this->tree, Type::Array, String());
 
-        return &link->field;
+        return link->field;
     }
 
 }
 
 /* same for named nodes */
-Node* Node::node(const String& name_) const
+Node& Node::node(const String& name_) const
 {
     auto hash = this->tree->storage.hash_string(name_);
     auto* link = find_link<Hash>(hash, this->nodes, name_);
 
     if (link != nullptr) {
-        return &link->field;
+        return link->field;
 
     } else {
         auto* link_value = find_link<Throw | Hash>(hash, this->values, name_);
@@ -192,7 +192,7 @@ Node* Node::node(const String& name_) const
         }
         auto* new_link = this->tree->storage.create_node(*this->tree, Type::Array, name_);
 
-        return &new_link->field;
+        return new_link->field;
     }
 }
 
@@ -236,7 +236,7 @@ void Node::to_source()
     this->tree->parse_value(scope_start, *this->name_ptr);
 
     for(auto v : this->values) {
-        this->tree->parse_value(v->field, *v->field.name());
+        this->tree->parse_value(v->field, v->field.name());
     }
 
     for(auto n : this->nodes) {
@@ -293,7 +293,7 @@ vector<Value*> Node::find_values(const String& name_, bool recursive) const
     auto hash = this->tree->storage.hash_string(name_);
 
     this->forall_values([&rslt, this, hash] (Value* value) {
-        if(this->tree->storage.hash_string(*value->name()) == hash) {
+        if(this->tree->storage.hash_string(value->name()) == hash) {
             rslt.push_back(value);
         }
     }, recursive);

@@ -359,7 +359,7 @@ bool test_serialize(const TParser& parser, const string& parser_name, const Tail
 
         print_log("\tTree::paste.........");
         TestClassA target;
-        tree.root()->paste(target);
+        tree.root().paste(target);
         print_log("ok.\n");
 
         print_log("\tData comparison.....");
@@ -376,7 +376,7 @@ bool test_serialize(const TParser& parser, const string& parser_name, const Tail
 
         print_log("\tTree::from_stream...");
         tree = Tree::From_Source(strm, parser);
-        tree.root()->paste(target);
+        tree.root().paste(target);
         print_log("ok.\n");
 
         print_log("\tData comparison.....");

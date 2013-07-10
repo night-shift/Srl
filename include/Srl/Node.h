@@ -54,11 +54,11 @@ namespace Srl {
         template<class T> T unwrap_field (const String& field_name) const;
         template<class T> T unwrap_field (size_t index) const;
 
-        Node* node (const String& name) const;
-        Node* node (size_t index) const;
+        Node& node (const String& name) const;
+        Node& node (size_t index) const;
 
-        Value* value (const String& name) const;
-        Value* value (size_t index) const;
+        Value& value (const String& name) const;
+        Value& value (size_t index) const;
 
         std::vector<Node*>  find_nodes  (const String& name, bool recursive = false) const;
         std::vector<Value*> find_values (const String& name, bool recursive = false) const;
@@ -83,7 +83,7 @@ namespace Srl {
         inline size_t num_nodes()   const;
         inline size_t num_values()  const;
         inline Type   type()        const;
-        inline const String* name() const;
+        inline const String& name() const;
 
         template<class TParser>
         std::vector<uint8_t> to_source(const TParser& parser = TParser());
@@ -109,21 +109,20 @@ namespace Srl {
         void open_scope (void (*Insert)(Node& node, const Args&... args),
                          Type node_type, const String& name, const Args&... args);
 
-        Node* insert_node  (const Node& node, const String& name);
-        Node* insert_node  (Type type, const String& name);
+        Node& insert_node  (const Node& node, const String& name);
+        Node& insert_node  (Type type, const String& name);
         void  insert_value (const Value& value, const String& name);
 
         void to_source ();
         void parse_in  (Lib::In& source, Parser& parser);
 
         template<class T, class ID>
-        typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), Value*>::type
+        typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), Value&>::type
         find(const ID& id) const;
 
         template<class T, class ID>
-        typename std::enable_if<TpTools::is_scope(Lib::Switch<T>::type), Node*>::type
+        typename std::enable_if<TpTools::is_scope(Lib::Switch<T>::type), Node&>::type
         find(const ID& id) const;
-
     };
 }
 

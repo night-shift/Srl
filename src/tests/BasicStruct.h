@@ -30,10 +30,10 @@ namespace Tests {
          N = P;
 
     #define INSERT_FIELD(N, T, P) \
-        tree.root()->insert(#N, N);
+        tree.root().insert(#N, N);
 
     #define PASTE_FIELD(N, T, P) \
-        tree.root()->paste_field(#N, N);
+        tree.root().paste_field(#N, N);
 
     struct BasicStruct {
 

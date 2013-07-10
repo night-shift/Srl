@@ -49,10 +49,12 @@ namespace Srl {
         Registrations* registrations();
 
         template<class T>
-        struct TypeRegistration : TypeID {
+        class TypeRegistration : public TypeID {
 
+        private:
             const char* type_id;
 
+        public:
             TypeRegistration(const char* type_id_) : type_id(type_id_)
             {
                 Lib::registrations()->add<T>(type_id);

@@ -40,7 +40,7 @@ namespace Srl {
 
         } else {
             auto tmp = Tools::convert_charset(this->block.encoding, a, false);
-            return cmp(&tmp[0], tmp.size());
+            return cmp(tmp.data(), tmp.size());
         }
     }
 }

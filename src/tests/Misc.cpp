@@ -15,13 +15,13 @@ bool test_node_api()
 
     try {
         Tree tree;
-        auto& root = *tree.root();
+        auto& root = tree.root();
 
         root.insert("field0", 0, "field1", 1, "field2", 2);
         root.insert("node0", root);
-        root.insert("node1", *root.node("node0"));
-        root.node("node0")->insert("node1", *root.node("node0"));
-        root.node("node0")->insert("field3", 3);
+        root.insert("node1", root.node("node0"));
+        root.node("node0").insert("node1", root.node("node0"));
+        root.node("node0").insert("field3", 3);
 
         bool recursive  = true;
         size_t n_nodes  = 3;
@@ -61,7 +61,7 @@ bool test_node_api()
         root.forall_nodes([](Node* node) {
             auto values = node->all_values();
             for(auto v : values) {
-                node->remove_value(*v->name());
+                node->remove_value(v->name());
             }
         }, recursive);
 
@@ -89,17 +89,17 @@ bool test_string_escaping()
         string str = "\"quotes\" & ampersand gr >  ls < ap ' \n\b\t\r\f/ backslash \\";
 
         Tree tree;
-        tree.root()->insert("str", str);
+        tree.root().insert("str", str);
 
         print_log("\tString escaping xml...");
         tree = Tree::From_Source<PXml>(tree.to_source<PXml>());
-        TEST(str == tree.root()->unwrap_field<string>("str"));
+        TEST(str == tree.root().unwrap_field<string>("str"));
         print_log("ok.\n");
 
         print_log("\tString escaping json...");
         tree = Tree::From_Source<PJson>(tree.to_source<PJson>());
 
-        TEST(str == tree.root()->unwrap_field<string>("str"));
+        TEST(str == tree.root().unwrap_field<string>("str"));
         print_log("ok.\n");
 
     } catch(Srl::Exception& ex) {
@@ -118,7 +118,7 @@ bool test_document_building()
         print_log("\tDocument building...");
 
         Tree tree;
-        tree.root()->insert(
+        tree.root().insert(
             "string", "string",
             "int", 5,
             "nested_node", Node(tree).insert(
@@ -139,17 +139,17 @@ bool test_document_building()
 
         auto source = tree.to_source<PJson>();
         tree = Tree::From_Source<PJson>(tree.to_source<PJson>());
-        auto& node = *tree.root();
+        auto& node = tree.root();
 
-        auto value = node.value("int");
-        auto some_int = value->unwrap<int>();
+        auto& value = node.value("int");
+        auto some_int = value.unwrap<int>();
         TEST(some_int == 5)
 
         value = node.value("string");
-        auto some_string = value->unwrap<string>();
+        auto some_string = value.unwrap<string>();
         TEST(some_string == "string")
 
-        node.node("nested_node")->paste_field("string", some_string);
+        node.node("nested_node").paste_field("string", some_string);
         TEST(some_string == "string");
 
         auto nodes = node.find_nodes("nested_node", true);
@@ -162,7 +162,7 @@ bool test_document_building()
         some_int = nodes[1]->unwrap_field<int>("int");
         TEST(some_int == 10)
 
-        auto lst = node.node("nested_node")->unwrap_field<list<list<string>>>("list");
+        auto lst = node.node("nested_node").unwrap_field<list<list<string>>>("list");
         list<list<string>> lst_n { list<string> { "a", "b", "c" }, list<string> { "d", "e", "f" } };
         TEST(lst == lst_n)
 
@@ -205,11 +205,11 @@ bool test_xml_attributes()
         string attribute2 = "";
         int attribute3    = 0;
 
-        tree.root()->paste_field("attribute1", attribute1);
-        tree.root()->paste_field("attribute2", attribute2);
-        tree.root()->paste_field("attribute3", attribute3);
+        tree.root().paste_field("attribute1", attribute1);
+        tree.root().paste_field("attribute2", attribute2);
+        tree.root().paste_field("attribute3", attribute3);
 
-        TEST(*tree.root()->name() == "node");
+        TEST(tree.root().name() == "node");
         TEST(attribute1 == 12.0)
         TEST(attribute2 == "value")
         TEST(attribute3 == -10)
@@ -227,7 +227,7 @@ bool test_xml_attributes()
 struct Base {
 
     virtual int get() = 0;
-    virtual const Srl::TypeID* srl_type_id() = 0;
+    virtual const Srl::TypeID& srl_type_id() = 0;
     virtual void srl_resolve(Context& ctx) = 0;
 
     virtual ~Base() { }
@@ -238,7 +238,7 @@ struct Root : Base {
     int m = 0;
     int get() override { return m; }
 
-    const Srl::TypeID* srl_type_id() override;
+    const Srl::TypeID& srl_type_id() override;
 
     virtual void srl_resolve(Context& ctx) override
     {
@@ -249,7 +249,7 @@ struct Root : Base {
 };
 
 const auto reg_root = Srl::register_type<Root>("Root");
-const Srl::TypeID* Root::srl_type_id() { return &reg_root; }
+const Srl::TypeID& Root::srl_type_id() { return reg_root; }
 
 struct DerivedA : Root {
 
@@ -258,7 +258,7 @@ struct DerivedA : Root {
     int a;
     int get() override { return a; }
 
-    const Srl::TypeID* srl_type_id() override;
+    const Srl::TypeID& srl_type_id() override;
 
     void srl_resolve(Context& ctx) override
     {
@@ -268,7 +268,7 @@ struct DerivedA : Root {
 };
 
 const auto reg_a = Srl::register_type<DerivedA>("DerivedA");
-const Srl::TypeID* DerivedA::srl_type_id() { return &reg_a; }
+const Srl::TypeID& DerivedA::srl_type_id() { return reg_a; }
 
 class DerivedB : public Root {
 
@@ -279,7 +279,7 @@ public:
 
     int get() override { return b; }
 
-    const Srl::TypeID* srl_type_id() override;
+    const Srl::TypeID& srl_type_id() override;
 
     void srl_resolve(Context& ctx) override
     {
@@ -293,7 +293,7 @@ private:
 };
 
 const auto reg_b = Srl::register_type<DerivedB>("DerivedB");
-const Srl::TypeID* DerivedB::srl_type_id() { return &reg_b; }
+const Srl::TypeID& DerivedB::srl_type_id() { return reg_b; }
 
 struct TestClass {
     unique_ptr<Base> one;
@@ -317,8 +317,8 @@ bool test_polymorphic_classes()
         TestClass cl(new DerivedB(12), new DerivedA(6));
         cl = Srl::Restore<TestClass, PJson>(Srl::Store<PJson>(cl));
 
-        TEST(strcmp(cl.one->srl_type_id()->name(), "DerivedB") == 0);
-        TEST(strcmp(cl.two->srl_type_id()->name(), "DerivedA") == 0);
+        TEST(strcmp(cl.one->srl_type_id().name(), "DerivedB") == 0);
+        TEST(strcmp(cl.two->srl_type_id().name(), "DerivedA") == 0);
         TEST(cl.one->get() == 12);
         TEST(cl.two->get() == 6);
 

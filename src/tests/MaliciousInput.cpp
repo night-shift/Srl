@@ -22,7 +22,7 @@ bool malicious_input()
     bool success = false;
     TestStruct m;
     auto tree = Tree::From_Type(m);
-    auto& node = *tree.root();
+    auto& node = tree.root();
 
     try {
         print_log("\tOut of bounds access...");

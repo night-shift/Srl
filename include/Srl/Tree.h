@@ -40,7 +40,7 @@ namespace Srl {
         template<class TParser>
         void to_source(std::ostream& stream, const TParser& parser = TParser());
 
-        Node* root();
+        Node& root();
 
         void srl_resolve(Context& ctx);
 

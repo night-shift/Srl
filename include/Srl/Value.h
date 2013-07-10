@@ -32,7 +32,7 @@ namespace Srl {
         inline Encoding       encoding() const;
         inline size_t         size()     const;
         inline const uint8_t* data()     const;
-        inline const String*  name()     const;
+        inline const String&  name()     const;
 
     private:
         Value(const Lib::PackedBlock& data_) : block(data_) { }

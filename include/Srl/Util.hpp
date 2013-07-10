@@ -12,21 +12,21 @@ namespace Srl {
 
         template<class T, class = void> struct StoreSwitch {
             static std::function<void()> Insert(const T& o, Tree& tree) {
-                return [&o, &tree] { tree.root()->insert(o); };
+                return [&o, &tree] { tree.root().insert(o); };
             }
             static void Paste(Tree& tree, T& target) {
-                tree.root()->paste_field(0, target);
+                tree.root().paste_field(0, target);
             }
         };
         template<class T>
         struct StoreSwitch<T, class std::enable_if<has_resolve_method<T>::value>::type> {
             static std::function<void()> Insert(const T& o, Tree& tree) {
                 return [&o, &tree] {
-                    Switch<T>::Insert(*tree.root(), o);
+                    Switch<T>::Insert(tree.root(), o);
                 };
             }
             static void Paste(Tree& tree, T& target) {
-                tree.root()->paste(target);
+                tree.root().paste(target);
             }
         };
 

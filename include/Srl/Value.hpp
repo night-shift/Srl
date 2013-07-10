@@ -49,9 +49,9 @@ namespace Srl {
         return this->block.encoding;
     }
 
-    inline const String* Value::name() const
+    inline const String& Value::name() const
     {
-        return this->name_ptr;
+        return *this->name_ptr;
     }
 }
 

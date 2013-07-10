@@ -15,7 +15,7 @@ namespace Srl {
      * Or make your own type-specific routines by defining a specialized
      * namespace Srl { template<>struct Srl::Ctor<your_namespace::your_type>...
      * template in your project. */
-    template<class T, typename = void> struct Ctor {
+    template<class T, class... Rest> struct Ctor {
 
         static T* Create_New() { return new T(); }
         static T  Create()     { return T(); }
@@ -51,7 +51,7 @@ namespace Lib {
         template<class U, U> struct test_sig { };
 
         template<class U>
-        static char test(test_sig<const Srl::TypeID*(U::*)(void), &U::srl_type_id>*);
+        static char test(test_sig<const Srl::TypeID&(U::*)(void), &U::srl_type_id>*);
         template<class U>
         static long test(...);
 

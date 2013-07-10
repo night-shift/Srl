@@ -103,10 +103,10 @@ Link<Node>* Storage::store_node(const Node& node, Tree& tree, const String& name
         auto* link = this->create_node(tree, node.scope_type, name);
 
         for(auto n : node.nodes) {
-            link->field.insert_node(n->field, *n->field.name());
+            link->field.insert_node(n->field, n->field.name());
         }
         for(auto v : node.values) {
-            link->field.insert_value(v->field, *v->field.name());
+            link->field.insert_value(v->field, v->field.name());
         }
 
         return link;

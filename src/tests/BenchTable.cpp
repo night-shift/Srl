@@ -46,7 +46,7 @@ void run_bench(Tree& tree)
 
         map<string, BStruct> map;
 
-        measure([&](){ tree.root()->paste_field("map", map); }, "\tpaste data   ms: ");
+        measure([&](){ tree.root().paste_field("map", map); }, "\tpaste data   ms: ");
         Tree new_tree;
         measure([&](){ new_tree = Tree::From_Type(map); }, "\tinsert data  ms: ");
 
@@ -107,13 +107,13 @@ void Tests::run_benches()
     }, "ms: ");
 
     Tree tree;
-    tree.root()->insert("map", map);
+    tree.root().insert("map", map);
 
     size_t sz = 4000000;
     unique_ptr<uint8_t[]> bin(new uint8_t[sz]);
     memset(bin.get(), 0, sz);
 
-    tree.root()->insert("Bin", BitWrap(bin.get(), sz));
+    tree.root().insert("Bin", BitWrap(bin.get(), sz));
 
     run_bench (
         tree,

@@ -38,11 +38,11 @@ void Tree::parse_out(Parser& parser, Lib::Out& out, const function<void()>& stor
 
     this->root_node->just_parse = true;
 
-    this->parse_value(Value(Type::Object), *this->root_node->name());
+    this->parse_value(Value(Type::Object), this->root_node->name());
 
     store_switch();
 
-    this->parse_value(Value(Type::Scope_End), *this->root_node->name());
+    this->parse_value(Value(Type::Scope_End), this->root_node->name());
 }
 
 void Tree::set_output (Parser& parser, Lib::Out& out)
@@ -127,9 +127,9 @@ Value Tree::convert_type(const Value& value)
 
 }
 
-Node* Tree::root()
+Node& Tree::root()
 {
-    return this->root_node;
+    return *this->root_node;
 }
 
 void Tree::srl_resolve(Context& ctx)

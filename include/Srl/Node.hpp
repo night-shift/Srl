@@ -23,9 +23,9 @@ namespace Srl {
     template<class T>
     Node& Node::insert(const String& field_name, const std::initializer_list<T>& elements)
     {
-        auto* new_node = this->insert_node(Type::Array, field_name);
+        auto& new_node = this->insert_node(Type::Array, field_name);
         for(auto& e : elements) {
-           new_node->insert(e);
+           new_node.insert(e);
         }
         return *this;
     }
@@ -91,15 +91,15 @@ namespace Srl {
     template<class T>
     void Node::paste_field(const String& field_name, T& o) const
     {
-        auto* item = this->find<T>(field_name);
-        Lib::Switch<T>::Paste(o, *item, field_name);
+        auto& item = this->find<T>(field_name);
+        Lib::Switch<T>::Paste(o, item, field_name);
     }
 
     template<class T>
     void Node::paste_field(size_t index, T& o) const
     {
-        auto* item = this->find<T>(index);
-        Lib::Switch<T>::Paste(o, *item, index);
+        auto& item = this->find<T>(index);
+        Lib::Switch<T>::Paste(o, item, index);
     }
 
     template<class... Args>
@@ -114,20 +114,20 @@ namespace Srl {
             this->tree->parse_value(Value(Type::Scope_End), scope_name);
 
         } else {
-           auto* new_node = this->insert_node(node_type, scope_name);
-           Insert(*new_node, args...);
+           auto& new_node = this->insert_node(node_type, scope_name);
+           Insert(new_node, args...);
         }
     }
 
     template<class T, class ID>
-    typename std::enable_if<TpTools::is_scope(Lib::Switch<T>::type), Node*>::type
+    typename std::enable_if<TpTools::is_scope(Lib::Switch<T>::type), Node&>::type
     Node::find(const ID& id) const
     {
         return this->node(id);
     }
 
     template<class T, class ID>
-    typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), Value*>::type
+    typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), Value&>::type
     Node::find(const ID& id) const
     {
         return this->value(id);
@@ -165,9 +165,9 @@ namespace Srl {
         return this->values.size();
     }
 
-    inline const String* Node::name() const
+    inline const String& Node::name() const
     {
-        return this->name_ptr;
+        return *this->name_ptr;
     }
 
     inline Type Node::type() const

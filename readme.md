@@ -7,20 +7,21 @@ class YourClass {
     int a = 10;
     // strings
     u32string b = U"string";
-    // stl-containers
+    // stl-containers...
     vector<double> c { 1.0, 2.0, 3.0 };
+    // ...including maps
+    map<short, string> d { { 0, "0" }, { 1, "1" } };
     // shared_ / unique_ptrs
-    shared_ptr<int> d = make_shared<int>(5);
+    shared_ptr<int> e = make_shared<int>(5);
     // tuples
-    tuple<bool, string, char> e { false, "tuple", 'N' };
+    tuple<bool, string, char> f { false, "tuple", 'N' };
 
 public :
     // implement a srl_resolve method
     void srl_resolve(Srl::Context& ctx) {
         // tell the context what to serialize, field names are optional
-        ctx ("fielda", a) ("fieldb", b)
-            ("fieldc", c) ("fieldd", d)
-            ("fielde", e);
+        ctx ("a", a) ("b", b) ("c", c)
+            ("d", d) ("e", e) ("f", f);
     }
 };
 
@@ -49,21 +50,21 @@ string json = "{ "
 // create Srl::Tree from a source
 Tree tree = Tree::From_Source<PJson>(json.c_str(), json.size());
 // the root node
-Node* root = tree.root();
+Node& root = tree.root();
 // access values
-auto version = root->value("version")->unwrap<int>();
+auto version = root.value("version").unwrap<int>();
 // or just 'paste'
 string name;
-root->paste_field("name", name);
+root.paste_field("name", name);
 // insert data
-root->insert("extensions", { ".cpp", ".cc" });
+root.insert("extensions", { ".cpp", ".cc" });
 // access nodes
-Node* extensions = root->node("extensions");
-extensions->insert(".hpp");
+Node& extensions = root.node("extensions");
+extensions.insert(".hpp");
 // access by index
-auto extension = extensions->value(2)->unwrap<string>();
+auto extension = extensions.value(2).unwrap<string>();
 // unwrap nodes
-auto vec = extensions->unwrap<vector<string>>();
+auto vec = extensions.unwrap<vector<string>>();
 // translate the tree - to plain bytes...
 vector<uint8_t> bytes = tree.to_source<PJson>();
 // ...or to a stream
@@ -76,7 +77,7 @@ tree.to_source<PJson>(cout); // will print...
 ```
 Same output as a single expression:
 ```cpp
-Tree().root()->insert(
+Tree().root().insert(
     "name", "cpp",
     "version", 11,
     "extensions", list<string> { ".cpp", ".cc", ".hpp" }
@@ -102,7 +103,7 @@ auto lang = Srl::Restore<Lang, PJson>(bytes);
 Which is actually the short form for:
 ```cpp
 auto tree = Tree::From_Source<PJson>(bytes);
-auto lang = tree.root()->unwrap<Lang>();
+auto lang = tree.root().unwrap<Lang>();
 ```
 #### Handling non-default constructors
 Objects are instantiated through a factory ```struct Srl::Ctor<T>```. As default parameterless constructors are required. You can declare
@@ -113,7 +114,7 @@ Objects are instantiated through a factory ```struct Srl::Ctor<T>```. As default
 struct Base {
     int field = 5;
     // declare a srl_type_id method
-    virtual const Srl::TypeID* srl_type_id();
+    virtual const Srl::TypeID& srl_type_id();
 
     virtual void srl_resolve (Srl::Context& ctx) {
         ctx ("frombase", field);
@@ -125,13 +126,13 @@ struct Base {
 // this will force a registration on program initialization
 const auto base_id = Srl::register_type<Base>("Base");
 // return the ID
-const Srl::TypeID* Base::srl_type_id() { return &base_id; }
+const Srl::TypeID& Base::srl_type_id() { return base_id; }
 
 // same for derived types
 struct Derived : Base {
     int field = 10;
 
-    const Srl::TypeID* srl_type_id() override;
+    const Srl::TypeID& srl_type_id() override;
 
     void srl_resolve (Srl::Context& ctx) override {
         Base::srl_resolve(ctx);
@@ -140,7 +141,7 @@ struct Derived : Base {
 };
 
 const auto derived_id = Srl::register_type<Derived>("Derived");
-const Srl::TypeID* Derived::srl_type_id() { return derived_id; }
+const Srl::TypeID& Derived::srl_type_id() { return derived_id; }
 
 class Composite {
     // make private constructor accessible
@@ -187,16 +188,16 @@ Srl::Store<PJson>(cout, composite);
 ```cpp
 /// access a polymorphic type 
 auto tree = Tree::From_Type(composite);
-auto* bases = tree.root()->node("bases");
-auto derived = bases->node(0)->unwrap<unique_ptr<Base>>();
+auto& bases = tree.root().node("bases");
+auto derived = bases.node(0).unwrap<unique_ptr<Base>>();
 // or
-auto* base = bases->node(1)->unwrap<Base*>();
-assert(base->srl_type_id()->name() == "Base");
+auto* base = bases.node(1).unwrap<Base*>();
+assert(base->srl_type_id().name() == "Base");
 // you are responsible for base*
 delete base;
 // unwrap as Composite
-composite = tree.root()->unwrap<Composite>();
-assert(composite.at(0)->srl_type_id()->name() == "Derived");
+composite = tree.root().unwrap<Composite>();
+assert(composite.at(0)->srl_type_id().name() == "Derived");
 ```
 #### Handling binary data
 Use Srl::BitWrap to serialize raw binary data...
@@ -229,10 +230,10 @@ static uint8_t binary[] { 2, 4, 6, 8 };
 Tree tree;
 
 BitWrap wrap(binary, 4);
-tree.root()->insert("data", wrap);
+tree.root().insert("data", wrap);
 
 wrap = BitWrap( [](size_t sz) { assert(sz == 4); return binary; } );
-tree.root()->value("data")->paste(wrap);
+tree.root().value("data").paste(wrap);
 ```
 For text-based serialization formats binary data will be converted to a base64 string. So calling
 ```tree.to_source<PJson>(cout)``` on the Srl::Tree from above will yield...
