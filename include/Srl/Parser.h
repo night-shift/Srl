@@ -22,6 +22,9 @@ namespace Srl {
             SourceSeg(Type type)
                 : SourceSeg(Value(type)) { }
 
+            SourceSeg(Type type, Lib::MemBlock name_)
+                : SourceSeg(Value(type), name_) { }
+
             Value         value;
             Lib::MemBlock name;
             bool          data_buffered;

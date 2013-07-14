@@ -35,6 +35,9 @@ namespace Srl { namespace Lib {
         void check_type_scope(Type got, const ID& field_id);
 
         template<class ID>
+        void check_type_string(Type got, const ID& field_id);
+
+        template<class ID>
         void check_size(size_t required_size, size_t actual_size, const ID& field_id);
 
         template<class TChar, class ID>
@@ -93,13 +96,13 @@ namespace Srl { namespace Lib {
             if(val_type == Type::Null) {
                 return;
             }
-            Aux::check_type_value(val_type, id);
 
-            if(val_type == Type::String) {
+            if(val_type == Type::String || val_type == Type::Binary) {
                 str = String(value.data(), value.size(), value.encoding()).unwrap<T>();
 
             } else {
                 /* convert literal to string */
+                Aux::check_type_value(val_type, id);
                 Aux::check_size(TpTools::get_size(val_type), value.size(), id);
 
                 auto tmp_string = Tools::type_to_string(val_type, value.data());
@@ -204,7 +207,7 @@ namespace Srl { namespace Lib {
         template<class ID = String>
         static void Paste(String& s, const Value& value, const ID& id = Aux::Str_Empty)
         {
-            Aux::check_type(Type::String, value.type(), id);
+            Aux::check_type_string(value.type(), id);
             s = String({ value.data(), value.size() }, value.encoding());
         }
     };
@@ -609,9 +612,7 @@ namespace Srl { namespace Lib {
         template<class ID = String>
         static void Paste(BitWrap& wrap, const Value& value, const ID& id = Aux::Str_Empty)
         {
-            if(value.type() != Type::String) {
-                Aux::check_type(Type::Binary, value.type(), id);
-            }
+            Aux::check_type_string(value.type(), id);
 
             MemBlock mem_block(value.data(), value.size());
 
@@ -641,7 +642,7 @@ namespace Srl { namespace Lib {
         template<class TChar, class ID>
         void copy_string(TChar* dst, size_t size, const Value& value, const ID& id)
         {
-            check_type(Type::String, value.type(), id);
+            check_type_string(value.type(), id);
 
             auto encoding = get_encoding<TChar>();
 
@@ -689,6 +690,15 @@ namespace Srl { namespace Lib {
         {
             if(got != Type::String && !TpTools::is_literal(got)) {
                 throw_error("Type mismatch, expected: string or literal, got: "
+                            + TpTools::get_name(got) + ".", field_id);
+            }
+        }
+
+        template<class ID>
+        void check_type_string(Type got, const ID& field_id)
+        {
+            if(got != Type::String && got != Type::Binary) {
+                throw_error("Type mismatch, expected: string or binary, got: "
                             + TpTools::get_name(got) + ".", field_id);
             }
         }

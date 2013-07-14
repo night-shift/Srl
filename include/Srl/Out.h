@@ -36,7 +36,8 @@ namespace Srl { namespace Lib {
         class Ticket {
 
         friend class Out;
-
+        public:
+            Ticket() { }
         private:
             Ticket(uint8_t* mem_, size_t size_, size_t pos_, size_t seg_id_)
                 : mem(mem_), size(size_), pos(pos_), seg_id(seg_id_) { }

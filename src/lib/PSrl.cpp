@@ -191,9 +191,7 @@ Parser::SourceSeg PSrl::read_literal(const MemBlock& name, In& source, Type type
     auto size        = TpTools::get_size(type);
     uint64_t integer = decode_integer(source);
     /* TODO support for big-endian */
-    memcpy(this->integer_buffer, &integer, size);
-
-    return { Value({ this->integer_buffer, size }, type), name, true };
+    return { Value::From_Type({ (const uint8_t*)&integer, size }, type), name };
 }
 
 void PSrl::push_scope(Type scope_type)

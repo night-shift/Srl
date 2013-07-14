@@ -109,15 +109,10 @@ void Tests::run_benches()
     Tree tree;
     tree.root().insert("map", map);
 
-    size_t sz = 4000000;
-    unique_ptr<uint8_t[]> bin(new uint8_t[sz]);
-    memset(bin.get(), 0, sz);
-
-    tree.root().insert("Bin", BitWrap(bin.get(), sz));
-
     run_bench (
         tree,
         PSrl(),  "Srl",  "",
+        PMsgPack(),  "MsgPack",  "",
         PBson(), "Bson", "",
         PJson(), "Json", "",
         PXml(),  "Xml",  "",

@@ -1,4 +1,6 @@
 #include "Tests.h"
+#include "BasicStruct.h"
+
 #include <sstream>
 
 using namespace std;

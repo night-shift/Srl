@@ -34,9 +34,9 @@ int main() {
     YourClass restored = Srl::Restore<YourClass, Srl::PJson>(bytes);
     // or use streams
     ofstream fso("file");
-    Srl::Store<Srl::PJson>(fso, original);
+    Srl::Store<Srl::PMsgPack>(fso, original);
     ifstream fsi("file");
-    Srl::Restore<Srl::PJson>(restored, fsi);
+    Srl::Restore<Srl::PMsgPack>(restored, fsi);
     // Thats it.
     return 0;
 }
@@ -244,16 +244,17 @@ For text-based serialization formats binary data will be converted to a base64 s
 ```
 
 #### Serialization formats
-Srl supports 4 serialization formats. Json, Xml, Bson and [Srl](https://github.com/night-shift/Srl/blob/master/src/lib/PSrl.cpp), a custom space efficient binary format.
+Srl supports 5 serialization formats. Json, Xml, MessagePack, Bson and
+[Srl](https://github.com/night-shift/Srl/blob/master/src/lib/PSrl.cpp), a custom space efficient binary format.
 
 Select a format by...
 ```cpp
 // ...passing the corresponding type as a template parameter
-auto tree = Tree::From_Source<Srl::PBson>(source);
+auto tree = Tree::From_Source<Srl::PSrl>(source);
 // ...or by passing an instance
 Srl::PXml xml;
 xml.set_skip_whitespace(true);
-tree.to_source(xml);
+auto bytes = tree.to_source(xml);
 ```
 Output encoding for text-based formats is UTF-8. Input is also expected to be UTF-8. As of now no BOM-checking is done, so make sure text documents have the 
 correct encoding before parsing.

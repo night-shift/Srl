@@ -7,6 +7,7 @@
 #include "PJson.h"
 #include "PBson.h"
 #include "PXml.h"
+#include "PMsgPack.h"
 #include "Registration.h"
 
 #include "Tree.hpp"

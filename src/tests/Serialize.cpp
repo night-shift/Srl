@@ -394,8 +394,8 @@ bool test_serialize(const TParser& parser, const string& parser_name, const Tail
 bool Tests::test_parser()
 {
     bool success = test_serialize (
-        PSrl(),  "Srl",  PBson(), "Bson",
-        PJson(), "Json", PXml(),  "Xml",
+        PSrl(),  "Srl",  PMsgPack(), "MsgPack", 
+        PBson(), "Bson", PJson(), "Json", PXml(),  "Xml",
         PJson(true), "Json w/o space", PXml(true), "Xml w/o space"
     );
 

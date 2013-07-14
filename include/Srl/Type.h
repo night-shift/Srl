@@ -36,9 +36,6 @@ namespace Srl {
     };
 
     #undef SRL_TYPE_ENUM_ENTRY
-
-    namespace TpTools {
-
-} }
+} 
 
 #endif

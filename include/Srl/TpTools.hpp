@@ -149,7 +149,7 @@ namespace Srl { namespace TpTools {
         switch(src_type) {
             SRL_TYPES_LITERAL(SRL_PASTE_TYPE_TEMPLATE)
 
-            default : assert("Incomplete literal-type entries."); return false;
+            default : assert(false && "Incomplete literal-type entries."); return false;
         }
     }
 

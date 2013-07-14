@@ -32,8 +32,6 @@ namespace Srl {
         Type   scope            = Type::Null;
         size_t n_hashed_strings = 0;
 
-        uint8_t integer_buffer[TpTools::Literal_Max_Size];
-
         std::map<size_t, size_t>   hashed_strings;
         std::vector<Lib::MemBlock> indexed_strings;
         Lib::Heap<uint8_t>         string_buffer;

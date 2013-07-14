@@ -18,8 +18,9 @@ namespace Srl {
                 tree.root().paste_field(0, target);
             }
         };
+
         template<class T>
-        struct StoreSwitch<T, class std::enable_if<has_resolve_method<T>::value>::type> {
+        struct StoreSwitch<T, typename std::enable_if<has_resolve_method<T>::value>::type> {
             static std::function<void()> Insert(const T& o, Tree& tree) {
                 return [&o, &tree] {
                     Switch<T>::Insert(tree.root(), o);
@@ -36,7 +37,7 @@ namespace Srl {
     std::vector<uint8_t> Store(const Object& object, const TParser& parser, const std::string& name)
     {
         Lib::Out out;
-        Store(object, out, parser, name);
+        Store<TParser, Object>(object, out, parser, name);
         return out.extract();
     }
 
@@ -44,7 +45,7 @@ namespace Srl {
     void Store(std::ostream& out_stream, const Object& object, const TParser& parser, const std::string& name)
     {
         Lib::Out out(out_stream);
-        Store(object, out, parser, name);
+        Store<TParser, Object>(object, out, parser, name);
         out.flush();
     }
 
@@ -60,7 +61,7 @@ namespace Srl {
     Object Restore(std::istream& stream, const TParser& parser)
     {
         auto object = Ctor<Object>::Create();
-        Restore(object, stream, parser);
+        Restore<Object, TParser>(object, stream, parser);
 
         return std::move(object);
     }
@@ -76,7 +77,7 @@ namespace Srl {
     {
         auto object = Ctor<Object>::Create();
         Lib::In in(data, size);
-        Restore(object, in, parser);
+        Restore<Object, TParser>(object, in, parser);
 
         return std::move(object);
     }

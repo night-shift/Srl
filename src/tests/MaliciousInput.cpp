@@ -7,7 +7,7 @@ using namespace Tests;
 
 struct TestStruct {
 
-    vector<BasicStruct> vec { BasicStruct() };
+    vector<BasicStruct> vec { BasicStruct(), BasicStruct() };
 
     void srl_resolve(Context& ctx)
     {
@@ -136,10 +136,10 @@ bool malicious_input(const TParser& parser, const string& parser_name, const Tai
     TestStruct m;
     auto data = Store(m, parser);
 
-    assert(data.size() > 100);
+    assert(data.size() > 20);
     /* wild guess */
-    for(auto i = 100U; i < data.size(); i += 91) {
-        data[i] ^= 1U;
+    for(auto i = 20U; i < data.size(); i += 20) {
+        data[i] ^= data[i - 1];
     }
 
     try {
@@ -158,7 +158,7 @@ bool malicious_input(const TParser& parser, const string& parser_name, const Tai
 bool Tests::test_malicious_input()
 {
     bool success = malicious_input (
-        PSrl(),  "Srl",  PBson(), "Bson",
+        PSrl(),  "Srl", PMsgPack(), "MsgPack", PBson(), "Bson",
         PJson(), "Json", PXml(),  "Xml",
         PJson(true), "Json w/o space", PXml(true), "Xml w/o space"
     );

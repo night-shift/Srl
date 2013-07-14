@@ -16,6 +16,8 @@ namespace Srl {
         friend class Lib::Storage;
 
     public:
+        inline static Value From_Type(const Lib::MemBlock&block, Type type);
+
         Value(Type type_)
             : block({ nullptr, 0 }, type_, Encoding::Unknown) { }
 
@@ -25,8 +27,11 @@ namespace Srl {
         Value(const Lib::MemBlock& data_, Encoding encoding_)
             : block(data_, Type::String, encoding_) { }
 
-        template<typename T> T    unwrap();
-        template<typename T> void paste(T& o);
+        Value(const Lib::MemBlock& data_, Type type_, Encoding encoding_)
+            : block(data_, type_, encoding_) { }
+
+        template<class T> T    unwrap();
+        template<class T> void paste(T& o);
 
         inline Type           type()     const;
         inline Encoding       encoding() const;

@@ -131,8 +131,11 @@ Link<Node>* Storage::create_node(Tree& tree, Type type, const String& name, bool
 Link<Value>* Storage::store_value(const Value& value, const String& name, bool store_data)
 {
     auto* link = this->create_link(value, name, this->value_heap, store_data);
-
     auto& block = link->field.block;
+
+    if(block.stored_local) {
+        return link;
+    }
 
     if(store_data) {
         if(block.can_store_local()) {
