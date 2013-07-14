@@ -98,7 +98,7 @@ namespace {
 
     const function<void(const MemBlock&, Out& out)> srl_to_msgp[] {
         /* false 0xc2 true 0xc3 */
-        [](const MemBlock& val, Out& out) { uint8_t t = *val.ptr ? 0xC2 : 0xC3; out.write(t); },
+        [](const MemBlock& val, Out& out) { uint8_t t = *val.ptr ? 0xC3 : 0xC2; out.write(t); },
         scalar_to_msgp<0xD0, Type::I8>(),
         scalar_to_msgp<0xCC, Type::UI8>(),
         scalar_to_msgp<0xD1, Type::I16>(),
@@ -149,7 +149,7 @@ namespace {
 
     Value read_bool(uint8_t prefix)
     {
-        uint8_t val = prefix == 0xC2 ? 1 : 0;
+        uint8_t val = prefix == 0xC3 ? 1 : 0;
         return Value::From_Type({ &val, 1 }, Type::Bool);
     }
 
