@@ -19,7 +19,7 @@ namespace {
         return [](const MemBlock& val, Out& out) {
 
             const auto write_pfixnum = [&out](uint64_t i) {
-                if(i <= (uint8_t)~0U >> 1) {
+                if(i <= 0x7F) {
                     out.write((uint8_t)i);
                     return true;
                 }
@@ -32,7 +32,6 @@ namespace {
                 TpTools::paste_type(i, type, val.ptr);
 
                 if(i < 0 && i >= -31) {
-                    /* negative */
                     out.write(0xE0 | (uint8_t)-i);
                     return;
 
@@ -92,8 +91,8 @@ namespace {
     {
         assert(prefix_is_raw(prefix));
 
-        return prefix <= 0xBF ? prefix & ((uint8_t)~0U >> 0x03)
-             : prefix & 0x01  ? in.cast_move<uint32_t>(error)
+        return prefix <= 0xBF ? prefix & 0xFF >> 3
+             : prefix & 1  ? in.cast_move<uint32_t>(error)
              : in.cast_move<uint16_t>(error);
     }
 
@@ -158,8 +157,8 @@ namespace {
     {
         Type type; uint8_t val;
 
-        if((0x01 << 7) & prefix) {
-            val = (uint8_t)~0U >> 3 & prefix;
+        if(1 << 7 & prefix) {
+            val = 0xFF >> 3 & prefix;
             val = -val;
             type = Type::I8;
 
@@ -206,15 +205,15 @@ namespace {
 
         Type type; size_t size;
 
-        if((0x0D << 4) & prefix) {
+        if(0x0D << 4 & prefix) {
            type = prefix <= 0xDD ? Type::Array : Type::Object;
            size = prefix & 0x01 ? in.cast_move<uint32_t>(error) : in.cast_move<uint16_t>(error);
 
         } else {
-            assert((0x01 << 7) & prefix);
+            assert(1 << 7 & prefix);
 
-            type = prefix & (0x01 << 4) ? Type::Array : Type::Object;
-            size = (uint8_t)~0U >> 4 & prefix;
+            type = prefix & 1 << 4 ? Type::Array : Type::Object;
+            size = 0xFF >> 4 & prefix;
         }
 
         return { type, size };
