@@ -158,7 +158,7 @@ bool malicious_input(const TParser& parser, const string& parser_name, const Tai
 bool Tests::test_malicious_input()
 {
     bool success = malicious_input (
-        PSrl(),  "Srl", PMsgPack(), "MsgPack", PBson(), "Bson",
+        PSrl(),  "Srl", PMsgPack(), "MsgPack",
         PJson(), "Json", PXml(),  "Xml",
         PJson(true), "Json w/o space", PXml(true), "Xml w/o space"
     );

@@ -21,7 +21,7 @@ namespace Tests {
         T N = P;
 
     #define RESOLVE_FIELD(N, T, P) \
-        ctx(#N, N);
+        (#N, N)
 
     #define COMPARE_FIELD(N, T, P) \
         TEST(N == P.N)
@@ -43,7 +43,9 @@ namespace Tests {
 
         void srl_resolve(Srl::Context& ctx)
         {
+            ctx
             FIELDS_FNC(RESOLVE_FIELD, 0)
+            ;
         }
 
         void test(BasicStruct& n)

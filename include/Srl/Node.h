@@ -45,16 +45,29 @@ namespace Srl {
 
         inline Node& insert();
 
-        template<class T> T unwrap () const;
-        template<class T> void paste (T& o) const;
+        template<class T> T unwrap ();
+        template<class T> void paste (T& o);
 
-        template<class T> void paste_field (const String& field_name, T& o) const;
-        template<class T> void paste_field (size_t index, T& o) const;
+        template<class T>
+        typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), void>::type
+        paste_field (const String& field_name, T& o);
 
-        template<class T> T unwrap_field (const String& field_name) const;
-        template<class T> T unwrap_field (size_t index) const;
+        template<class T>
+        typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), void>::type
+        paste_field (size_t index, T& o);
 
-        Node& node (const String& name) const;
+        template<class T>
+        typename std::enable_if<TpTools::is_scope(Lib::Switch<T>::type), void>::type
+        paste_field (const String& field_name, T& o);
+
+        template<class T>
+        typename std::enable_if<TpTools::is_scope(Lib::Switch<T>::type), void>::type
+        paste_field (size_t index, T& o);
+
+        template<class T> T unwrap_field (const String& field_name);
+        template<class T> T unwrap_field (size_t index);
+
+        Node& node (const String& name)const;
         Node& node (size_t index) const;
 
         Value& value (const String& name) const;
@@ -92,18 +105,21 @@ namespace Srl {
         void to_source(std::ostream& stream, const TParser& parser = TParser());
 
     private:
-        Node(Tree* tree_, Type type_ = Type::Object, bool just_parse_ = false)
-            : tree(tree_), scope_type(type_), just_parse(just_parse_) { }
+        template<class T>
+        using Items = std::vector<Lib::Link<T>*>;
+
+        Node(Tree* tree_, Type type_ = Type::Object, bool parsed_ = true)
+            : tree(tree_), scope_type(type_), parsed(parsed_) { }
 
         Node() : Node(nullptr) { }
 
         Tree*         tree;
-        Type          scope_type;
-        bool          just_parse;
         const String* name_ptr;
+        Type          scope_type;
+        bool          parsed;
 
-        std::vector<Lib::Link<Node>*>  nodes;
-        std::vector<Lib::Link<Value>*> values;
+        Items<Node>  nodes;
+        Items<Value> values;
 
         template<class... Args>
         void open_scope (void (*Insert)(Node& node, const Args&... args),
@@ -113,16 +129,31 @@ namespace Srl {
         Node& insert_node  (Type type, const String& name);
         void  insert_value (const Value& value, const String& name);
 
-        void to_source ();
-        void parse_in  (Lib::In& source, Parser& parser);
+        void  to_source   ();
+        void  parse_in    (Lib::In& source, Parser& parser);
 
-        template<class T, class ID>
-        typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), Value&>::type
-        find(const ID& id) const;
+        void  consume_scope ();
+        Node  consume_node  (bool throw_exception);
+        Value consume_value (bool throw_exception); 
+        Node  consume_node  (const String& name);
+        Value consume_value (const String& name);
 
-        template<class T, class ID>
-        typename std::enable_if<TpTools::is_scope(Lib::Switch<T>::type), Node&>::type
-        find(const ID& id) const;
+
+        template<class T>
+        typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), Value>::type
+        consume_item();
+
+        template<class T>
+        typename std::enable_if<TpTools::is_scope(Lib::Switch<T>::type), Node>::type
+        consume_item();
+
+        template<class T>
+        typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), Items<Value>&>::type
+        items();
+
+        template<class T>
+        typename std::enable_if<TpTools::is_scope(Lib::Switch<T>::type), Items<Node>&>::type
+        items();
     };
 }
 

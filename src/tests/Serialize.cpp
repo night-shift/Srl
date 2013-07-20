@@ -58,7 +58,8 @@ struct TestClassF  {
 };
 
 struct TestClassE {
-    void srl_resolve (Context&) { }
+
+    void srl_resolve (Context& ctx) { double d; ctx(d); }
 };
 
 struct TestClassD {
@@ -92,6 +93,7 @@ struct TestClassD {
             this->deque_string.push_back(to_string(e));
             this->vector_class.push_back(TestClassE());
         }
+
         this->map_class.insert({ "a", TestClassE()});
         this->class_f.shuffle();
     }
@@ -333,40 +335,40 @@ bool test_serialize(const TParser& parser, const string& parser_name, const Tail
         TestClassA original;
         original.shuffle();
 
-        print_log("\tSrl::Store..........");
+        print_log("\tSrl::Store................");
         auto source = Srl::Store(original, parser);
         print_log("ok.\n");
 
-        print_log("\tSrl::Restore........");
+        print_log("\tSrl::Restore.............");
         auto restored = Srl::Restore<TestClassA>(source, parser);
         print_log("ok.\n");
 
-        print_log("\tData comparison.....");
+        print_log("\tData comparison..........");
         restored.test(original);
         print_log("ok.\n");
 
-        print_log("\tTree::From_Type.....");
+        print_log("\tTree::From_Type..........");
         Tree tree = Tree::From_Type(original);
         print_log("ok.\n");
 
-        print_log("\tTree::to_source.....");
+        print_log("\tTree::to_source..........");
         source = tree.to_source(parser);
         print_log("ok.\n");
 
-        print_log("\tTree::From_Source...");
+        print_log("\tTree::From_Source........");
         tree = Tree::From_Source(source, parser);
         print_log("ok.\n");
 
-        print_log("\tTree::paste.........");
+        print_log("\tTree::paste..............");
         TestClassA target;
         tree.root().paste(target);
         print_log("ok.\n");
 
-        print_log("\tData comparison.....");
+        print_log("\tData comparison..........");
         target.test(original);
         print_log("ok.\n");
 
-        print_log("\tTree::to_stream.....");
+        print_log("\tTree::to_stream..........");
         stringstream strm;
         tree = Tree::From_Type(original);
         tree.to_source(strm, parser);
@@ -374,15 +376,25 @@ bool test_serialize(const TParser& parser, const string& parser_name, const Tail
 
         strm.seekg(0);
 
-        print_log("\tTree::from_stream...");
+        print_log("\tTree::from_stream........");
         tree = Tree::From_Source(strm, parser);
         tree.root().paste(target);
         print_log("ok.\n");
 
-        print_log("\tData comparison.....");
+        print_log("\tData comparison..........");
         target.test(original);
         print_log("ok.\n");
 
+        print_log("\tSrl::Restore unordered...");
+        tree = Tree::From_Type(original);
+        source = tree.to_source(parser);
+        auto restored_unordred = Srl::Restore<TestClassA>(source, parser);
+        print_log("ok.\n");
+
+        print_log("\tData comparison.....");
+        restored_unordred.test(original);
+
+        print_log("ok.\n");
 
     }  catch(Srl::Exception& ex) {
         Tests::print_log(string(ex.what()) + "\n");
@@ -395,7 +407,7 @@ bool Tests::test_parser()
 {
     bool success = test_serialize (
         PSrl(),  "Srl",  PMsgPack(), "MsgPack", 
-        PBson(), "Bson", PJson(), "Json", PXml(),  "Xml",
+        PJson(), "Json", PXml(),  "Xml",
         PJson(true), "Json w/o space", PXml(true), "Xml w/o space"
     );
 

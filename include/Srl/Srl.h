@@ -5,7 +5,6 @@
 #include "Exception.h"
 #include "PSrl.h"
 #include "PJson.h"
-#include "PBson.h"
 #include "PXml.h"
 #include "PMsgPack.h"
 #include "Registration.h"

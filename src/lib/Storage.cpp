@@ -7,8 +7,6 @@ using namespace Lib;
 
 namespace {
 
-    Tools::HashFnv1a<MemBlock> hash_function;
-
     MemBlock convert_string(const String& in, vector<uint8_t>& buffer, Encoding encoding)
     {
         if(in.encoding() == encoding) {
@@ -17,6 +15,16 @@ namespace {
         auto size = Tools::convert_charset(encoding, in, buffer, true);
 
         return MemBlock(buffer.data(), size);
+    }
+
+    size_t hash_fnc(const MemBlock& block)
+    {
+        return Tools::hash_fnv1a(block.ptr, block.size);
+    }
+
+    size_t hash_fnc(const String& str)
+    {
+        return Tools::hash_fnv1a(str.data(), str.size());
     }
 }
 
@@ -53,15 +61,22 @@ void Storage::clear_nodes()
     }
 }
 
+String Storage::conv_string(const String& str)
+{
+    return str.encoding() == Storage::Name_Encoding
+        ? str
+        : convert_string(str, this->str_buffer, Storage::Name_Encoding);
+}
+
 size_t Storage::hash_string(const String& str)
 {
     return str.encoding() == Storage::Name_Encoding
-        ? hash_function({ str.data(), str.size() })
-        : hash_function(convert_string(str, this->str_buffer, Storage::Name_Encoding));
+        ? hash_fnc(str)
+        : hash_fnc(conv_string(str));
 }
 
 template<class T>
-Link<T>* Storage::create_link(const T& val, const String& name, Heap<Link<T>>& heap, bool store_name)
+Link<T>* Storage::create_link(const T& val, const String& name, Heap<Link<T>>& heap)
 {
     static const String empty_str = String(MemBlock(), Storage::Name_Encoding);
 
@@ -69,11 +84,11 @@ Link<T>* Storage::create_link(const T& val, const String& name, Heap<Link<T>>& h
         ? MemBlock(name.data(), name.size())
         : convert_string(name, this->str_buffer, Storage::Name_Encoding);
 
-    auto name_hash = hash_function(name_conv);
+    auto name_hash = hash_fnc(name_conv);
 
     const String* str_ptr = nullptr;
 
-    if(store_name && name.size() > 0) {
+    if(name.size() > 0) {
         auto* mem = this->str_heap.get_mem(1);
 
         auto* ptr = new(mem) String(name_conv, Storage::Name_Encoding);
@@ -113,37 +128,35 @@ Link<Node>* Storage::store_node(const Node& node, Tree& tree, const String& name
 
     } else {
         /* all the fields are already stored here */
-        auto* link = this->create_link(node, name, this->node_heap, true);
+        auto* link = this->create_link(node, name, this->node_heap);
         this->stored_nodes.push_back(&link->field);
 
         return link;
     }
 }
 
-Link<Node>* Storage::create_node(Tree& tree, Type type, const String& name, bool store_data)
+Link<Node>* Storage::create_node(Tree& tree, Type type, const String& name)
 {
-    auto* link = this->create_link(Node(&tree, type), name, this->node_heap, store_data);
+    auto* link = this->create_link(Node(&tree, type), name, this->node_heap);
     this->stored_nodes.push_back(&link->field);
 
     return link;
 }
 
-Link<Value>* Storage::store_value(const Value& value, const String& name, bool store_data)
+Link<Value>* Storage::store_value(const Value& value, const String& name)
 {
-    auto* link = this->create_link(value, name, this->value_heap, store_data);
+    auto* link = this->create_link(value, name, this->value_heap);
     auto& block = link->field.block;
 
     if(block.stored_local) {
         return link;
     }
 
-    if(store_data) {
-        if(block.can_store_local()) {
-            block.move_to_local();
+    if(block.can_store_local()) {
+        block.move_to_local();
 
-        } else {
-            block.extern_data = copy_block(this->data_heap, { block.extern_data, block.size }).ptr;
-        }
+    } else {
+        block.extern_data = copy_block(this->data_heap, { block.extern_data, block.size }).ptr;
     }
 
     return link;

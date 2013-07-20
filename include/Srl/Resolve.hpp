@@ -313,7 +313,7 @@ namespace Srl { namespace Lib {
         }
 
         template<class ID = String>
-        static void Paste(T& o, const Node& node, const ID& id = Aux::Str_Empty)
+        static void Paste(T& o, Node& node, const ID& id = Aux::Str_Empty)
         {
             Aux::check_type_scope(node.type(), id);
 
@@ -346,7 +346,7 @@ namespace Srl { namespace Lib {
         }
 
         template<class ID = String>
-        static void Paste(T& o, const Node& node, const ID& id = Aux::Str_Empty)
+        static void Paste(T& o, Node& node, const ID& id = Aux::Str_Empty)
         {
             Aux::check_type_scope(node.type(), id);
 
@@ -382,16 +382,36 @@ namespace Srl { namespace Lib {
             }
         }
 
+        template<class Item>
+        static typename std::enable_if<std::is_same<Item, Value>::value, void>::type
+        Finish(Item&) { }
+
+        template<class Item>
+        static typename std::enable_if<std::is_same<Item, Node>::value, void>::type
+        Finish(Item& node) { node.consume_scope(); }
+
         template<class ID = String>
-        static void Paste(T& c, const Node& node, const ID& id = Aux::Str_Empty)
+        static void Paste(T& c, Node& node, const ID& id = Aux::Str_Empty)
         {
             Aux::check_type_scope(node.type(), id);
 
             T new_cont;
-            auto count = node.num_nodes() < 1 ? node.num_values() : node.num_nodes();
+            size_t count = 0;
 
-            for(auto i = 0U; i < count; i++) {
-                ElemSwitch<T, E>::Insert(new_cont, node, i);
+            if(node.parsed) {
+                for(auto itm : node.items<E>()) {
+                    ElemSwitch<T, E>::Insert(new_cont, itm->field, count++);
+                }
+
+            } else {
+                while(true) {
+                    auto itm = node.consume_item<E>();
+                    if(node.parsed) {
+                        break;
+                    }
+                    ElemSwitch<T, E>::Insert(new_cont, itm, count);
+                    Finish(itm);
+                }
             }
 
             c = std::move(new_cont);
@@ -401,9 +421,10 @@ namespace Srl { namespace Lib {
             static void Extract(const Elem& e, Node& node) {
                 Switch<Elem>::Insert(e, node, Aux::Str_Empty);
             }
-            static void Insert(Cont& c, const Node& node, size_t index) {
-                auto itr = c.insert(c.end(), Ctor<Elem>::Create());
-                node.paste_field(index, *itr);
+            template<class Item>
+            static void Insert(Cont& c, Item& itm, size_t index) {
+                c.emplace_back(Ctor<Elem>::Create());
+                Switch<Elem>::Paste(c.back(), itm, index);
             }
         };
 
@@ -415,9 +436,11 @@ namespace Srl { namespace Lib {
             static void Extract(const Elem& e, Node& node) {
                 Switch<Elem>::Insert(e, node, Aux::Str_Empty);
             }
-            static void Insert(Cont& c, const Node& node, size_t index) {
+            
+            template<class Item>
+            static void Insert(Cont& c, Item& itm, size_t index) {
                 auto elem = Ctor<ElemNC>::Create();
-                node.paste_field(index, elem);
+                Switch<Elem>::Paste(elem, itm, index);
                 c.insert(c.end(), std::move(elem));
             }
         };
@@ -430,14 +453,17 @@ namespace Srl { namespace Lib {
                 Switch<std::pair<KeyNC, Value>>::Insert_Pair(p, node, Aux::Str_Empty, Aux::Str_Key, Aux::Str_Value);
             }
 
-            static void Insert(Cont& c, const Node& node, size_t index) {
-                auto& pair_node = node.node(index);
-
+            template<class Item>
+            static void Insert(Cont& c, Item& itm, size_t) {
                 auto key = Ctor<KeyNC>::Create();
-                pair_node.paste_field(Aux::Str_Key, key);
+                itm.paste_field(Aux::Str_Key, key);
 
-                auto itr = c.insert(c.end(), { key, Ctor<Value>::Create() });
-                pair_node.paste_field(Aux::Str_Value, itr->second);
+                auto itr = c.emplace(std::move(key), Ctor<Value>::Create());
+                if(!itr.second) {
+                    /* entry duplication */
+                    throw Exception("Unable to restore map. Key duplication");
+                }
+                itm.paste_field(Aux::Str_Value, itr.first->second);
             }
         };
     };
@@ -461,16 +487,26 @@ namespace Srl { namespace Lib {
         }
 
         template<class ID = String>
-        static void Paste(T& ar, const Node& node, const ID& id = Aux::Str_Empty)
+        static void Paste(T& ar, Node& node, const ID& id = Aux::Str_Empty)
         {
-            auto count = TpTools::is_scope(Switch<E>::type) ? node.num_nodes() : node.num_values();
-
-            Aux::check_size(std::extent<T>::value, count, id);
             Aux::check_type_scope(node.type(), id);
 
-            for(auto i = 0U; i < count; i++) {
-                node.paste_field(i, ar[i]);
+            size_t count = 0;
+
+            if(node.parsed) {
+                for(auto itm : node.items<E>()) {
+                    Switch<E>::Paste(ar[count], itm->field, count);
+                    count++;
+                }
+
+            } else {
+                while(!node.parsed && count < std::extent<T>::value) {
+                    node.paste_field(count, ar[count]);
+                    count++;
+                }
             }
+
+            Aux::check_size(std::extent<T>::value, count, id);
         }
     };
 
@@ -496,7 +532,7 @@ namespace Srl { namespace Lib {
         }
 
         template<class ID = String>
-        static void Paste(std::pair<F,S>& p, const Node& node, const ID& id = Aux::Str_Empty)
+        static void Paste(std::pair<F,S>& p, Node& node, const ID& id = Aux::Str_Empty)
         {
             Aux::check_type(Type::Object, node.type(), id);
 
@@ -523,7 +559,7 @@ namespace Srl { namespace Lib {
         }
 
         template<class ID = String>
-        static void Paste(std::tuple<T...>& tpl, const Node& node, const ID& id = Aux::Str_Empty)
+        static void Paste(std::tuple<T...>& tpl, Node& node, const ID& id = Aux::Str_Empty)
         {
             Aux::check_type_scope(node.type(), id);
 
@@ -557,7 +593,7 @@ namespace Srl { namespace Lib {
         }
 
         template<class Wrap, class ID = String>
-        static void Paste(T& p, const Wrap& wrap, const ID& id = Aux::Str_Empty)
+        static void Paste(T& p, Wrap& wrap, const ID& id = Aux::Str_Empty)
         {
             ElemSwitch<E>::Paste(p, wrap, id);
         }
@@ -570,7 +606,7 @@ namespace Srl { namespace Lib {
                 Switch<E>::Insert(*p.get(), wrap, name);
             }
             template<class Wrap, class ID>
-            static void Paste(T& p, const Wrap& wrap, const ID& id)
+            static void Paste(T& p, Wrap& wrap, const ID& id)
             {
                 p = T(Ctor<C>::Create_New());
                 Switch<E>::Paste(*p.get(), wrap, id);
@@ -584,7 +620,7 @@ namespace Srl { namespace Lib {
                 Switch<E*>::Insert(p.get(), node, name);
             }
             template<class ID>
-            static void Paste(T& p, const Node& node, const ID& id)
+            static void Paste(T& p, Node& node, const ID& id)
             {
                 C* ptr = p.get();
                 Switch<C*>::Paste(ptr, node, id);

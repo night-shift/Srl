@@ -29,10 +29,11 @@ namespace Srl { namespace Lib {
         Storage(Storage&& g);
 
         Link<Node>*  store_node  (const Node& node, Tree& tree, const String& name);
-        Link<Node>*  create_node (Tree& tree, Type type, const String& name, bool store_data = true);
-        Link<Value>* store_value (const Value& value, const String& name, bool store_data = true);
+        Link<Node>*  create_node (Tree& tree, Type type, const String& name);
+        Link<Value>* store_value (const Value& value, const String& name);
 
-        size_t hash_string      (const String& str);
+        size_t hash_string       (const String& str);
+        String conv_string       (const String& str);
 
         inline std::vector<uint8_t>&  str_conv_buffer();
         inline std::vector<uint8_t>&  type_conv_buffer();
@@ -50,7 +51,7 @@ namespace Srl { namespace Lib {
 
         void clear_nodes();
         template<class T>
-        Link<T>* create_link(const T& val, const String& name, Heap<Link<T>>& heap, bool store_name);
+        Link<T>* create_link(const T& val, const String& name, Heap<Link<T>>& heap);
     };
 
 } }

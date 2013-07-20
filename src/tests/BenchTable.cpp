@@ -17,7 +17,7 @@ struct BStruct {
 
     BStruct() { }
 
-    BStruct(string&& str)
+    BStruct(string str)
     {
         for(int i = 0; i < 10; i++) {
             this->str_vec.push_back(str);
@@ -30,12 +30,12 @@ struct BStruct {
     }
 };
 
-void measure(const function<void(void)>& fnc, const string& msg)
+void measure(const function<void(void)>& fnc, const string& msg, int fac = 1)
 {
     auto start = chrono::high_resolution_clock::now();
     fnc();
     auto end = chrono::high_resolution_clock::now();
-    auto elapsed = chrono::duration_cast<chrono::milliseconds>(end - start).count();
+    auto elapsed = chrono::duration_cast<chrono::milliseconds>(end - start).count() / fac;
     print_log(msg + to_string(elapsed) + "\n");
 }
 
@@ -55,9 +55,13 @@ void run_bench(Tree& tree)
 
         measure([&](){ Restore<PSrl>(map, source); }, "\tRestore Srl  ms: ");
 
-        measure([&](){ source = Store(map, PJson(false)); }, "\tStore Json   ms: ");
+        measure([&](){ source = Store(map, PJson(true)); }, "\tStore Json   ms: ");
 
         measure([&](){ Restore<PJson>(map, source); }, "\tRestore Json ms: ");
+
+        measure([&](){ source = Store<PMsgPack>(map); }, "\tStore MsgP    ms: ");
+
+        measure([&](){ Restore<PMsgPack>(map, source); }, "\tRestore MsgP  ms: ");
 
     } catch(Exception& ex) {
         print_log(string(ex.what()) + "\n");
@@ -84,6 +88,26 @@ void run_bench(Tree& tree, const T& parser, const string& name, const string& me
 
         unlink("File");
 
+        measure([&] {
+            Lib::In src(source.data(), source.size());
+            auto p = parser;
+            int depth = 0;
+            while(true) {
+                auto seg = p.parse_in(src); 
+                if(TpTools::is_scope(seg.value.type())) {
+                    depth++;
+                    continue;
+                }
+                if(seg.value.type() == Type::Scope_End) {
+                    depth--;
+                    if(depth <= 0) {
+                        break;
+                    }
+                }
+                
+            }
+        }, "\tParse in / no store ms: ");
+
         print_log("\tdocument size bytes: " + to_string(source.size()) + "\n");
 
     } catch (Exception& ex) {
@@ -108,12 +132,10 @@ void Tests::run_benches()
 
     Tree tree;
     tree.root().insert("map", map);
-
     run_bench (
         tree,
         PSrl(),  "Srl",  "",
         PMsgPack(),  "MsgPack",  "",
-        PBson(), "Bson", "",
         PJson(), "Json", "",
         PXml(),  "Xml",  "",
         PJson(true), "Json"," w/o space",

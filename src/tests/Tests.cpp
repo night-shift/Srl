@@ -50,9 +50,9 @@ int main(int argc, char** args)
 
         cout<<endl;
         if(success) {
-            cout<<"Tests passed."<<endl;
+            cout << "Tests passed." <<endl;
         } else {
-            cout<<"Tests failed."<<endl;
+            cout << "Tests failed." <<endl;
         }
     }
 

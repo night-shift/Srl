@@ -24,7 +24,7 @@ namespace Srl {
         String(const std::pair<Encoding, Lib::MemBlock>& pair)
             :  block(pair.second, Type::String, pair.first) { }
 
-        String(Lib::MemBlock data_, Encoding encoding_)
+        String(Lib::MemBlock data_, Encoding encoding_ = Encoding::UTF8)
             : block(data_, Type::String, encoding_ ) { }
 
         String(const uint8_t* ptr, size_t size_, Encoding encoding_)

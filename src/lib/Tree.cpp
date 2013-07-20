@@ -35,8 +35,7 @@ void Tree::parse_out(Parser& parser, Lib::Out& out, const function<void()>& stor
 {
     this->temp_parser = &parser;
     this->temp_stream = &out;
-
-    this->root_node->just_parse = true;
+    this->just_parse = true;
 
     this->parse_value(Value(Type::Object), this->root_node->name());
 
@@ -51,7 +50,7 @@ void Tree::set_output (Parser& parser, Lib::Out& out)
     this->temp_stream = &out;
 }
 
-void Tree::parse_in(Parser& parser, In& source, bool just_parse)
+void Tree::parse_in(Parser& parser, In& source)
 {
     auto first_seg = parser.parse_in(source);
     auto& name = first_seg.name;
@@ -61,11 +60,30 @@ void Tree::parse_in(Parser& parser, In& source, bool just_parse)
         throw Exception("Unable to parse source. Data malformed.");
     }
 
-    auto* link = this->storage.create_node(*this, value.type(), String(name, Encoding::UTF8), !just_parse);
+    auto* link = this->storage.create_node(*this, value.type(), String(name, Encoding::UTF8));
     this->root_node = &link->field;
-    this->root_node->just_parse = just_parse;
 
     this->root_node->parse_in(source, parser);
+}
+
+void Tree::parse_in(Parser& parser, In& source, const function<void()>& restore_switch)
+{
+    this->temp_in = &source;
+    this->temp_parser = &parser;
+    this->just_parse = true;
+
+    auto first_seg = parser.parse_in(source);
+    auto& name = first_seg.name;
+    auto& value = first_seg.value;
+
+    if(!TpTools::is_scope(value.type())) {
+        throw Exception("Unable to parse source. Data malformed.");
+    }
+
+    auto* link = this->storage.store_node(Node(this, value.type(), false), *this, String(name));
+    this->root_node = &link->field;
+
+    restore_switch();
 }
 
 void Tree::parse_out_convert(const Value& value, const String& val_name, Parser& parser)
@@ -132,18 +150,3 @@ Node& Tree::root()
     return *this->root_node;
 }
 
-void Tree::srl_resolve(Context& ctx)
-{
-    vector<uint8_t> source;
-
-    if(ctx.mode() == Mode::Insert) {
-        source = this->to_source<PSrl>();
-    }
-
-    auto wrap = BitWrap(
-        source.data(), source.size(),
-        [&source](size_t sz) { source.resize(sz); return source.data(); }
-    );
-
-    ctx("binary", wrap);
-}

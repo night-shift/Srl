@@ -14,7 +14,7 @@ namespace {
     /* Positive FixNum 0xxxxxxx 0x00 - 0x7f
        Negative FixNum 111xxxxx 0xe0 - 0xff */
     template<uint8_t prefix, Type type>
-    function<void(const MemBlock&, Out& out)> scalar_to_msgp()
+    function<void(const MemBlock&, Out& out)> integral_to_msgp()
     {
         return [](const MemBlock& val, Out& out) {
 
@@ -24,23 +24,25 @@ namespace {
                     return true;
                 }
                 return false;
+            };
 
+            const auto write_nfixnum = [&out](int64_t i) {
+                if(i < 0 && i >= -31) {
+                    out.write(0xE0 | (uint8_t)-i);
+                    return true;
+                } 
+                return false;
             };
 
             if(TpTools::is_signed(type)) {
                 int64_t i;
                 TpTools::paste_type(i, type, val.ptr);
 
-                if(i < 0 && i >= -31) {
-                    out.write(0xE0 | (uint8_t)-i);
-                    return;
-
-                } else if(i >= 0 && write_pfixnum(i)) { 
+                if((i >= 0 && write_pfixnum(i)) || write_nfixnum(i)) {
                     return;
                 }
 
             } else {
-
                 uint64_t i;
                 TpTools::paste_type(i, type, val.ptr);
                 if(write_pfixnum(i)) {
@@ -68,7 +70,7 @@ namespace {
         if(val.size < 16) {
             out.write(0xA0 | (uint8_t)val.size);
 
-        } else if (val.size <= (uint16_t)~0U) {
+        } else if (val.size <= 0xFFFF) {
             uint16_t sz = val.size;
             out.write(0xDA);
             out.write((const uint8_t*)&sz, 2);
@@ -99,15 +101,17 @@ namespace {
     const function<void(const MemBlock&, Out& out)> srl_to_msgp[] {
         /* false 0xc2 true 0xc3 */
         [](const MemBlock& val, Out& out) { uint8_t t = *val.ptr ? 0xC3 : 0xC2; out.write(t); },
-        scalar_to_msgp<0xD0, Type::I8>(),
-        scalar_to_msgp<0xCC, Type::UI8>(),
-        scalar_to_msgp<0xD1, Type::I16>(),
-        scalar_to_msgp<0xCD, Type::UI16>(),
-        scalar_to_msgp<0xD2, Type::I32>(),
-        scalar_to_msgp<0xCE, Type::UI32>(),
-        scalar_to_msgp<0xD3, Type::I64>(),
-        scalar_to_msgp<0xCF, Type::UI64>(),
+        integral_to_msgp<0xD0, Type::I8>(),
+        integral_to_msgp<0xCC, Type::UI8>(),
+        integral_to_msgp<0xD1, Type::I16>(),
+        integral_to_msgp<0xCD, Type::UI16>(),
+        integral_to_msgp<0xD2, Type::I32>(),
+        integral_to_msgp<0xCE, Type::UI32>(),
+        integral_to_msgp<0xD3, Type::I64>(),
+        integral_to_msgp<0xCF, Type::UI64>(),
+        /* Type::FP32 */
         fp_to_msgp<0xCA>(),
+        /* Type::FP64 */
         fp_to_msgp<0xCB>(),
         /* nil 0xc0 Type::Null*/
         [](const MemBlock&, Out& out) { out.write(0xC0); },
@@ -117,26 +121,27 @@ namespace {
         raw_to_msgp,
     };
 
-    template<Type type> function<Value(In& in)> integral_to_srl()
+    template<Type type> function<Value(In& in)> scalar_to_srl()
     {
         return [](In& in) {
             auto sz = TpTools::get_size(type);
             auto block = in.read_block(sz, error);
-            return Value(block, type);
+
+            return Value::From_Type(block, type);
         };
     }
 
     const function<Value(In& in)> msgp_to_srl[] {
-    /* float   0xca */ integral_to_srl<Type::FP32>(),
-    /* double  0xcb */ integral_to_srl<Type::FP64>(),
-    /* uint 8  0xcc */ integral_to_srl<Type::UI8>(),
-    /* uint 16 0xcd */ integral_to_srl<Type::UI16>(),
-    /* uint 32 0xce */ integral_to_srl<Type::UI32>(),
-    /* uint 64 0xcf */ integral_to_srl<Type::UI64>(),
-    /* int 8   0xd0 */ integral_to_srl<Type::I8>(),
-    /* int 16  0xd1 */ integral_to_srl<Type::I16>(),
-    /* int 32  0xd2 */ integral_to_srl<Type::I32>(),
-    /* int 64  0xd3 */ integral_to_srl<Type::I64>()
+    /* float   0xca */ scalar_to_srl<Type::FP32>(),
+    /* double  0xcb */ scalar_to_srl<Type::FP64>(),
+    /* uint 8  0xcc */ scalar_to_srl<Type::UI8>(),
+    /* uint 16 0xcd */ scalar_to_srl<Type::UI16>(),
+    /* uint 32 0xce */ scalar_to_srl<Type::UI32>(),
+    /* uint 64 0xcf */ scalar_to_srl<Type::UI64>(),
+    /* int 8   0xd0 */ scalar_to_srl<Type::I8>(),
+    /* int 16  0xd1 */ scalar_to_srl<Type::I16>(),
+    /* int 32  0xd2 */ scalar_to_srl<Type::I32>(),
+    /* int 64  0xd3 */ scalar_to_srl<Type::I64>()
     };
 
     bool prefix_is_integral(uint8_t prefix)
@@ -249,7 +254,7 @@ void PMsgPack::parse_out(const Value& value, const MemBlock& name, Out& out)
         return;
     }
 
-    if(this->scope != nullptr) { 
+    if(this->scope) { 
         if(this->scope->type == Type::Object) {
             srl_to_msgp[(uint8_t)Type::String](name, out);
         }
@@ -278,7 +283,7 @@ void PMsgPack::write_scope(Type type, Out& out)
 
 Parser::SourceSeg PMsgPack::parse_in(In& source)
 {
-    if(this->scope != nullptr) {
+    if(this->scope) {
 
         if(this->scope->elements < 1) {
             if(this->scope_stack.size() < 1) {
@@ -296,7 +301,7 @@ Parser::SourceSeg PMsgPack::parse_in(In& source)
     MemBlock name;
     auto prefix = source.cast_move<uint8_t>(error);
 
-    if(this->scope != nullptr && this->scope->type == Type::Object) {
+    if(this->scope && this->scope->type == Type::Object) {
         name = prefix_is_raw(prefix) ? read_name(prefix, this->buffer, source) : name;
         prefix = source.cast_move<uint8_t>(error);
     }

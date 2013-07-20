@@ -100,11 +100,6 @@ Taking the vector of bytes from above, you can call:
 ```cpp
 auto lang = Srl::Restore<Lang, PJson>(bytes);
 ```
-Which is actually the short form for:
-```cpp
-auto tree = Tree::From_Source<PJson>(bytes);
-auto lang = tree.root().unwrap<Lang>();
-```
 #### Handling non-default constructors
 Objects are instantiated through a factory ```struct Srl::Ctor<T>```. As default parameterless constructors are required. You can declare
 ```friend struct Srl::Ctor<YourClass>``` if you don't want to expose public default constructors. Or specialize
@@ -117,7 +112,7 @@ struct Base {
     virtual const Srl::TypeID& srl_type_id();
 
     virtual void srl_resolve (Srl::Context& ctx) {
-        ctx ("frombase", field);
+        ctx ("from_base", field);
     }
 
     virtual ~Base { }
@@ -136,7 +131,7 @@ struct Derived : Base {
 
     void srl_resolve (Srl::Context& ctx) override {
         Base::srl_resolve(ctx);
-        ctx ("fromderived", field);
+        ctx ("from_derived", field);
     }
 };
 
@@ -175,12 +170,12 @@ Srl::Store<PJson>(cout, composite);
     "bases": [
         {
             "srl_type_id": "Derived",
-            "frombase": 5,
-            "fromderived": 10
+            "from_base": 5,
+            "from_derived": 10
         },
         {
             "srl_type_id": "Base",
-            "frombase": 5
+            "from_base": 5
         }
     ]
 }
@@ -244,7 +239,7 @@ For text-based serialization formats binary data will be converted to a base64 s
 ```
 
 #### Serialization formats
-Srl supports 5 serialization formats. Json, Xml, MessagePack, Bson and
+Srl supports 4 serialization formats. Json, Xml, MessagePack, and
 [Srl](https://github.com/night-shift/Srl/blob/master/src/lib/PSrl.cpp), a custom space efficient binary format.
 
 Select a format by...

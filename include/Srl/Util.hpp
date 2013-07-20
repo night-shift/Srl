@@ -14,20 +14,18 @@ namespace Srl {
             static std::function<void()> Insert(const T& o, Tree& tree) {
                 return [&o, &tree] { tree.root().insert(o); };
             }
-            static void Paste(Tree& tree, T& target) {
-                tree.root().paste_field(0, target);
+            static std::function<void()> Paste(Tree& tree, T& o) {
+                return [&o, &tree] { tree.root().paste_field(0, o); };
             }
         };
 
         template<class T>
         struct StoreSwitch<T, typename std::enable_if<has_resolve_method<T>::value>::type> {
             static std::function<void()> Insert(const T& o, Tree& tree) {
-                return [&o, &tree] {
-                    Switch<T>::Insert(tree.root(), o);
-                };
+                return [&o, &tree] { Switch<T>::Insert(tree.root(), o); };
             }
-            static void Paste(Tree& tree, T& target) {
-                tree.root().paste(target);
+            static std::function<void()> Paste(Tree& tree, T& o) {
+                return [&o, &tree] { tree.root().paste(o); };
             }
         };
 
@@ -107,10 +105,7 @@ namespace Srl {
     {
         TParser copy = parser;
         Tree tree;
-        bool just_parse = true;
-        tree.parse_in(copy, in, just_parse);
-
-        Lib::Aux::StoreSwitch<Object>::Paste(tree, object);
+        tree.parse_in(copy, in, Lib::Aux::StoreSwitch<Object>::Paste(tree, object));
     }
 }
 

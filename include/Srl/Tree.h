@@ -42,14 +42,14 @@ namespace Srl {
 
         Node& root();
 
-        void srl_resolve(Context& ctx);
-
     private:
         Lib::Storage storage;
         Node*        root_node;
 
         Parser*   temp_parser = nullptr;
         Lib::Out* temp_stream = nullptr;
+        Lib::In*  temp_in     = nullptr;
+        bool      just_parse  = false;
 
         void parse_value (const Value& value, const String& name);
         void parse_out (Parser& parser, Lib::Out& out, const std::function<void()>& store_switch);
@@ -59,7 +59,8 @@ namespace Srl {
         void parse_out_convert (const Value& value, const String& name, Parser& parser);
         Value convert_type (const Value& value);
 
-        void parse_in (Parser& parser, Lib::In& source, bool just_parse = false);
+        void parse_in (Parser& parser, Lib::In& source);
+        void parse_in (Parser& parser, Lib::In& source, const std::function<void()>& restore_switch);
 
         template<class TParser>
         static Tree From_Source (Lib::In& source, const TParser& parser);

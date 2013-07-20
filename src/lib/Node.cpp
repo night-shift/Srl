@@ -107,15 +107,55 @@ namespace {
     }
 
     template<class T>
+    void remove_link(T& field, Cont<T>& links)
+    {
+        for(auto itr = links.begin(); itr != links.end(); itr++) {
+            if(&(*itr)->field == &field) {
+                links.erase(itr);
+                break;
+            }
+        }
+    }
+
+    template<class T>
     void insert_link(Link<T>* link, Cont<T>& links)
     {
         links.push_back(link);
+    }
+
+    size_t hash_string(const String& str, Storage& storage)
+    {
+        return str.encoding() == Storage::Name_Encoding 
+            ? Tools::hash_fnv1a(str.data(), str.size())
+            : storage.hash_string(str);
+    }
+
+    template<class T>
+    T* find_link_remove(const String& name, Cont<T>& links, Storage& storage)
+    {
+        T* rslt = nullptr;
+
+        auto* link = links.size() > 0 
+            ? find_link<Hash>(hash_string(name, storage), links)
+            : nullptr;
+
+        if(link != nullptr) {
+            rslt = &link->field;
+            remove_link(*rslt, links);
+        }
+
+        return rslt;
+    }
+
+    bool compare(const String& a, const MemBlock& b)
+    {
+        return a.size() == b.size && memcmp(a.data(), b.ptr, b.size) == 0;
     }
 }
 
 void Node::insert_value(const Value& new_value, const String& name_)
 {
-    if(this->just_parse) {
+    if(this->tree->just_parse) {
         this->tree->parse_value(new_value, name_);
 
     } else {
@@ -139,7 +179,7 @@ Node& Node::insert_node(Type node_type, const String& name_)
 
 Value& Node::value(const String& name_) const
 {
-    auto hash = this->tree->storage.hash_string(name_);
+    auto hash = hash_string(name_, this->tree->storage);
     auto* link = find_link<Throw | Hash>(hash, this->values, name_);
 
     return link->field;
@@ -151,49 +191,15 @@ Value& Node::value(size_t index) const
     return link->field;
 }
 
-/* In rare cases empty document nodes can't be distinguished
- * from empty plain values, try to detect such a case, create an empty node and forward it. */
 Node& Node::node(size_t index) const
 {
-    if(this->nodes.size() > 0) {
-        return find_link<Throw | Index>(index, this->nodes)->field;
-
-    } else {
-        /* check if a value at given index exists */
-        find_link<Throw | Index>(index, this->values);
-        /* this might be such a case now if all values are empty  */
-        for(auto e : this->values) {
-            if(e->field.size() > 0) {
-                auto msg = "Cannot access Node at pos " + to_string(index) + ". Index out of bounds.";
-                throw Exception(msg);
-            }
-        }
-        auto* link = this->tree->storage.create_node(*this->tree, Type::Array, String());
-
-        return link->field;
-    }
-
+    return find_link<Throw | Index>(index, this->nodes)->field;
 }
 
-/* same for named nodes */
 Node& Node::node(const String& name_) const
 {
-    auto hash = this->tree->storage.hash_string(name_);
-    auto* link = find_link<Hash>(hash, this->nodes, name_);
-
-    if (link != nullptr) {
-        return link->field;
-
-    } else {
-        auto* link_value = find_link<Throw | Hash>(hash, this->values, name_);
-        if(link_value->field.size() > 0) {
-            auto msg = "Field " + name_.unwrap(false) + " not found.";
-            throw Exception(msg);
-        }
-        auto* new_link = this->tree->storage.create_node(*this->tree, Type::Array, name_);
-
-        return new_link->field;
-    }
+    auto hash = hash_string(name_, this->tree->storage);
+    return find_link<Throw | Hash>(hash, this->nodes, name_)->field;
 }
 
 void Node::parse_in(In& source, Parser& parser)
@@ -204,30 +210,174 @@ void Node::parse_in(In& source, Parser& parser)
         auto& val = seg.value;
 
         if(val.type() == Type::Scope_End) {
+            this->parsed = true;
             break;
         }
 
         auto field_name = String(seg.name, Encoding::UTF8);
-        /* in direct parse mode the whole tree is discarded afterwards,
-         * so storing data blocks is unnecessary */
-        bool store_data = !this->just_parse || seg.data_buffered;
 
         if(!TpTools::is_scope(val.type())) {
             /* new value */
-            auto* link = this->tree->storage.store_value(
-                val, field_name, store_data
-            );
+            auto* link = this->tree->storage.store_value(val, field_name);
             insert_link(link, this->values);
 
         } else {
             /* new node */
-            auto* link = this->tree->storage.create_node(*this->tree, val.type(), field_name, store_data);
-            link->field.just_parse = this->just_parse;
+            auto* link = this->tree->storage.create_node(*this->tree, val.type(), field_name);
             insert_link(link, this->nodes);
 
             link->field.parse_in(source, parser);
         }
     }
+}
+
+Node Node::consume_node(const String& name)
+{
+    auto* found = find_link_remove(name, this->nodes, this->tree->storage);
+
+    if(found != nullptr) {
+        return *found;
+    }
+
+    auto name_conv = this->tree->storage.conv_string(name);
+
+    while(!this->parsed) {
+
+        auto seg = this->tree->temp_parser->parse_in(*this->tree->temp_in);
+        auto type = seg.value.type();
+
+        if(type == Type::Scope_End) {
+            this->parsed = true;
+            break;
+        }
+
+        if(TpTools::is_scope(type)) {
+            if(compare(name_conv, seg.name)) {
+                return Node(this->tree, type, false);
+
+            }
+
+            auto* node = this->tree->storage.create_node(*this->tree, type, seg.name);
+            insert_link(node, this->nodes);
+
+            node->field.parse_in(*this->tree->temp_in, *this->tree->temp_parser);
+
+        } else {
+            auto* value = this->tree->storage.store_value(seg.value, seg.name);
+            insert_link(value, this->values);
+        }
+    }
+
+    throw Exception("Field " + name.unwrap(false) + " not found");
+}
+
+Value Node::consume_value(const String& name)
+{
+    auto* val = find_link_remove(name, this->values, this->tree->storage);
+
+    if(val != nullptr) {
+        return *val;
+    }
+
+    auto name_conv = this->tree->storage.conv_string(name);
+
+    while(!this->parsed) {
+
+        auto seg = this->tree->temp_parser->parse_in(*this->tree->temp_in);
+        auto type = seg.value.type();
+
+        if(type == Type::Scope_End) {
+            this->parsed = true;
+            break;
+        }
+
+        if(!TpTools::is_scope(type)) {
+            if(compare(name_conv, seg.name)) { 
+                return seg.value;
+            }
+
+            auto* value = this->tree->storage.store_value(seg.value, seg.name);
+            insert_link(value, this->values);
+
+        } else {
+            auto* node = this->tree->storage.create_node(*this->tree, type, seg.name);
+            insert_link(node, this->nodes);
+            node->field.parse_in(*this->tree->temp_in, *this->tree->temp_parser);
+        }
+    }
+
+    throw Exception("Field " + name.unwrap(false) + " not found");
+}
+
+
+Node Node::consume_node(bool throw_exception)
+{
+    if(this->nodes.size() > 0) {
+        auto& field = this->nodes[0]->field;
+        this->nodes.erase(this->nodes.begin());
+
+        return move(field);
+    }
+
+    while(!this->parsed) {
+        auto seg = this->tree->temp_parser->parse_in(*this->tree->temp_in);
+        auto type = seg.value.type();
+
+        if(type == Type::Scope_End) {
+            this->parsed = true;
+            break;
+        }
+
+        if(TpTools::is_scope(type)) {
+            return Node(this->tree, type, false);
+
+        } else {
+            auto* link = this->tree->storage.store_value(seg.value, seg.name);
+            insert_link(link, this->values);
+        }
+    }
+
+    if(throw_exception) {
+        throw Exception("Cannot access Node. Index out of bounds");
+    }
+
+    return Node(*this->tree);
+}
+
+Value Node::consume_value(bool throw_exception)
+{
+    if(this->values.size() > 0) {
+
+        auto& field = this->values[0]->field;
+        this->values.erase(this->values.begin());
+
+        return field;
+    }
+
+    while(!this->parsed) {
+        auto seg = this->tree->temp_parser->parse_in(*this->tree->temp_in);
+        auto type = seg.value.type();
+
+        if(type == Type::Scope_End) {
+            this->parsed = true;
+            break;
+        }
+
+        if(!TpTools::is_scope(type)) {
+            return seg.value;
+
+        } else {
+            auto* link = this->tree->storage.create_node(*this->tree, type, seg.name);
+            insert_link(link, this->nodes);
+            link->field.parse_in(*this->tree->temp_in, *this->tree->temp_parser);
+        }
+    }
+
+    if(throw_exception) {
+        throw Exception("Cannot access Node. Index out of bounds");
+    }
+
+    return Value(Type::Null);
 }
 
 void Node::to_source()
@@ -245,6 +395,26 @@ void Node::to_source()
 
     Value scope_end = Value(Type::Scope_End);
     this->tree->parse_value(scope_end, *this->name_ptr);
+}
+
+void Node::consume_scope()
+{
+    int depth = 0;
+
+    while(!this->parsed) {
+        auto seg = this->tree->temp_parser->parse_in(*this->tree->temp_in);
+        if(TpTools::is_scope(seg.value.type())) {
+            depth++;
+            continue;
+        }
+
+        if(seg.value.type() == Type::Scope_End) {
+            depth--;
+            if(depth <= 0) {
+                this->parsed = true;
+            }
+        }
+    }
 }
 
 void Node::forall_nodes(const function<void(Node*)>& fnc, bool recursive) const
@@ -276,10 +446,10 @@ void Node::forall_values(const function<void(Value*)>& fnc, bool recursive) cons
 vector<Node*> Node::find_nodes(const String& name_, bool recursive) const
 {
     vector<Node*> rslt;
-    auto hash = this->tree->storage.hash_string(name_);
+    auto hash = hash_string(name_, this->tree->storage);
 
     this->forall_nodes([&rslt, this, hash] (Node* node) {
-        if(this->tree->storage.hash_string(*node->name_ptr) == hash) {
+        if(hash_string(*node->name_ptr, this->tree->storage) == hash) {
             rslt.push_back(node);
         }
     }, recursive);
@@ -290,10 +460,10 @@ vector<Node*> Node::find_nodes(const String& name_, bool recursive) const
 vector<Value*> Node::find_values(const String& name_, bool recursive) const
 {
     vector<Value*> rslt;
-    auto hash = this->tree->storage.hash_string(name_);
+    auto hash = hash_string(name_, this->tree->storage);
 
     this->forall_values([&rslt, this, hash] (Value* value) {
-        if(this->tree->storage.hash_string(value->name()) == hash) {
+        if(hash_string(value->name(), this->tree->storage) == hash) {
             rslt.push_back(value);
         }
     }, recursive);
@@ -325,7 +495,7 @@ vector<Value*> Node::all_values(bool recursive) const
 
 void Node::remove_node(const String& name_)
 {
-    auto hash = this->tree->storage.hash_string(name_);
+    auto hash = hash_string(name_, this->tree->storage);
     auto itr = find_link<Iterator | Hash>(hash, this->nodes, name_);
     remove_link(itr, this->nodes);
 }
@@ -344,7 +514,7 @@ void Node::remove_node(Node* to_remove)
 
 void Node::remove_value(const String& name_)
 {
-    auto hash = this->tree->storage.hash_string(name_);
+    auto hash = hash_string(name_, this->tree->storage);
     auto itr = find_link<Iterator | Hash>(hash, this->values, name_);
     remove_link(itr, this->values);
 }
@@ -363,12 +533,12 @@ void Node::remove_value(Value* to_remove)
 
 bool Node::has_node(const String& field_name) const
 {
-    auto hash = this->tree->storage.hash_string(field_name);
+    auto hash = hash_string(field_name, this->tree->storage);
     return find_link<Hash>(hash, this->nodes, field_name) != nullptr;
 }
 
 bool Node::has_value(const String& field_name) const
 {
-    auto hash = this->tree->storage.hash_string(field_name);
+    auto hash = hash_string(field_name, this->tree->storage);
     return find_link<Hash>(hash, this->values, field_name) != nullptr;
 }
