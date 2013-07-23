@@ -16,18 +16,14 @@ namespace Srl {
 
         struct SourceSeg {
 
-            SourceSeg(Value val_, Lib::MemBlock name_ = { }, bool buffered_ = false)
-                : value(val_), name(name_), data_buffered(buffered_) { }
+            SourceSeg(Value val_, Lib::MemBlock name_ = { })
+                : value(val_), name(name_) { }
 
             SourceSeg(Type type)
                 : SourceSeg(Value(type)) { }
 
-            SourceSeg(Type type, Lib::MemBlock name_)
-                : SourceSeg(Value(type), name_) { }
-
             Value         value;
             Lib::MemBlock name;
-            bool          data_buffered;
         };
 
         virtual Format get_format() const = 0;

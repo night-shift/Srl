@@ -16,7 +16,7 @@ cache    = cache
 CXXFLAGS = -std=c++11 -Wfatal-errors
 
 ifeq ($(debug), 1)
-	CXXFLAGS += -g -O1 -DDEBUG -pedantic -Wall -Wextra -Wshadow -ftrapv -Wcast-align
+	CXXFLAGS += -g -O0 -DDEBUG -pedantic -Wall -Wextra -Wshadow -ftrapv -Wcast-align
 	out   := $(out)/debug
 	cache := $(cache)/debug
 else

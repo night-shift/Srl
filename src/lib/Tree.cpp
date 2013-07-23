@@ -132,7 +132,7 @@ Value Tree::convert_type(const Value& value)
 
     } else if(TpTools::is_literal(value.type())) {
 
-        data_size = Tools::type_to_string(value.type(), value.data(), buffer);
+        data_size = Tools::type_to_string(value, buffer);
 
     } else {
 

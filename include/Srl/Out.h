@@ -19,11 +19,12 @@ namespace Srl { namespace Lib {
 
         class Ticket;
 
-        inline void  write (uint8_t byte);
-        inline void  write (const MemBlock& block);
-        inline void  write (const uint8_t* bytes, size_t nbytes);
-        inline void  write (Ticket& ticket, const uint8_t* bytes, size_t offset, size_t nbytes);
-        inline void  write_times (size_t n_times, uint8_t byte);
+        template<class T> void write (const T& o);
+        inline void write_byte (uint8_t byte);
+        inline void write (const MemBlock& block);
+        inline void write (const uint8_t* bytes, size_t nbytes);
+        inline void write (Ticket& ticket, const uint8_t* bytes, size_t offset, size_t nbytes);
+        inline void write_times (size_t n_times, uint8_t byte);
 
         template<class... Tokens>
         void write_substitute(const Lib::MemBlock& data, const Tokens&... tokens);

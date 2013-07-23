@@ -105,7 +105,7 @@ namespace Srl { namespace Lib {
                 Aux::check_type_value(val_type, id);
                 Aux::check_size(TpTools::get_size(val_type), value.size(), id);
 
-                auto tmp_string = Tools::type_to_string(val_type, value.data());
+                auto tmp_string = Tools::type_to_string(value);
                 str = String(tmp_string).unwrap<T>();
             }
         }
@@ -224,7 +224,7 @@ namespace Srl { namespace Lib {
 
         static void Insert(const T& o, Node& node, const String& name)
         {
-            Value value({ reinterpret_cast<const uint8_t*>(&o), sizeof(T) }, type);
+            Value value(o);
             node.insert_value(value, name);
         }
 
@@ -236,12 +236,10 @@ namespace Srl { namespace Lib {
             Aux::check_type_value(val_type, id);
 
             if(val_type != Type::String) {
-                assert(value.size() <= TpTools::Literal_Max_Size && value.size() == TpTools::get_size(val_type));
-
-                Paste_Type(o, value.type(), value.data(), id);
+                Paste_Type(o, value, id);
 
             } else {
-                Paste_String(o, value);
+                Paste_String(o, value, id);
             }
         }
 
@@ -249,28 +247,25 @@ namespace Srl { namespace Lib {
         static void Paste_String(T& o, const Value& value, const ID& id = Aux::Str_Empty)
         {
             String wrap(value.data(), value.size(), value.encoding());
-            auto conversion = Tools::string_to_type(wrap);
 
-            if(!conversion.success) {
+            auto conv = Tools::string_to_type(wrap);
+
+            if(!conv.first) {
                 auto msg = "Cannot convert string \'"
                     + wrap.unwrap(false) + "\' to numeric type " + TpTools::get_name(type) + ".";
                 Aux::throw_error(msg, id);
             }
 
-            Paste_Type(o, conversion.type, (const uint8_t*)&conversion.int_value, id);
+            Paste_Type(o, conv.second, id);
         }
 
         template<class ID = String>
-        static void Paste_Type(T& o, Type src_type, const uint8_t* src_mem, const ID& id = Aux::Str_Empty)
+        static void Paste_Type(T& o, const Value& value, const ID& id = Aux::Str_Empty)
         {
-            if(src_type == type) {
-                o = Read_Cast<T>(src_mem);
-                return;
-            }
+            auto success = TpTools::paste_type(o, value);
 
-            auto success = TpTools::paste_type(o, src_type, src_mem);
             if(!success) {
-                auto msg = "Cannot cast type " + TpTools::get_name(src_type)
+                auto msg = "Cannot cast type " + TpTools::get_name(value.type())
                            + " to " + TpTools::get_name(type) + ". Overflow detected.";
                 Aux::throw_error(msg, id);
             }
@@ -409,7 +404,7 @@ namespace Srl { namespace Lib {
                     if(node.parsed) {
                         break;
                     }
-                    ElemSwitch<T, E>::Insert(new_cont, itm, count);
+                    ElemSwitch<T, E>::Insert(new_cont, itm, count++);
                     Finish(itm);
                 }
             }

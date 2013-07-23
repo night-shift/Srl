@@ -9,14 +9,27 @@
 
 namespace Srl {
 
-    inline Value Value::From_Type(const Lib::MemBlock&block, Type type)
+    template<class T> Value::Value(const T& val)
+        : block(sizeof(T), TpTools::SrlType<T>::type, Encoding::Unknown)
     {
-        assert(TpTools::is_literal(type));
+        static_assert(Lib::is_numeric<T>::value, "Cannot create Value from non-numeric type.");
 
-        Value val(block, type);
-        val.block.move_to_local();
+        const auto tp = TpTools::SrlType<T>::type;
 
-        return val;
+        if(tp == Type::FP64) {
+            this->block.fp64 = val;
+
+        } else if(tp == Type::FP32) {
+            this->block.fp32 = val;
+
+        } else if(TpTools::is_signed(tp)) {
+            this->block.i64 = val;
+
+        } else {
+            this->block.ui64 = val;
+        }
+
+        this->block.stored_local = true;
     }
 
     template<class T> T Value::unwrap()
@@ -63,6 +76,11 @@ namespace Srl {
     inline const String& Value::name() const
     {
         return *this->name_ptr;
+    }
+
+    inline const Lib::PackedBlock& Value::pblock() const
+    {
+        return this->block;
     }
 }
 

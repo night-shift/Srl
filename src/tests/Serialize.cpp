@@ -335,7 +335,7 @@ bool test_serialize(const TParser& parser, const string& parser_name, const Tail
         TestClassA original;
         original.shuffle();
 
-        print_log("\tSrl::Store................");
+        print_log("\tSrl::Store...............");
         auto source = Srl::Store(original, parser);
         print_log("ok.\n");
 
@@ -391,7 +391,7 @@ bool test_serialize(const TParser& parser, const string& parser_name, const Tail
         auto restored_unordred = Srl::Restore<TestClassA>(source, parser);
         print_log("ok.\n");
 
-        print_log("\tData comparison.....");
+        print_log("\tData comparison..........");
         restored_unordred.test(original);
 
         print_log("ok.\n");

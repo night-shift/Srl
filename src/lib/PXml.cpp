@@ -134,10 +134,12 @@ Parser::SourceSeg PXml::parse_in(In& source)
     auto& tag = *this->tags[this->tag_index++];
 
     if(tag.type == Type::Scope_End || TpTools::is_scope(tag.type)) {
-        return SourceSeg(Value(tag.type), tag.name, source.is_streaming());
+
+        return SourceSeg(Value(tag.type), tag.name);
 
     } else {
-        return SourceSeg(Value(tag.data, Encoding::UTF8), tag.name, true);
+
+        return SourceSeg(Value(tag.data, Encoding::UTF8), tag.name);
     }
 }
 

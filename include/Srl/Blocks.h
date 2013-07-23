@@ -20,19 +20,25 @@ namespace Srl {
 
         struct PackedBlock {
 
+            PackedBlock(uint32_t sz, Type type_, Encoding encoding_)
+                : size(sz), type(type_), encoding(encoding_) { }
+
             PackedBlock(const Lib::MemBlock& block, Type type_, Encoding encoding_)
                 : extern_data(block.ptr), size(block.size), type(type_), encoding(encoding_) { }
 
             union {
-                uint8_t        local_data[sizeof(size_t)];
+                uint8_t        local_data[8];
                 const uint8_t* extern_data;
+                double         fp64;
+                float          fp32;
+                int64_t        i64;
+                uint64_t       ui64;
             };
 
             uint32_t size;
             Type     type;
             Encoding encoding;
             bool     stored_local = false;
-
 
             const uint8_t* data() const
             {
@@ -50,7 +56,7 @@ namespace Srl {
                 this->stored_local = true;
             }
 
-            bool can_store_local() { return this->size <= sizeof(size_t); }
+            bool can_store_local() { return this->size <= 8; }
         };
     }
 }

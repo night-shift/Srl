@@ -14,6 +14,26 @@ namespace {
     /* variable-length quantity encoding */
     void     encode_integer(uint64_t integer, Out& buffer);
     uint64_t decode_integer(In& source);
+
+    template<Type type> function<Value(uint64_t)> conv_fnc()
+    {
+        return [](uint64_t decoded) {
+            auto val = (typename TpTools::Real<type>::type)decoded;
+            return Value(val);
+        };
+    }
+
+    const function<Value(uint64_t)> decoded_to_value[] {
+        conv_fnc<Type::Bool>(),
+        conv_fnc<Type::I8>(),
+        conv_fnc<Type::UI8>(),
+        conv_fnc<Type::I16>(),
+        conv_fnc<Type::UI16>(),
+        conv_fnc<Type::I32>(),
+        conv_fnc<Type::UI32>(),
+        conv_fnc<Type::I64>(),
+        conv_fnc<Type::UI64>(),
+    };
 }
 
 /* Check if a particular field id was written already.
@@ -115,10 +135,8 @@ void PSrl::parse_out(const Value& value, const MemBlock& name, Out& out)
             out.write(value.data(), value.size());
 
         } else {
-            uint64_t integer = 0;
-            assert(value.size() < 9 && "Cannot encode integers > 64 bit.");
-            /* TODO support for big-endian */
-            memcpy(&integer, value.data(), value.size());
+
+            uint64_t integer = value.pblock().ui64;
             encode_integer(integer, out);
         }
 
@@ -164,10 +182,8 @@ Parser::SourceSeg PSrl::parse_in(In& source)
         auto size  = decode_integer(source);
         auto block = source.read_block(size, error);
 
-        bool buffered = source.is_streaming();
-
-        return type == Type::String ? SourceSeg({ block, Encoding::UTF8 }, name, buffered)
-                                    : SourceSeg({ block, Type::Binary }, name, buffered);
+        return type == Type::String ? SourceSeg({ block, Encoding::UTF8 }, name)
+                                    : SourceSeg({ block, Type::Binary }, name);
     }
 
     /* shouldn't end down here */
@@ -178,20 +194,19 @@ Parser::SourceSeg PSrl::parse_in(In& source)
 Parser::SourceSeg PSrl::read_literal(const MemBlock& name, In& source, Type type)
 {
     if(type == Type::Null) {
-        return { Value({ }, type), name, false };
+        return { Value({ }, type), name };
     }
 
     if(type == Type::FP32 || type == Type::FP64) {
-        auto type_size = TpTools::get_size(type);
-        auto block = source.read_block(type_size, error);
+        double val = type == Type::FP64 ? source.cast_move<double>(error)
+                                        : source.cast_move<float>(error);
 
-        return { Value(block, type), name, source.is_streaming() };
+        return { Value(val), name };
     }
 
-    auto size        = TpTools::get_size(type);
     uint64_t integer = decode_integer(source);
-    /* TODO support for big-endian */
-    return { Value::From_Type({ (const uint8_t*)&integer, size }, type), name };
+
+    return { decoded_to_value[(size_t)type](integer), name };
 }
 
 void PSrl::push_scope(Type scope_type)

@@ -135,6 +135,7 @@ namespace Srl {
         void  consume_scope ();
         Node  consume_node  (bool throw_exception);
         Value consume_value (bool throw_exception); 
+
         Node  consume_node  (const String& name);
         Value consume_value (const String& name);
 

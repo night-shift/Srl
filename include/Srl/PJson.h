@@ -27,7 +27,6 @@ namespace Srl {
 
     private :
         bool             skip_whitespace;
-        uint8_t          conversion_buffer[TpTools::Literal_Max_Size];
         std::stack<Type> scope_stack;
         Type             scope_type   = Type::Null;
         bool             scope_closed = true;

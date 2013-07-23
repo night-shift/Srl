@@ -4,7 +4,6 @@
 #include "Enums.h"
 #include "Type.h"
 #include "Blocks.h"
-#include "TpTools.hpp"
 
 namespace Srl {
 
@@ -16,7 +15,7 @@ namespace Srl {
         friend class Lib::Storage;
 
     public:
-        inline static Value From_Type(const Lib::MemBlock&block, Type type);
+        template<class T> Value (const T& val);
 
         Value(Type type_)
             : block({ nullptr, 0 }, type_, Encoding::Unknown) { }
@@ -33,11 +32,12 @@ namespace Srl {
         template<class T> T    unwrap();
         template<class T> void paste(T& o);
 
-        inline Type           type()     const;
-        inline Encoding       encoding() const;
-        inline size_t         size()     const;
-        inline const uint8_t* data()     const;
-        inline const String&  name()     const;
+        inline Type                    type()     const;
+        inline Encoding                encoding() const;
+        inline size_t                  size()     const;
+        inline const uint8_t*          data()     const;
+        inline const String&           name()     const;
+        inline const Lib::PackedBlock& pblock()   const;
 
     private:
         Value(const Lib::PackedBlock& data_) : block(data_) { }

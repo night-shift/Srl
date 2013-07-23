@@ -5,6 +5,16 @@
 
 namespace Srl { namespace Lib {
 
+    namespace Aux {
+        template<size_t N> void copy(const uint8_t* src, uint8_t* dst)
+        {
+            *dst = *src;
+            copy<N - 1>(src + 1, dst + 1);
+        }
+
+        template<> inline void copy<0>(const uint8_t*, uint8_t*) { }
+    }
+
     inline uint8_t* Out::alloc(size_t nbytes)
     {
         this->sz_total += nbytes;
@@ -60,9 +70,15 @@ namespace Srl { namespace Lib {
         return { reserved, nbytes, pos, this->segs_flushed };
     }
 
-    inline void Out::write(uint8_t byte)
+    inline void Out::write_byte(uint8_t byte)
     {
         *this->alloc(1) = byte;
+    }
+
+    template<class T> void Out::write(const T& o)
+    {
+        auto* mem = this->alloc(sizeof(T));
+        Aux::copy<sizeof(T)>((const uint8_t*)&o, mem);
     }
 
     inline void Out::write(const MemBlock& block)

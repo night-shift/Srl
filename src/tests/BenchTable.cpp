@@ -14,6 +14,7 @@ struct BStruct {
 
     BasicStruct strct;
     vector<string> str_vec;
+    vector<double> fp_vec;
 
     BStruct() { }
 

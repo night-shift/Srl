@@ -16,7 +16,7 @@ namespace {
 
     tuple<double, bool> string_to_double(const uint8_t* str, size_t str_len)
     {
-        const size_t buffer_size = 16;
+        const size_t buffer_size = 64;
         char buffer[buffer_size];
 
         double val;
@@ -86,56 +86,46 @@ namespace {
             memcmp(to_compare + offset, str + offset, str_len - offset) == 0;
     }
 
-    StringToTypeResult string_to_type_converted(const uint8_t* str, size_t str_len, Type hint)
+    pair<bool, Value> string_to_type_converted(const uint8_t* str, size_t str_len, Type hint)
     {
-        StringToTypeResult rslt;
-
         Tools::trim_space(str, str_len);
 
         if(str_len < 1) {
-            return rslt;
+            return { false, Value(Type::Null) };
         }
 
         if(str_len >= 4 && str[0] >= 'f') {
-            /* being optimistic */
-            rslt.success = true;
 
             if((str[0] == 't' || str[0] == 'T') && compare_strings(str, str_len, str_true, 1)) {
-                rslt.type = Type::Bool;
-                rslt.bool_value = true;
-                return rslt;
+                return { true, true };
             }
 
             if((str[0] == 'f' || str[0] == 'F') && compare_strings(str, str_len, str_false, 1)) {
-                rslt.type = Type::Bool;
-                rslt.bool_value = false;
-                return rslt;
+                return { true, false };
             }
 
             if((str[0] == 'n' || str[0] == 'N') && compare_strings(str, str_len, str_null, 1)) {
-                rslt.type = Type::Null;
-                return rslt;
+                return { true, Value(Type::Null) };
             }
-
-            rslt.success = false;
         }
+
+        bool success = false;
 
         if(!TpTools::is_fp(hint)) {
             bool is_signed;
-            tie(rslt.int_value, is_signed, rslt.success) = string_to_int(str, str_len);
+            uint64_t i;
 
-            if(is_signed && rslt.success) {
-                rslt.int_value = -rslt.int_value;
+            tie(i, is_signed, success) = string_to_int(str, str_len);
+
+            if(success) {
+                return is_signed ? make_pair(true, Value(-(int64_t)i)) : make_pair(true, Value(i));
             }
-            rslt.type = is_signed ? Type::I64 : Type::UI64;
         }
 
-        if(!rslt.success) {
-            tie(rslt.fp_value, rslt.success) = string_to_double(str, str_len);
-            rslt.type = rslt.success ? Type::FP64 : Type::Null;
-        }
+        double fp;
+        tie(fp, success) = string_to_double(str, str_len);
 
-        return rslt;
+        return success ? make_pair(true, Value(fp)) : make_pair(false, Value(Type::Null));
     }
 
     void copy_to_vector(vector<uint8_t>& vec, const uint8_t* data, size_t size)
@@ -148,12 +138,13 @@ namespace {
 
     template<Type type>
     typename enable_if<TpTools::is_integral(type) && type != Type::Bool, size_t>::type
-    to_string_switch(const uint8_t* pointer, vector<uint8_t>& out)
+    to_string_switch(const Value& value, vector<uint8_t>& out)
     {
         typedef typename TpTools::Real<type>::type T;
 
-        auto val_in = Read_Cast<T>(pointer);
-        if(val_in == 0) {
+        uint64_t val = value.pblock().ui64;
+
+        if(val == 0) {
             out.insert(out.begin(), '0');
             return 1;
         }
@@ -162,10 +153,9 @@ namespace {
 
         uint8_t buffer[buffer_size];
 
-        uint64_t val = val_in;
         bool negative = false;
         /* testing if msb is set instead of val < 0 avoids a logical compare warning for unsigned types */
-        if(TpTools::is_signed(type) && val_in >> (sizeof(T) - 1) * 8 & 0x80) {
+        if(TpTools::is_signed(type) && val >> (sizeof(T) - 1) * 8 & 0x80) {
             /* the signed integer might overflow on negation, negating the unsigned type
             * instead avoids the possible overflow */
             val = -val;
@@ -193,30 +183,34 @@ namespace {
         return str_len;
     }
 
-    template<Type type>
-    typename enable_if<TpTools::is_fp(type), size_t>::type
-    to_string_switch(const uint8_t* pointer, vector<uint8_t>& out)
+    template<Type type> typename enable_if<TpTools::is_fp(type), size_t>::type
+    to_string_switch(const Value& value, vector<uint8_t>& out)
     {
-        double val = type == Type::FP64 ? Read_Cast<double>(pointer) : Read_Cast<float>(pointer);
+        const size_t sz_buf = 256;
 
-        if(floor(val) == val && val < numeric_limits<int64_t>::max()) {
-            auto integral = (int64_t)val;
-            return to_string_switch<Type::I64>((const uint8_t*)&integral, out);
+        double val = type == Type::FP64 ? value.pblock().fp64 : value.pblock().fp32;
+
+        if(floor(val) == val && val <= numeric_limits<int64_t>::max() && val >= numeric_limits<int64_t>::min()) {
+
+            return to_string_switch<Type::I64>((int64_t)val, out);
         }
 
-        auto str = to_string(val);
-        copy_to_vector(out, (const uint8_t*)str.c_str(), str.size() - 1);
+        if(out.size() < sz_buf) {
+            out.resize(sz_buf);
+        }
 
-        return str.size() - 1;
+		int sz = snprintf((char*)out.data(), sz_buf, "%f", val);
 
+        assert(sz > 0);
+
+        return sz;
     }
 
-    template<Type type>
-    typename enable_if<type == Type::Bool, size_t>::type
-    to_string_switch(const uint8_t* pointer, vector<uint8_t>& out)
+    template<Type type> typename enable_if<type == Type::Bool, size_t>::type
+    to_string_switch(const Value& value, vector<uint8_t>& out)
     {
-        const char* str = *pointer ? str_true : str_false;
-        size_t size = (*pointer ? sizeof(str_true) : sizeof(str_false)) - 1;
+        const char* str = value.pblock().ui64 ? str_true : str_false;
+        size_t size = (value.pblock().ui64 ? sizeof(str_true) : sizeof(str_false)) - 1;
 
         copy_to_vector(out, (const uint8_t*)str, size);
 
@@ -225,7 +219,7 @@ namespace {
 
     template<Type type>
     typename enable_if<type == Type::Null, size_t>::type
-    to_string_switch(const uint8_t*, vector<uint8_t>& out)
+    to_string_switch(const Value&, vector<uint8_t>& out)
     {
         copy_to_vector(out, (const uint8_t*)str_null, sizeof(str_null) - 1);
         return sizeof(str_null) - 1;
@@ -243,17 +237,17 @@ void Tools::trim_space(const uint8_t*& str, size_t& str_len)
         return;
     }
 
-    while(str_len > 0U && is_space(*str)) {
+    while(str_len > 0 && is_space(*str)) {
         str++;
         str_len--;
     }
 
-    while(str_len > 0U && is_space(*(str + str_len - 1))) {
+    while(str_len > 0 && is_space(*(str + str_len - 1))) {
         str_len--;
     }
 }
 
-StringToTypeResult Tools::string_to_type(const String& string_wrap, Type hint)
+pair<bool, Value> Tools::string_to_type(const String& string_wrap, Type hint)
 {
     if(string_wrap.encoding() == Encoding::UTF8) {
         return string_to_type_converted(string_wrap.data(), string_wrap.size(), hint);
@@ -261,21 +255,19 @@ StringToTypeResult Tools::string_to_type(const String& string_wrap, Type hint)
     } else {
         auto vec = Tools::convert_charset(Encoding::UTF8, string_wrap, false);
         if(vec.size() < 1) {
-            return StringToTypeResult();
+            return make_pair(false, Value(Type::Null));
         }
 
         return string_to_type_converted(vec.data(), vec.size(), hint);
     }
 }
 
-#define SRL_TYPE_TO_STR(id, value, real, size) \
-    case Type::id : return to_string_switch<Type::id>(pointer, out);
+#define SRL_TYPE_TO_STR(id, idx, real, size) \
+    case Type::id : return to_string_switch<Type::id>(value, out);
 
-size_t Tools::type_to_string(Type type, const uint8_t* pointer, vector<uint8_t>& out)
+size_t Tools::type_to_string(const Value& value, vector<uint8_t>& out)
 {
-    assert((pointer != nullptr || type == Type::Null) && "Converting nullptr to string.");
-
-    switch(type) {
+    switch(value.type()) {
         /* defined in Type.h */
         SRL_TYPES_LITERAL(SRL_TYPE_TO_STR)
 
@@ -285,10 +277,10 @@ size_t Tools::type_to_string(Type type, const uint8_t* pointer, vector<uint8_t>&
 
 #undef SRL_TYPE_TO_STR
 
-string Tools::type_to_string(Type type, const uint8_t* pointer)
+string Tools::type_to_string(const Value& value)
 {
     vector<uint8_t> buffer;
-    auto size = Tools::type_to_string(type, pointer, buffer);
+    auto size = Tools::type_to_string(value, buffer);
 
     return size > 0 ? string((const char*)buffer.data(), size) : string();
 }

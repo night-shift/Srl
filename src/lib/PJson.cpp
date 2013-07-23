@@ -216,7 +216,7 @@ Parser::SourceSeg PJson::parse_in(In& source)
         }
     }
 
-    return SourceSeg(state.parsed_value, state.name, true);
+    return SourceSeg(state.parsed_value, state.name);
 }
 
 void PJson::process_bracket(char bracket, State& state)
@@ -297,29 +297,14 @@ void PJson::process_literal(const MemBlock& data, State& state)
 {
     String wrap(data.ptr, data.size, Encoding::UTF8);
 
-    auto conversion = Tools::string_to_type(wrap);
+    auto conv = Tools::string_to_type(wrap);
 
-    if(!conversion.success) {
+    if(!conv.first) {
         throw_exception(state, String("Failed to convert string \'"
                         + wrap.unwrap<char>(false) + "\' to literal."));
     }
 
-    auto* conv_data = conversion.type != Type::Null
-        ? (uint8_t*)&conversion.int_value
-        : nullptr;
-
-    auto size = TpTools::get_size(conversion.type);
-
-    if(size > 0) {
-        assert(conv_data != nullptr);
-
-        memcpy(this->conversion_buffer, conv_data, size);
-        state.parsed_value = Value({ this->conversion_buffer, size }, conversion.type);
-
-    } else {
-        state.parsed_value = Value(MemBlock(), conversion.type);
-    }
-
+    state.parsed_value = conv.second;
     state.complete = true;
 }
 

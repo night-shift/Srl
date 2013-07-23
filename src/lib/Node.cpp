@@ -117,12 +117,6 @@ namespace {
         }
     }
 
-    template<class T>
-    void insert_link(Link<T>* link, Cont<T>& links)
-    {
-        links.push_back(link);
-    }
-
     size_t hash_string(const String& str, Storage& storage)
     {
         return str.encoding() == Storage::Name_Encoding 
@@ -160,14 +154,14 @@ void Node::insert_value(const Value& new_value, const String& name_)
 
     } else {
         auto* link = this->tree->storage.store_value(new_value, name_);
-        insert_link(link, this->values);
+        this->values.push_back(link);
     }
 }
 
 Node& Node::insert_node(const Node& new_node, const String& name_)
 {
     auto* link = this->tree->storage.store_node(new_node, *this->tree, name_);
-    insert_link(link, this->nodes);
+    this->nodes.push_back(link);
 
     return link->field;
 }
@@ -219,94 +213,93 @@ void Node::parse_in(In& source, Parser& parser)
         if(!TpTools::is_scope(val.type())) {
             /* new value */
             auto* link = this->tree->storage.store_value(val, field_name);
-            insert_link(link, this->values);
+            this->values.push_back(link);
 
         } else {
             /* new node */
             auto* link = this->tree->storage.create_node(*this->tree, val.type(), field_name);
-            insert_link(link, this->nodes);
+            this->nodes.push_back(link);
 
             link->field.parse_in(source, parser);
         }
     }
 }
 
-Node Node::consume_node(const String& name)
+Node Node::consume_node(const String& id)
 {
-    auto* found = find_link_remove(name, this->nodes, this->tree->storage);
+    auto* found = find_link_remove(id, this->nodes, this->tree->storage);
 
     if(found != nullptr) {
         return *found;
     }
 
-    auto name_conv = this->tree->storage.conv_string(name);
+    auto id_conv = this->tree->storage.conv_string(id);
 
     while(!this->parsed) {
 
         auto seg = this->tree->temp_parser->parse_in(*this->tree->temp_in);
-        auto type = seg.value.type();
+        auto tp = seg.value.type();
 
-        if(type == Type::Scope_End) {
+        if(tp == Type::Scope_End) {
             this->parsed = true;
             break;
         }
 
-        if(TpTools::is_scope(type)) {
-            if(compare(name_conv, seg.name)) {
-                return Node(this->tree, type, false);
-
+        if(TpTools::is_scope(tp)) {
+            if(compare(id_conv, seg.name)) {
+                return Node(this->tree, tp, false);
             }
 
-            auto* node = this->tree->storage.create_node(*this->tree, type, seg.name);
-            insert_link(node, this->nodes);
+            auto* link = this->tree->storage.create_node(*this->tree, tp, seg.name);
+            this->nodes.push_back(link);
 
-            node->field.parse_in(*this->tree->temp_in, *this->tree->temp_parser);
+            link->field.parse_in(*this->tree->temp_in, *this->tree->temp_parser);
 
         } else {
-            auto* value = this->tree->storage.store_value(seg.value, seg.name);
-            insert_link(value, this->values);
+            auto* link = this->tree->storage.store_value(seg.value, seg.name);
+            this->values.push_back(link);
         }
     }
 
-    throw Exception("Field " + name.unwrap(false) + " not found");
+    throw Exception("Field " + id.unwrap(false) + " not found");
 }
 
-Value Node::consume_value(const String& name)
+Value Node::consume_value(const String& id)
 {
-    auto* val = find_link_remove(name, this->values, this->tree->storage);
+    auto* val = find_link_remove(id, this->values, this->tree->storage);
 
     if(val != nullptr) {
         return *val;
     }
 
-    auto name_conv = this->tree->storage.conv_string(name);
+    auto name_conv = this->tree->storage.conv_string(id);
 
     while(!this->parsed) {
 
         auto seg = this->tree->temp_parser->parse_in(*this->tree->temp_in);
-        auto type = seg.value.type();
+        auto tp = seg.value.type();
 
-        if(type == Type::Scope_End) {
+        if(tp == Type::Scope_End) {
             this->parsed = true;
             break;
         }
 
-        if(!TpTools::is_scope(type)) {
+        if(!TpTools::is_scope(tp)) {
             if(compare(name_conv, seg.name)) { 
                 return seg.value;
             }
 
-            auto* value = this->tree->storage.store_value(seg.value, seg.name);
-            insert_link(value, this->values);
+            auto* link = this->tree->storage.store_value(seg.value, seg.name);
+            this->values.push_back(link);
 
         } else {
-            auto* node = this->tree->storage.create_node(*this->tree, type, seg.name);
-            insert_link(node, this->nodes);
-            node->field.parse_in(*this->tree->temp_in, *this->tree->temp_parser);
+            auto* link = this->tree->storage.create_node(*this->tree, tp, seg.name);
+            this->nodes.push_back(link);
+            link->field.parse_in(*this->tree->temp_in, *this->tree->temp_parser);
         }
     }
 
-    throw Exception("Field " + name.unwrap(false) + " not found");
+    throw Exception("Field " + id.unwrap(false) + " not found");
 }
 
 
@@ -321,19 +314,19 @@ Node Node::consume_node(bool throw_exception)
 
     while(!this->parsed) {
         auto seg = this->tree->temp_parser->parse_in(*this->tree->temp_in);
-        auto type = seg.value.type();
+        auto tp = seg.value.type();
 
-        if(type == Type::Scope_End) {
+        if(tp == Type::Scope_End) {
             this->parsed = true;
             break;
         }
 
-        if(TpTools::is_scope(type)) {
-            return Node(this->tree, type, false);
+        if(TpTools::is_scope(tp)) {
+            return Node(this->tree, tp, false);
 
         } else {
             auto* link = this->tree->storage.store_value(seg.value, seg.name);
-            insert_link(link, this->values);
+            this->values.push_back(link);
         }
     }
 
@@ -356,25 +349,25 @@ Value Node::consume_value(bool throw_exception)
 
     while(!this->parsed) {
         auto seg = this->tree->temp_parser->parse_in(*this->tree->temp_in);
-        auto type = seg.value.type();
+        auto tp = seg.value.type();
 
-        if(type == Type::Scope_End) {
+        if(tp == Type::Scope_End) {
             this->parsed = true;
             break;
         }
 
-        if(!TpTools::is_scope(type)) {
+        if(!TpTools::is_scope(tp)) {
             return seg.value;
 
         } else {
-            auto* link = this->tree->storage.create_node(*this->tree, type, seg.name);
-            insert_link(link, this->nodes);
+            auto* link = this->tree->storage.create_node(*this->tree, tp, seg.name);
+            this->nodes.push_back(link);
             link->field.parse_in(*this->tree->temp_in, *this->tree->temp_parser);
         }
     }
 
     if(throw_exception) {
-        throw Exception("Cannot access Node. Index out of bounds");
+        throw Exception("Cannot access Value. Index out of bounds");
     }
 
     return Value(Type::Null);

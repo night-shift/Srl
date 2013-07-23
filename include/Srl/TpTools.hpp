@@ -2,7 +2,7 @@
 #define SRL_TYPETOOLS_HPP
 
 #include "Type.h"
-#include "Cast.hpp"
+#include "Value.h"
 
 #include <limits>
 
@@ -56,97 +56,118 @@ namespace Srl { namespace TpTools {
     inline size_t  get_size    (Type type)     { return Aux::type_size_lookup[(size_t)type]; }
 
     namespace Aux {
+
         constexpr bool gt(size_t a, size_t b) { return a > b; }
-    }
 
-    template<class T, class U>
-    typename std::enable_if<Aux::gt(sizeof(U), sizeof(T)) && !std::numeric_limits<U>::is_signed, bool>::type
-    overflows(const U& val)
-    {
-        return val > std::numeric_limits<T>::max();
-    }
+        template<class T>
+        constexpr T max() { return std::numeric_limits<T>::max(); }
 
-    template<class T, class U>
-    typename std::enable_if<Aux::gt(sizeof(U), sizeof(T)) && std::numeric_limits<U>::is_signed, bool>::type
-    overflows(const U& val)
-    {
-        return val > std::numeric_limits<T>::max() || val < std::numeric_limits<T>::min();
-    }
+        template<class T>
+        constexpr T min() { return std::numeric_limits<T>::min(); }
 
-    template<class T, class U>
-    typename std::enable_if<Aux::gt(sizeof(T), sizeof(U)) , bool>::type
-    overflows(const U&)
-    {
-        return false;
-    }
+        template<class T, class U>
+        typename std::enable_if<Aux::gt(sizeof(U), sizeof(T)) && !std::is_signed<U>::value, bool>::type
+        overflows(const U& val)
+        {
+            return val > max<T>();
+        }
 
-    template<class T, class U>
-    typename std::enable_if<sizeof(T) == sizeof(U) && !std::is_floating_point<T>::value, bool>::type
-    overflows(const U& val)
-    {
-        return !std::numeric_limits<U>::is_signed && std::numeric_limits<T>::is_signed
-                    ? val > std::numeric_limits<U>::max() >> 1
-                    : false;
-    }
+        template<class T, class U>
+        typename std::enable_if<Aux::gt(sizeof(U), sizeof(T)) && std::is_signed<U>::value, bool>::type
+        overflows(const U& val)
+        {
+            return val > max<T>() || val < min<T>();
+        }
 
-    template<class T, class U>
-    typename std::enable_if<sizeof(T) == sizeof(U) && std::is_floating_point<T>::value, bool>::type
-    overflows(const U&)
-    {
-        return false;
-    }
-
-    template<class T, Type TP>
-    typename std::enable_if<is_integral(TP), bool>::type
-    paste_type_switch(T& target, const uint8_t* mem)
-    {
-        auto val = Lib::Read_Cast<typename Real<TP>::type>(mem);
-
-        if(is_signed(TP) && !std::numeric_limits<T>::is_signed
-           && val >> (TypeSize<TP>::size - 1) * 8 & 0x80) {
-             /*trying to assign a negative value to an unsigned type */
+        template<class T, class U>
+        typename std::enable_if<Aux::gt(sizeof(T), sizeof(U)) , bool>::type
+        overflows(const U&)
+        {
             return false;
         }
 
-        if(overflows<T>(val)) {
+        template<class T, class U>
+        typename std::enable_if<sizeof(T) == sizeof(U) && !std::is_floating_point<T>::value, bool>::type
+        overflows(const U& val)
+        {
+            return !std::is_signed<U>::value && std::is_signed<T>::value
+                        ? val > max<U>() >> 1
+                        : false;
+        }
+
+        template<class T, class U>
+        typename std::enable_if<sizeof(T) == sizeof(U) && std::is_floating_point<T>::value, bool>::type
+        overflows(const U&)
+        {
             return false;
         }
 
-        target = val;
-        return true;
-    }
+        template<class T, Type TP>
+        typename std::enable_if<is_integral(TP) && is_signed(TP), bool>::type
+        paste_type_switch(T& target, const Value& value)
+        {
+            int64_t val = value.pblock().i64;
 
-    template<class T, Type TP>
-    typename std::enable_if<is_fp(TP), bool>::type
-    paste_type_switch(T& target, const uint8_t* mem)
-    {
-        auto val = Lib::Read_Cast<typename Real<TP>::type>(mem);
+            if(!std::is_signed<T>::value && val >> (7) * 8 & 0x80) {
+                /*trying to assign a negative value to an unsigned type */
+                return false;
+            }
 
-        if(val < std::numeric_limits<T>::min() || val > std::numeric_limits<T>::max()) {
-            return false;
+            if(overflows<T>(val)) {
+                return false;
+            }
+
+            target = val;
+
+            return true;
         }
 
-        target = val;
-        return true;
+        template<class T, Type TP>
+        typename std::enable_if<is_integral(TP) && !is_signed(TP), bool>::type
+        paste_type_switch(T& target, const Value& value)
+        {
+            uint64_t val = value.pblock().ui64;
+
+            if(overflows<T>(val)) {
+                return false;
+            }
+
+            target = val;
+            return true;
+        }
+
+        template<class T, Type TP>
+        typename std::enable_if<is_fp(TP), bool>::type
+        paste_type_switch(T& target, const Value& value)
+        {
+            double val = TP == Type::FP32 ? value.pblock().fp32 : value.pblock().fp64;
+
+            if(SrlType<T>::type != TP && (val < min<T>() || val > max<T>())) {
+                return false;
+            }
+
+            target = val;
+            return true;
+        }
+
+        template<class T, Type TP>
+        typename std::enable_if<TP == Type::Null, bool>::type
+        paste_type_switch(T& target, const Value&)
+        {
+            target = T();
+            return true;
+        }
     }
 
-    template<class T, Type TP>
-    typename std::enable_if<TP == Type::Null, bool>::type
-    paste_type_switch(T& target, const uint8_t*)
-    {
-        target = T();
-        return true;
-    }
-
-    #define SRL_PASTE_TYPE_TEMPLATE(type, value, real, size) \
-        case Type::type : return paste_type_switch<T, Type::type>(target, src_mem);
+    #define SRL_PASTE_TYPE_TEMPLATE(type, idx, real, size) \
+    case Type::type : return Aux::paste_type_switch<T, Type::type>(target, value);
 
     template<class T>
-    bool paste_type(T& target, Type src_type, const uint8_t* src_mem)
+    bool paste_type(T& target, const Value& value)
     {
         static_assert(is_literal(SrlType<T>::type), "Cannot paste non-literal type.");
 
-        switch(src_type) {
+        switch(value.type()) {
             SRL_TYPES_LITERAL(SRL_PASTE_TYPE_TEMPLATE)
 
             default : assert(false && "Incomplete literal-type entries."); return false;
