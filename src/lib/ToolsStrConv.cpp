@@ -150,7 +150,8 @@ namespace {
         uint64_t val = negative ? -value.pblock().i64 : value.pblock().ui64;
 
         if(val == 0) {
-            out.insert(out.begin(), '0');
+            if(out.size() < 1) out.resize(1);
+            out[0] = '0'
             return 1;
         }
 
