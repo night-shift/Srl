@@ -24,7 +24,7 @@ namespace Srl { namespace Lib {
         }
 
         if(this->left < nbytes) {
-            this->flush();
+            this->write_to_stream();
         }
 
         if(this->cap < nbytes) {

@@ -67,6 +67,7 @@ namespace Srl { namespace Lib {
 
         void inc_cap          (size_t nbytes);
         inline uint8_t* alloc (size_t nbytes);
+        void write_to_stream  ();
 
         template<class Token, class Sub, class... Tokens>
         void substitute_token(uint8_t src, const Token& token, const Sub& sub, const Tokens&... tail);

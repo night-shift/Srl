@@ -63,7 +63,7 @@ namespace Srl { namespace TpTools {
         constexpr T max() { return std::numeric_limits<T>::max(); }
 
         template<class T>
-        constexpr T min() { return std::numeric_limits<T>::min(); }
+        constexpr T min() { return std::numeric_limits<T>::lowest(); }
 
         template<class T, class U>
         typename std::enable_if<Aux::gt(sizeof(U), sizeof(T)) && !std::is_signed<U>::value, bool>::type
@@ -146,7 +146,7 @@ namespace Srl { namespace TpTools {
                 return false;
             }
 
-            target = val;
+            target = TP == Type::FP32 ? value.pblock().fp32 : value.pblock().fp64;
             return true;
         }
 

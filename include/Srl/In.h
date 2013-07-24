@@ -56,7 +56,7 @@ namespace Srl { namespace Lib {
         inline bool is_at_token();
 
     private :
-        static const size_t Stream_Buffer_Size  = 8192;
+        static const size_t Stream_Buffer_Size = 8192;
 
         const uint8_t* start       = nullptr;
         const uint8_t* end         = nullptr;

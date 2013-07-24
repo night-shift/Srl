@@ -6,9 +6,10 @@
 using namespace std;
 using namespace Tests;
 
-bool Tests::Verbose             = false;
-bool Tests::Run_Benchmarks      = false;
-size_t Tests::Benchmark_Objects = 20000;
+bool Tests::Verbose                = false;
+bool Tests::Run_Benchmarks         = false;
+size_t Tests::Benchmark_Objects    = 20000;
+size_t Tests::Benchmark_Iterations = 1;
 
 void Tests::print_source(const vector<uint8_t>& source)
 {
@@ -30,13 +31,21 @@ int main(int argc, char** args)
     for(int i = 0; i < argc; i++) {
         if(string(args[i]) == "-v") {
             Tests::Verbose = true;
+
         } else if(string(args[i]) == "-b") {
             Tests::Run_Benchmarks = true;
-        } else if(string(args[i], 3) == "-i=") {
+
+        } else if(string(args[i], 3) == "-o=") {
             istringstream is(string(args[i] + 3));
             int in;
             is >> in;
             if(in > 0) { Tests::Benchmark_Objects = in; }
+
+        } else if(string(args[i], 3) == "-i=") {
+            istringstream is(string(args[i] + 3));
+            int in;
+            is >> in;
+            if(in > 0) { Tests::Benchmark_Iterations = in; }
         }
     }
 

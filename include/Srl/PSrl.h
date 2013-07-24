@@ -22,13 +22,6 @@ namespace Srl {
         virtual SourceSeg parse_in(Lib::In& source) override;
 
     private :
-        enum class StringPrefix : uint8_t {
-            Empty   = 0,
-            New     = 1,
-            Indexed = 2
-        };
-        inline bool valid_string_prefix (uint8_t token) { return token < 3; }
-
         Type   scope            = Type::Null;
         size_t n_hashed_strings = 0;
 
@@ -40,9 +33,10 @@ namespace Srl {
         void push_scope (Type scope_type);
         void pop_scope  ();
 
-        SourceSeg read_literal (const Lib::MemBlock& name, Lib::In& source, Type type);
-        void write_string (const Lib::MemBlock& str, Lib::Out& out);
-        Lib::MemBlock read_string (Lib::In& source);
+        SourceSeg read_num (uint8_t flag, const Lib::MemBlock& name, Lib::In& source);
+
+        void write_flag (uint8_t flag, const Lib::MemBlock& str, Lib::Out& out);
+        std::pair<uint8_t, Lib::MemBlock> read_flag (Lib::In& source);
     };
 }
 

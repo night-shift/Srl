@@ -5,6 +5,7 @@
 #include <fstream>
 #include <memory>
 #include <unistd.h>
+#include <sys/stat.h>
 
 using namespace std;
 using namespace Srl;
@@ -15,13 +16,13 @@ struct BStruct {
     BasicStruct strct;
     vector<string> str_vec;
     vector<double> fp_vec;
-
     BStruct() { }
 
     BStruct(string str)
     {
         for(int i = 0; i < 10; i++) {
             this->str_vec.push_back(str);
+            this->fp_vec.push_back(i * 35.688f);
         }
     }
 
@@ -31,12 +32,17 @@ struct BStruct {
     }
 };
 
-void measure(const function<void(void)>& fnc, const string& msg, int fac = 1)
+void measure(const function<void(void)>& fnc, const string& msg,
+             const function<void(void)>& rep = [] { },
+             int fac = Tests::Benchmark_Iterations)
 {
     auto start = chrono::high_resolution_clock::now();
-    fnc();
+
+    for(int i = 0; i < fac; i++) { fnc(); rep(); }
+
     auto end = chrono::high_resolution_clock::now();
-    auto elapsed = chrono::duration_cast<chrono::milliseconds>(end - start).count() / fac;
+    auto elapsed = (chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0) / fac;
+
     print_log(msg + to_string(elapsed) + "\n");
 }
 
@@ -70,10 +76,10 @@ void run_bench(Tree& tree)
 }
 
 template<class T, class... Tail>
-void run_bench(Tree& tree, const T& parser, const string& name, const string& message, const Tail&... tail)
+void run_bench(Tree& tree, const T& parser, const string& name, const Tail&... tail)
 {
     try {
-        print_log("\nBenching parser " + name + message + "...\n");
+        print_log("\nBenching parser " + name + "...\n");
 
         vector<uint8_t> source;
         measure([&](){ source = tree.to_source(parser); },   "\tparse out  ms: ");
@@ -123,23 +129,26 @@ void Tests::run_benches()
     Verbose = true;
     print_log("\nGenerating data with " + to_string(Benchmark_Objects) + " objects...");
 
-    map<string, BStruct> map;
+    map<string, BStruct> data;
 
     measure([&](){
         for(auto i = 0U; i < Benchmark_Objects; i++) {
-            map.insert({ to_string(i), BStruct(to_string(i + 1000)) });
+            data.insert({ to_string(i), BStruct(to_string(i + 1000)) });
         }
-    }, "ms: ");
+    }, "ms: ", [] { }, 1);
+
+    print_log("Running with " + to_string(Benchmark_Iterations) + " iterations...\n");
 
     Tree tree;
-    tree.root().insert("map", map);
-    run_bench (
+    tree.root().insert("map", data);
+
+    run_bench(
         tree,
-        PSrl(),  "Srl",  "",
-        PMsgPack(),  "MsgPack",  "",
-        PJson(), "Json", "",
-        PXml(),  "Xml",  "",
-        PJson(true), "Json"," w/o space",
-        PXml(true),  "Xml", " w/o space"
+        PSrl(), "PSrl",
+        PMsgPack(), "PMsgPack",
+        PJson(), "PJson",
+        PJson(), "PXml",
+        PJson(true), "PJson w/o space",
+        PJson(true), "PXml w/o space"
     );
 }

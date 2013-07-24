@@ -7,7 +7,14 @@ using namespace Tests;
 
 struct TestStruct {
 
-    vector<BasicStruct> vec { BasicStruct(), BasicStruct() };
+    vector<BasicStruct> vec;
+
+    TestStruct()
+    {
+        for(int i = 0; i < 10; i++) {
+            vec.push_back(BasicStruct());
+        }
+    }
 
     void srl_resolve(Context& ctx)
     {
@@ -101,7 +108,7 @@ bool malicious_input()
     }
     try {
         print_log("\tOverflow fp min........");
-        auto d = numeric_limits<double>::min();
+        auto d = numeric_limits<double>::lowest();
         node.insert("double_min", d);
         node.unwrap_field<float>("double_min");
         success = false;
@@ -136,10 +143,10 @@ bool malicious_input(const TParser& parser, const string& parser_name, const Tai
     TestStruct m;
     auto data = Store(m, parser);
 
-    assert(data.size() > 20);
+    assert(data.size() > 100);
     /* wild guess */
-    for(auto i = 20U; i < data.size(); i += 20) {
-        data[i] ^= data[i - 1];
+    for(auto i = 100U; i < data.size(); i += 20) {
+        data[i] ^= ~0U;
     }
 
     try {

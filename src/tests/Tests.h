@@ -13,6 +13,7 @@ namespace Tests {
     extern bool   Verbose;
     extern bool   Run_Benchmarks;
     extern size_t Benchmark_Objects;
+    extern size_t Benchmark_Iterations;
 
     void print_source(const std::vector<uint8_t>& source);
 

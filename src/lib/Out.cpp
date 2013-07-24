@@ -15,12 +15,20 @@ void Out::inc_cap(size_t nbytes)
 
 void Out::flush()
 {
+    if(this->streaming) {
+        this->write_to_stream();
+        this->stream->flush();
+    }
+}
+
+void Out::write_to_stream()
+{
     if(!this->streaming || this->mem_start == nullptr) {
         return;
     }
 
     this->stream->write((const char*)this->mem_start, this->cap - this->left);
-    this->stream->flush();
+
     this->left = this->cap;
     this->crr_mem = this->mem_start;
     this->segs_flushed++;

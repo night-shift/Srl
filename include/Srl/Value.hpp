@@ -17,7 +17,14 @@ namespace Srl {
         const auto tp = TpTools::SrlType<T>::type;
 
         if(tp == Type::FP64) {
-            this->block.fp64 = val;
+            if((float)val == val) {
+                this->block.fp32 = val;
+                this->block.size = 4;
+                this->block.type = Type::FP32;
+
+            } else {
+                this->block.fp64 = val;
+            }
 
         } else if(tp == Type::FP32) {
             this->block.fp32 = val;
