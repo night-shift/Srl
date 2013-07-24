@@ -60,7 +60,7 @@ namespace {
         }
 
         if(TpTools::is_integral(tp)) {
-            return FNum | (val.pblock().i64 < 0 ? FSigned : 0);
+            return FNum | (TpTools::is_signed(tp) && val.pblock().i64 < 0 ? FSigned : 0);
         }
 
         return 0;
