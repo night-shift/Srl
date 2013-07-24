@@ -141,7 +141,7 @@ void PJson::parse_out(const Value& value, const MemBlock& name, Out& out)
         return;
     }
 
-    if(TpTools::is_literal(type)) {
+    if(TpTools::is_scalar(type)) {
         out.write(value.data(), value.size());
 
     } else {
@@ -277,9 +277,9 @@ void PJson::process_string(const MemBlock& content, State& state)
 /* values not in quotes are literals */
 void PJson::process_char(In& source, State& state, bool& out_move)
 {
-    bool is_literal = this->lookup.table[*source.pointer()] == LiteralTable::Char_Valid;
+    bool is_scalar = this->lookup.table[*source.pointer()] == LiteralTable::Char_Valid;
 
-    if(is_literal) {
+    if(is_scalar) {
 
         auto block = source.read_block_until(error, ',', ' ', '}', ']', '\n');
 

@@ -130,7 +130,7 @@ Value Tree::convert_type(const Value& value)
         String wrap(value.data(), value.size(), value.encoding());
         data_size = Tools::convert_charset(Encoding::UTF8, wrap, buffer, true);
 
-    } else if(TpTools::is_literal(value.type())) {
+    } else if(TpTools::is_scalar(value.type())) {
 
         data_size = Tools::type_to_string(value, buffer);
 

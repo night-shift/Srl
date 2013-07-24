@@ -719,7 +719,7 @@ namespace Srl { namespace Lib {
         template<class ID>
         void check_type_value(Type got, const ID& field_id)
         {
-            if(got != Type::String && !TpTools::is_literal(got)) {
+            if(got != Type::String && !TpTools::is_scalar(got)) {
                 throw_error("Type mismatch, expected: string or literal, got: "
                             + TpTools::get_name(got) + ".", field_id);
             }

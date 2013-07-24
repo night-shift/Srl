@@ -19,7 +19,7 @@ namespace Srl { namespace TpTools {
         template<> struct Real<Type::name>     { typedef real type;                   }; \
         template<> struct TypeSize<Type::name> { static const size_t size = size_;    };
 
-    SRL_TYPES_LITERAL(SRL_TYPE_TEMPLATES)
+    SRL_TYPES_SCALAR(SRL_TYPE_TEMPLATES)
 
     #undef SRL_TYPE_TEMPLATES
 
@@ -28,7 +28,7 @@ namespace Srl { namespace TpTools {
         #define SRL_TYPE_SIZE_LOOKUP_ENTRY(name, value, type, size) size,
 
         const size_t type_size_lookup[] {
-            SRL_TYPES_LITERAL(SRL_TYPE_SIZE_LOOKUP_ENTRY)
+            SRL_TYPES_SCALAR(SRL_TYPE_SIZE_LOOKUP_ENTRY)
             SRL_TYPES_NON_SCALAR(SRL_TYPE_SIZE_LOOKUP_ENTRY)
         };
         #undef SRL_TYPE_SIZE_LOOKUP_ENTRY
@@ -36,7 +36,7 @@ namespace Srl { namespace TpTools {
         #define SRL_TYPE_NAME_LOOKUP_ENTRY(name, value, type, size) #name,
 
         const std::string type_name_lookup[] {
-            SRL_TYPES_LITERAL(SRL_TYPE_NAME_LOOKUP_ENTRY)
+            SRL_TYPES_SCALAR(SRL_TYPE_NAME_LOOKUP_ENTRY)
             SRL_TYPES_NON_SCALAR(SRL_TYPE_NAME_LOOKUP_ENTRY)
         };
         #undef SRL_TYPE_NAME_LOOKUP_ENTRY
@@ -48,7 +48,8 @@ namespace Srl { namespace TpTools {
     inline const std::string& get_name (Type type) { return Aux::type_name_lookup[(size_t)type]; }
 
     constexpr bool is_scope    (Type type)     { return type == Type::Object || type == Type::Array; }
-    constexpr bool is_literal  (Type type)     { return type < Type::String; }
+    constexpr bool is_scalar   (Type type)     { return type < Type::String; }
+    constexpr bool is_num      (Type type)     { return type < Type::Null && type > Type::Bool; }
     constexpr bool is_integral (Type type)     { return type < Type::FP32; }
     constexpr bool is_fp       (Type type)     { return type == Type::FP32 || type == Type::FP64; }
     constexpr bool is_signed   (Type type)     { return is_fp(type) || (is_integral(type) && (uint8_t)type % 2 == 1); }
@@ -104,7 +105,7 @@ namespace Srl { namespace TpTools {
 
         template<class T, Type TP>
         typename std::enable_if<is_integral(TP) && is_signed(TP), bool>::type
-        paste_type_switch(T& target, const Value& value)
+        try_apply(T& target, const Value& value)
         {
             int64_t val = value.pblock().i64;
 
@@ -124,7 +125,7 @@ namespace Srl { namespace TpTools {
 
         template<class T, Type TP>
         typename std::enable_if<is_integral(TP) && !is_signed(TP), bool>::type
-        paste_type_switch(T& target, const Value& value)
+        try_apply(T& target, const Value& value)
         {
             uint64_t val = value.pblock().ui64;
 
@@ -138,7 +139,7 @@ namespace Srl { namespace TpTools {
 
         template<class T, Type TP>
         typename std::enable_if<is_fp(TP), bool>::type
-        paste_type_switch(T& target, const Value& value)
+        try_apply(T& target, const Value& value)
         {
             double val = TP == Type::FP32 ? value.pblock().fp32 : value.pblock().fp64;
 
@@ -152,29 +153,29 @@ namespace Srl { namespace TpTools {
 
         template<class T, Type TP>
         typename std::enable_if<TP == Type::Null, bool>::type
-        paste_type_switch(T& target, const Value&)
+        try_apply(T& target, const Value&)
         {
             target = T();
             return true;
         }
     }
 
-    #define SRL_PASTE_TYPE_TEMPLATE(type, idx, real, size) \
-    case Type::type : return Aux::paste_type_switch<T, Type::type>(target, value);
+    #define SRL_APPLY_TEMPLATE(type, idx, real, size) \
+    case Type::type : return Aux::try_apply<T, Type::type>(target, value);
 
     template<class T>
     bool paste_type(T& target, const Value& value)
     {
-        static_assert(is_literal(SrlType<T>::type), "Cannot paste non-literal type.");
+        static_assert(is_scalar(SrlType<T>::type), "Cannot paste non-literal type.");
 
         switch(value.type()) {
-            SRL_TYPES_LITERAL(SRL_PASTE_TYPE_TEMPLATE)
+            SRL_TYPES_SCALAR(SRL_APPLY_TEMPLATE)
 
             default : assert(false && "Incomplete literal-type entries."); return false;
         }
     }
 
-    #undef SRL_PASTE_TYPE_TEMPLATE
+    #undef SRL_APPLY_TEMPLATE
 
 } }
 

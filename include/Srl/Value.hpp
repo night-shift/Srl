@@ -48,7 +48,7 @@ namespace Srl {
 
     template<class T> void Value::paste(T& o)
     {
-        static_assert( TpTools::is_literal(Lib::Switch<T>::type)
+        static_assert( TpTools::is_scalar(Lib::Switch<T>::type)
                        || Lib::Switch<T>::type == Type::String
                        || Lib::Switch<T>::type == Type::Binary,
 

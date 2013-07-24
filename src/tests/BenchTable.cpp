@@ -5,7 +5,6 @@
 #include <fstream>
 #include <memory>
 #include <unistd.h>
-#include <sys/stat.h>
 
 using namespace std;
 using namespace Srl;
@@ -28,7 +27,7 @@ struct BStruct {
 
     void srl_resolve(Context& ctx)
     {
-        ctx ("struct", strct) ("vec", str_vec);
+        ctx ("struct", strct) ("vec", str_vec) ("fp_vec", fp_vec);
     }
 };
 
@@ -79,7 +78,7 @@ template<class T, class... Tail>
 void run_bench(Tree& tree, const T& parser, const string& name, const Tail&... tail)
 {
     try {
-        print_log("\nBenching parser " + name + "...\n");
+        print_log("\nBenching parser " + name +  "...\n");
 
         vector<uint8_t> source;
         measure([&](){ source = tree.to_source(parser); },   "\tparse out  ms: ");
@@ -115,7 +114,7 @@ void run_bench(Tree& tree, const T& parser, const string& name, const Tail&... t
             }
         }, "\tParse in / no store ms: ");
 
-        print_log("\tdocument size bytes: " + to_string(source.size()) + "\n");
+        print_log("\tdocument size bytes: " + to_string(source.size() / 1000.0f) + "\n");
 
     } catch (Exception& ex) {
         print_log(string(ex.what()) + "\n");
@@ -137,8 +136,6 @@ void Tests::run_benches()
         }
     }, "ms: ", [] { }, 1);
 
-    print_log("Running with " + to_string(Benchmark_Iterations) + " iterations...\n");
-
     Tree tree;
     tree.root().insert("map", data);
 
@@ -147,8 +144,8 @@ void Tests::run_benches()
         PSrl(), "PSrl",
         PMsgPack(), "PMsgPack",
         PJson(), "PJson",
-        PJson(), "PXml",
-        PJson(true), "PJson w/o space",
-        PJson(true), "PXml w/o space"
+        PJson(true), "PJson w/o space"
     );
+
+    print_log("Running with " + to_string(Benchmark_Iterations) + " iterations...\n");
 }

@@ -13,68 +13,93 @@ namespace {
 
     /* Positive FixNum 0xxxxxxx 0x00 - 0x7f
        Negative FixNum 111xxxxx 0xe0 - 0xff */
-    template<uint8_t prefix, Type type>
-    function<void(const Value&, Out& out)> integral_to_msgp()
+    bool write_pfixnum(uint64_t i, Out& out)
     {
-        typedef typename TpTools::Real<type>::type Real;
-
-        return [](const Value& val, Out& out) {
-
-            const auto write_pfixnum = [&out](uint64_t i) {
-                if(i <= 0x7F) {
-                    out.write_byte(i);
-                    return true;
-                }
-                return false;
-            };
-
-            const auto write_nfixnum = [&out](int64_t i) {
-                if(i < 0 && i >= -31) {
-                    out.write_byte(0xE0 | (uint8_t)-i);
-                    return true;
-                } 
-                return false;
-            };
-
-            if(TpTools::is_signed(type)) {
-                int64_t i = val.pblock().i64;
-                if((i >= 0 && write_pfixnum(i)) || write_nfixnum(i)) {
-                    return;
-                }
-
-                out.write(prefix); 
-                out.write((Real)i);
-
-            } else {
-                uint64_t i = val.pblock().ui64;
-                if(write_pfixnum(i)) {
-                    return;
-                }
-
-                out.write(prefix); 
-                out.write((Real)i);
-            }
-        };
+        if(i <= 0x7F) {
+            out.write_byte(i);
+            return true;
+        }
+        return false;
     }
 
-    template<uint8_t prefix, Type type> function<void(const Value&, Out& out)> fp_to_msgp()
+    bool write_nfixnum(int64_t i, Out& out)
     {
-        return [](const Value& val, Out& out) {
-            out.write(prefix); 
+        if(i < 0 && i >= -31) {
+            out.write_byte(0xE0 | (uint8_t)-i);
+            return true;
+        } 
+        return false;
+    }
 
-            if(type == Type::FP32) {
-                out.write(val.pblock().fp32);
+    template<Type TP> typename enable_if<TpTools::is_num(TP) && !TpTools::is_fp(TP), void>::type
+    write_scalar (const Value& val, Out& out)
+    {
+        typedef typename TpTools::Real<TP>::type Real;
 
-            } else {
-                out.write(val.pblock().fp64);
-            }
+        const uint8_t lk[] {
+            0xD0 /* Type::I8 */,
+            0xCC /* Type::UI8 */,
+            0xD1 /* Type::I16 */,
+            0xCD /* Type::UI16 */,
+            0xD2 /* Type::I32 */,
+            0xCE /* Type::UI32 */,
+            0xD3 /* Type::I64 */,
+            0xCF /* Type::UI64 */
         };
+
+        const uint8_t prefix = lk[(uint8_t)TP - 1];
+
+        if(TpTools::is_signed(TP)) {
+
+            int64_t i = val.pblock().i64;
+            if((i >= 0 && write_pfixnum(i, out)) || write_nfixnum(i, out)) {
+                return;
+            }
+
+            out.write(prefix); 
+            out.write((Real)i);
+
+        } else {
+
+            uint64_t i = val.pblock().ui64;
+            if(write_pfixnum(i, out)) {
+                return;
+            }
+
+            out.write(prefix); 
+            out.write((Real)i);
+        }
+    }
+
+    template<Type TP> typename enable_if<TpTools::is_fp(TP), void>::type
+    write_scalar (const Value& val, Out& out)
+    {
+        if(TP == Type::FP32) {
+            out.write_byte(0xCA); 
+            out.write(val.pblock().fp32);
+
+        } else {
+            out.write_byte(0xCB); 
+            out.write(val.pblock().fp64);
+        }
+    }
+
+    template<Type TP> typename enable_if<TP == Type::Bool, void>::type
+    write_scalar (const Value& val, Out& out)
+    {
+        out.write_byte(val.pblock().ui64 ? 0xC3 : 0xC2); 
+    }
+
+    template<Type TP> typename enable_if<TP == Type::Null, void>::type
+    write_scalar (const Value&, Out& out)
+    {
+        out.write_byte(0xC0); 
     }
 
     /* FixRaw 101xxxxx 0xa0 - 0xbf
        raw 16 11011010 0xda
        raw 32 11011011 0xdb */
-    void write_msgp_raw(const MemBlock& block, Out& out)
+    void write_raw(const MemBlock& block, Out& out)
     {
         if(block.size <= 16) {
             out.write_byte(0xA0 | block.size);
@@ -92,10 +117,29 @@ namespace {
 
         out.write(block.ptr, block.size);
     }
+    
+    void write_raw(const Value& val, Out& out)
+    {
+        write_raw(MemBlock(val.data(), val.size()), out);
+    }
 
-    const auto raw_to_msgp = [](const Value& val, Out& out) {
-        write_msgp_raw(MemBlock(val.data(), val.size()), out);
-    };
+    #define SRL_TYPE_TO_MSGP(id, v, t, s) \
+        case Type::id : write_scalar<Type::id>(value, out); break;
+
+    void srl_to_msgp(const Value& value, Out& out)
+    {
+        switch(value.type()) {
+
+            SRL_TYPES_SCALAR(SRL_TYPE_TO_MSGP)
+
+            case Type::Binary :
+            case Type::String : write_raw(value, out); break;
+
+            default : assert(0);
+        }
+    }
+
+    #undef SRL_TYPE_TO_MSGP
 
     bool prefix_is_raw(uint8_t prefix)
     {
@@ -111,47 +155,29 @@ namespace {
              : in.cast_move<uint16_t>(error);
     }
 
-    const function<void(const Value&, Out& out)> srl_to_msgp[] {
-        /* false 0xc2 true 0xc3 */
-        [](const Value& val, Out& out) { uint8_t t = val.pblock().ui64 ? 0xC3 : 0xC2; out.write(t); },
-        integral_to_msgp<0xD0, Type::I8>(),
-        integral_to_msgp<0xCC, Type::UI8>(),
-        integral_to_msgp<0xD1, Type::I16>(),
-        integral_to_msgp<0xCD, Type::UI16>(),
-        integral_to_msgp<0xD2, Type::I32>(),
-        integral_to_msgp<0xCE, Type::UI32>(),
-        integral_to_msgp<0xD3, Type::I64>(),
-        integral_to_msgp<0xCF, Type::UI64>(),
-        fp_to_msgp<0xCA, Type::FP32>(),
-        fp_to_msgp<0xCB, Type::FP64>(),
-        /* nil 0xc0 Type::Null*/
-        [](const Value&, Out& out) { out.write_byte(0xC0); },
-        /* Type::String*/
-        raw_to_msgp,
-        /* Type::Binary*/
-        raw_to_msgp,
-    };
-
-    template<Type type> function<Value(In& in)> scalar_to_srl()
+    template<Type TP> Value read_num(In& in)
     {
-        return [](In& in) {
-            auto val = in.cast_move<typename TpTools::Real<type>::type>(error);
-            return Value(val);
-        };
+        auto val = in.cast_move<typename TpTools::Real<TP>::type>(error);
+        return Value(val);
     }
 
-    const function<Value(In& in)> msgp_to_srl[] {
-    /* float   0xca */ scalar_to_srl<Type::FP32>(),
-    /* double  0xcb */ scalar_to_srl<Type::FP64>(),
-    /* uint 8  0xcc */ scalar_to_srl<Type::UI8>(),
-    /* uint 16 0xcd */ scalar_to_srl<Type::UI16>(),
-    /* uint 32 0xce */ scalar_to_srl<Type::UI32>(),
-    /* uint 64 0xcf */ scalar_to_srl<Type::UI64>(),
-    /* int 8   0xd0 */ scalar_to_srl<Type::I8>(),
-    /* int 16  0xd1 */ scalar_to_srl<Type::I16>(),
-    /* int 32  0xd2 */ scalar_to_srl<Type::I32>(),
-    /* int 64  0xd3 */ scalar_to_srl<Type::I64>()
-    };
+    Value read_num(uint8_t prefix, In& in)
+    {
+        switch(prefix) {
+            case 0xCA : return read_num<Type::FP32>(in);
+            case 0xCB : return read_num<Type::FP64>(in);
+            case 0xCC : return read_num<Type::UI8>(in);
+            case 0xCD : return read_num<Type::UI16>(in);
+            case 0xCE : return read_num<Type::UI32>(in);
+            case 0xCF : return read_num<Type::UI64>(in);
+            case 0xD0 : return read_num<Type::I8>(in);
+            case 0xD1 : return read_num<Type::I16>(in);
+            case 0xD2 : return read_num<Type::I32>(in);
+            case 0xD3 : return read_num<Type::I64>(in);
+
+            default : error(); return Value(Type::Null);
+        };
+    }
 
     bool prefix_is_scalar(uint8_t prefix)
     {
@@ -186,7 +212,7 @@ namespace {
         assert(prefix_is_scalar(prefix));
 
         return prefix == 0xC2 || prefix == 0xC3 ? read_bool(prefix) 
-             : prefix >= 0xCA && prefix <= 0xD3 ? msgp_to_srl[prefix - 0xCA](in) 
+             : prefix >= 0xCA && prefix <= 0xD3 ? read_num(prefix, in) 
              : prefix == 0xC0 ? Value(MemBlock(), Type::Null)
              : read_fixnum(prefix);
     }
@@ -205,7 +231,6 @@ namespace {
        array 32	 11011101 0xdd
        map 16	 11011110 0xde
        map 32	 11011111 0xdf */
-
     bool prefix_is_scope(uint8_t prefix)
     {
         return (prefix >= 0x80 && prefix <= 0x9F) || (prefix >= 0xDC && prefix <= 0xDF);
@@ -263,7 +288,7 @@ void PMsgPack::parse_out(const Value& value, const MemBlock& name, Out& out)
 
     if(this->scope) { 
         if(this->scope->type == Type::Object) {
-            write_msgp_raw(name, out);
+            write_raw(name, out);
         }
         this->scope_stack.top().elements++;
     }
@@ -274,7 +299,7 @@ void PMsgPack::parse_out(const Value& value, const MemBlock& name, Out& out)
         return;
     }
 
-    srl_to_msgp[(uint8_t)type](value, out);
+    srl_to_msgp(value, out);
 }
 
 void PMsgPack::write_scope(Type type, Out& out)

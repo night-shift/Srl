@@ -22,7 +22,7 @@ namespace {
         double val;
 
         const auto apply = [&val, str, str_len](char* ptr_mem) -> bool {
-            char* end;
+            char* end = nullptr;
             memcpy(ptr_mem, str, str_len);
             ptr_mem[str_len] = '\0';
             val = strtod(ptr_mem, &end);
@@ -136,30 +136,22 @@ namespace {
         memcpy(vec.data(), data, size);
     }
 
-    template<Type type>
-    typename enable_if<TpTools::is_integral(type) && type != Type::Bool, size_t>::type
-    to_string_switch(const Value& value, vector<uint8_t>& out)
+    template<Type TP>
+    typename enable_if<TpTools::is_num(TP) && !TpTools::is_fp(TP), size_t>::type
+    conv_type(const Value& value, vector<uint8_t>& out)
     {
-        typedef typename TpTools::Real<type>::type T;
+        typedef typename TpTools::Real<TP>::type T;
+        const auto buffer_size = size_t(numeric_limits<T>::digits10) + 1 + TpTools::is_signed(TP);
 
-        uint64_t val = value.pblock().ui64;
+        uint8_t buffer[buffer_size];
+
+        bool negative = TpTools::is_signed(TP) && value.pblock().i64 < 0;
+
+        uint64_t val = negative ? -value.pblock().i64 : value.pblock().ui64;
 
         if(val == 0) {
             out.insert(out.begin(), '0');
             return 1;
-        }
-
-        const auto buffer_size = size_t(numeric_limits<T>::digits10) + 1 + TpTools::is_signed(type);
-
-        uint8_t buffer[buffer_size];
-
-        bool negative = false;
-        /* testing if msb is set instead of val < 0 avoids a logical compare warning for unsigned types */
-        if(TpTools::is_signed(type) && val >> (sizeof(T) - 1) * 8 & 0x80) {
-            /* the signed integer might overflow on negation, negating the unsigned type
-            * instead avoids the possible overflow */
-            val = -val;
-            negative = true;
         }
 
         size_t str_len = 0;
@@ -184,30 +176,42 @@ namespace {
     }
 
     template<Type type> typename enable_if<TpTools::is_fp(type), size_t>::type
-    to_string_switch(const Value& value, vector<uint8_t>& out)
+    conv_type(const Value& value, vector<uint8_t>& out)
     {
-        const size_t sz_buf = 256;
-
         double val = type == Type::FP64 ? value.pblock().fp64 : value.pblock().fp32;
 
         if(floor(val) == val && val <= numeric_limits<int64_t>::max() && val >= numeric_limits<int64_t>::min()) {
 
-            return to_string_switch<Type::I64>((int64_t)val, out);
+            return conv_type<Type::I64>((int64_t)val, out);
         }
 
-        if(out.size() < sz_buf) {
-            out.resize(sz_buf);
+        int sz_buf = 0;
+        int sz = 64;
+
+        while(sz > sz_buf) {
+
+            sz_buf = sz + 1 /* string terminator */;
+
+            if(out.size() < (size_t)sz_buf) {
+                out.resize(sz_buf);
+            }
+
+            sz = snprintf((char*)out.data(), sz_buf, "%f", val);
+
+            if(sz < 0) {
+                throw Exception("Error occurred on converting floating point value to string.");
+            }
         }
 
-		int sz = snprintf((char*)out.data(), sz_buf, "%f", val);
-
-        assert(sz > 0);
+        while(sz > 1 && *(out.data() + sz - 1) == '0') {
+            sz--;
+        }
 
         return sz;
     }
 
     template<Type type> typename enable_if<type == Type::Bool, size_t>::type
-    to_string_switch(const Value& value, vector<uint8_t>& out)
+    conv_type(const Value& value, vector<uint8_t>& out)
     {
         const char* str = value.pblock().ui64 ? str_true : str_false;
         size_t size = (value.pblock().ui64 ? sizeof(str_true) : sizeof(str_false)) - 1;
@@ -219,7 +223,7 @@ namespace {
 
     template<Type type>
     typename enable_if<type == Type::Null, size_t>::type
-    to_string_switch(const Value&, vector<uint8_t>& out)
+    conv_type(const Value&, vector<uint8_t>& out)
     {
         copy_to_vector(out, (const uint8_t*)str_null, sizeof(str_null) - 1);
         return sizeof(str_null) - 1;
@@ -263,13 +267,13 @@ pair<bool, Value> Tools::string_to_type(const String& string_wrap, Type hint)
 }
 
 #define SRL_TYPE_TO_STR(id, idx, real, size) \
-    case Type::id : return to_string_switch<Type::id>(value, out);
+    case Type::id : return conv_type<Type::id>(value, out);
 
 size_t Tools::type_to_string(const Value& value, vector<uint8_t>& out)
 {
     switch(value.type()) {
         /* defined in Type.h */
-        SRL_TYPES_LITERAL(SRL_TYPE_TO_STR)
+        SRL_TYPES_SCALAR(SRL_TYPE_TO_STR)
 
         default : return 0;
     }

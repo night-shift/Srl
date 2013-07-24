@@ -16,6 +16,75 @@ using namespace Srl;
 using namespace std;
 using namespace Tests;
 
+bool in_text_format = false;
+
+struct TestClassH {
+
+    const string SCOPE = "TestClassH";
+
+
+};
+
+struct TestClassG {
+
+    const string SCOPE = "TestClassG";
+
+    double d_max = 0.0;
+    double d_min = 0.0;
+    double d_low = 0.0;
+
+    float f_max = 0.0;
+    float f_min = 0.0;
+    float f_low = 0.0;
+
+    void srl_resolve (Context& ctx)
+    {
+        ctx ("d_max", d_max)
+            ("d_min", d_min)
+            ("d_low", d_low)
+            ("f_low", f_low)
+            ("f_max", f_max)
+            ("f_min", f_min);
+    }
+
+    void shuffle()
+    {
+        d_max = numeric_limits<double>::max();
+        d_min = numeric_limits<double>::min();
+        d_low = numeric_limits<double>::lowest();
+
+        f_max = numeric_limits<float>::max();
+        f_min = numeric_limits<float>::min();
+        f_low = numeric_limits<float>::lowest();
+    }
+
+    void test(TestClassG& n)
+    {
+        if(in_text_format) {
+
+            double ed = 0.00000000001;
+
+            TEST(fabs(d_min - n.d_min) < ed)
+            TEST(fabs(d_low - n.d_low) < ed)
+            TEST(fabs(d_max - n.d_max) < ed)
+
+            TEST(fabs(f_min - n.f_min) < ed)
+            TEST(fabs(f_max - n.f_max) < ed)
+            TEST(fabs(f_low - n.f_low) < ed)
+
+        } else {
+
+            TEST(d_min == n.d_min)
+            TEST(d_low == n.d_low)
+            TEST(d_max == n.d_max)
+
+            TEST(f_min == n.f_min)
+            TEST(f_max == n.f_max)
+            TEST(f_low == n.f_low)
+        }
+    }
+};
+
 struct TestClassF  {
 
     const string SCOPE = "TestClassF";
@@ -26,11 +95,13 @@ struct TestClassF  {
     int integer_2 = 2;
     vector<char32_t> vec_char { U'5' };
     vector<BasicStruct> vec_struct { };
+    TestClassG class_g;
 
     void srl_resolve (Context& ctx)
     {
         ctx(vec_struct)(integer_2)(some_string)
-           (vec_char)(integer_0)(integer_1);
+           (vec_char)(integer_0)(integer_1)
+           (class_g);
     }
 
     void shuffle()
@@ -41,6 +112,7 @@ struct TestClassF  {
         this->vec_char.push_back( U'u' );
         this->vec_char.push_back( U'A' );
         this->vec_struct.push_back(BasicStruct());
+        this->class_g.shuffle();
     }
 
     void test(TestClassF& n)
@@ -54,6 +126,7 @@ struct TestClassF  {
         for(auto i = 0U; i < this->vec_struct.size(); i++) {
             this->vec_struct[i].test(n.vec_struct[i]);
         }
+        this->class_g.test(n.class_g);
     }
 };
 
@@ -252,6 +325,7 @@ struct TestClassA {
     int64_t s_int64_n = 1;
     int64_t  s_int64 = 1;
     int16_t  s_int16 = 1;
+    uint64_t u_int64 = 1;
     long double long_double = 2.2;
     unsigned char u_char    = 'a';
     int array[5] = {
@@ -275,6 +349,7 @@ struct TestClassA {
             ("s_int64_n", s_int64_n)
             ("s_int64", s_int64)
             ("s_int16", s_int16)
+            ("u_int64", u_int64)
             ("tpl", tpl);
     }
 
@@ -290,6 +365,7 @@ struct TestClassA {
         s_int64_n = -1;
         s_int64 = numeric_limits<int64_t>::max();
         s_int16 = numeric_limits<int16_t>::min();
+        u_int64 = numeric_limits<uint64_t>::max();
 
         for(auto& e : array) {
             e *= -3;
@@ -316,6 +392,7 @@ struct TestClassA {
         TEST(s_int64_n == n.s_int64_n);
         TEST(s_int64 == n.s_int64);
         TEST(s_int16 == n.s_int16);
+        TEST(u_int64 == n.u_int64);
 
         nested_class_b->test(*n.nested_class_b);
         nested_class_c->test(*n.nested_class_c);
@@ -329,7 +406,9 @@ bool test_serialize() { return true; }
 template<class TParser, class... Tail>
 bool test_serialize(const TParser& parser, const string& parser_name, const Tail&... tail)
 {
+    in_text_format = parser.get_format() == Format::Text;
     bool success = true;
+
     try {
         Tests::print_log("\nTest serialize " + parser_name + "\n");
         TestClassA original;

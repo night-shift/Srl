@@ -33,7 +33,7 @@ namespace {
     const Flag FArray  = 1 << 7;
     /* no flags set -> scope end */
 
-    bool is_scope    (Flag flag) { return !(flag & FNum) && flag & (FObject | FArray); }
+    bool is_scope (Flag flag) { return !(flag & FNum) && flag & (FObject | FArray); }
 
     Flag build_flag(const Value& val)
     {
@@ -48,7 +48,7 @@ namespace {
         }
 
         if(tp == Type::String || tp == Type::Binary) {
-            return FBinary;
+            return tp == Type::String ? FString : FBinary;
         }
 
         if(TpTools::is_fp(tp)) {
@@ -112,12 +112,9 @@ namespace {
 }
 
 /* Check if a particular field id was written already.
- * If yes, write StringPrefix::Indexed flag followed by the n-th position(encoded) of that string.
+ * If yes, write indexed flag followed by the n-th position(encoded) of that string.
  * If no, associate the string with the n-th occurrence of a new string,
- * write StringPrefix::New followed by the length of that string and the string itself.
- *
- * This saves a few bytes on multiple occurrences of the same data-structure almost for free.
- * Worst case you get an unnecessary extra byte per field index.
+ * write the length of that string and the string itself.
  * */
 void PSrl::write_flag(Flag flag, const MemBlock& str, Out& out)
 {
@@ -253,11 +250,12 @@ Parser::SourceSeg PSrl::parse_in(In& source)
     }
 
 
-    if(flag & FBinary) {
+    if(flag & (FBinary | FString)) {
         auto size  = decode_integer(source);
         auto block = source.read_block(size, error);
+        auto type = flag & FBinary ? Type::Binary : Type::String;
 
-        return SourceSeg(Value(block, Type::Binary, Encoding::UTF8), name);
+        return SourceSeg(Value(block, type, Encoding::UTF8), name);
     }
 
     if(flag & FNull) {

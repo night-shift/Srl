@@ -9,7 +9,7 @@ namespace Srl {
 
     #define SRL_TYPE_ENUM_ENTRY(name, value, type, size) name = value,
     /* enum-name, enum-value, associated-type, size of associated-type */
-    #define SRL_TYPES_LITERAL(FNC) \
+    #define SRL_TYPES_SCALAR(FNC) \
         FNC (Bool, 0,  bool,      1) \
         FNC (I8,   1,  int8_t,    1) \
         FNC (UI8,  2,  uint8_t,   1) \
@@ -31,7 +31,7 @@ namespace Srl {
         FNC (Scope_End,  16, 0, 0)
 
     enum class Type : uint8_t {
-        SRL_TYPES_LITERAL(SRL_TYPE_ENUM_ENTRY)
+        SRL_TYPES_SCALAR(SRL_TYPE_ENUM_ENTRY)
         SRL_TYPES_NON_SCALAR(SRL_TYPE_ENUM_ENTRY)
     };
 
