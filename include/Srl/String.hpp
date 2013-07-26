@@ -14,21 +14,6 @@ namespace Srl {
             : Tools::convert_charset<TChar>(*this, throw_error);
     }
 
-    inline const uint8_t* String::data() const
-    {
-        return this->block.data();
-    }
-
-    inline Encoding String::encoding() const
-    {
-        return this->block.encoding;
-    }
-
-    inline size_t String::size() const
-    {
-        return this->block.size;
-    }
-
     inline bool String::operator== (const String& a) const
     {
         const auto cmp = [this](const uint8_t* mem, size_t sz) {

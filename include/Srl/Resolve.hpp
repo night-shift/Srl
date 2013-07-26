@@ -9,7 +9,6 @@
 #include "String.h"
 #include "BitWrap.h"
 #include "Tools.h"
-#include "Cast.hpp"
 #include "TpTools.hpp"
 #include "Hash.h"
 #include "Registration.h"
@@ -262,7 +261,7 @@ namespace Srl { namespace Lib {
         template<class ID = String>
         static void Paste_Type(T& o, const Value& value, const ID& id = Aux::Str_Empty)
         {
-            auto success = TpTools::paste_type(o, value);
+            auto success = TpTools::apply_type(o, value);
 
             if(!success) {
                 auto msg = "Cannot cast type " + TpTools::get_name(value.type())

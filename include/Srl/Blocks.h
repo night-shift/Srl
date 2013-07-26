@@ -4,6 +4,7 @@
 #include "Common.h"
 #include "Type.h"
 #include "Enums.h"
+#include "Hash.h"
 
 namespace Srl {
 
@@ -18,6 +19,13 @@ namespace Srl {
             size_t         size;
 
             
+        };
+
+        template<> struct HashFnv1a<MemBlock> {
+            inline size_t operator() (const MemBlock& s) const
+            {
+                return hash_fnv1a(s.ptr, s.size);
+            }
         };
 
         struct PackedBlock {
@@ -60,7 +68,6 @@ namespace Srl {
 
             bool can_store_local() { return this->size <= 8; }
         };
-    }
-}
+} }
 
 #endif

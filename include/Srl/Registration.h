@@ -21,7 +21,7 @@ namespace Srl {
             template<class T>
             void add(const String& id)
             {
-                auto hash = Tools::hash_fnv1a(id.data(), id.size());
+                auto hash = hash_fnv1a(id.data(), id.size());
                 auto itr  = this->lookup.insert({ hash, [](){ return Ctor<T>::Create_New(); } });
 
                 if(!itr.second) {
@@ -32,7 +32,7 @@ namespace Srl {
             template<class T>
             T* create(const String& id)
             {
-                auto hash = Tools::hash_fnv1a(id.data(), id.size());
+                auto hash = hash_fnv1a(id.data(), id.size());
                 auto itr = this->lookup.find(hash);
 
                 if(itr == this->lookup.end()) {

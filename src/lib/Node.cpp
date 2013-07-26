@@ -120,7 +120,7 @@ namespace {
     size_t hash_string(const String& str, Storage& storage)
     {
         return str.encoding() == Storage::Name_Encoding 
-            ? Tools::hash_fnv1a(str.data(), str.size())
+            ? hash_fnv1a(str.data(), str.size())
             : storage.hash_string(str);
     }
 

@@ -2,7 +2,6 @@
 #define SRL_HEAP_H
 
 #include "Common.h"
-#include "Blocks.h"
 
 namespace Srl { namespace Lib {
 
@@ -14,6 +13,8 @@ namespace Srl { namespace Lib {
 
     public:
         T* get_mem (size_t n_elems);
+        template<class... Args>
+        T* create (const Args&... args);
         void clear ();
 
     private:
@@ -42,8 +43,6 @@ namespace Srl { namespace Lib {
         };
 
     };
-
-    inline MemBlock copy_block(Heap<uint8_t>& heap, const MemBlock& block);
 
 } }
 

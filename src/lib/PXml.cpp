@@ -156,7 +156,7 @@ void PXml::parse_document(Lib::In& source)
         }
 
         auto tag = source.read_block_until(error, '=', '>');
-        tag = source.is_streaming() ? copy_block(this->data_buffer, tag) : tag;
+        tag = source.is_streaming() ? Aux::copy(this->data_buffer, tag) : tag;
 
         if(tag.size < 1) {
             error();
@@ -215,13 +215,13 @@ Lib::MemBlock PXml::read_content(Lib::In& source)
         source.move(9, error);
         auto block = source.read_block_until(error, ar(']', ']', '>'));
 
-        return source.is_streaming() ? copy_block(this->data_buffer, block) : block;
+        return source.is_streaming() ? Aux::copy(this->data_buffer, block) : block;
 
     } else {
         auto content = read_escape('<', source, this->escape_buffer);
         Tools::trim_space(content);
 
-        return copy_block(this->data_buffer, content);
+        return Aux::copy(this->data_buffer, content);
     }
 }
 
@@ -255,7 +255,7 @@ void PXml::process_tag_close(const MemBlock& block)
 
     this->tag_index = closing.parent_tag;
     auto& parent = *this->tags[this->tag_index];
-    auto name_hash = Tools::hash_fnv1a(closing.name.ptr, closing.name.size);
+    auto name_hash = hash_fnv1a(closing.name.ptr, closing.name.size);
 
     /* guess: it's a container if all child tags have the same name */
     if(parent.n_child_tags < 1) {
@@ -307,7 +307,7 @@ void PXml::read_attributes(MemBlock& tag, In& source, bool& out_closed)
 
     const auto trim_save = [this, &source](MemBlock& block, bool save) {
         Tools::trim_space(block);
-        return save ? copy_block(this->data_buffer, block) : block;
+        return save ? Aux::copy(this->data_buffer, block) : block;
     };
 
     while(true) {

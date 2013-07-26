@@ -1,10 +1,10 @@
 #ifndef SRL_HASH_H
 #define SRL_HASH_H
 
-#include <cstdint>
-#include <cstddef>
+#include "Common.h"
+#include "Heap.h"
 
-namespace Srl { namespace Tools {
+namespace Srl { namespace Lib {
 
     /* Fowler–Noll–Vo hash function, suggested parameters from http://isthe.com/chongo/tech/comp/fnv/ */
 
@@ -20,7 +20,7 @@ namespace Srl { namespace Tools {
         static const uint32_t Base  = 0x811C9DC5;
     };
 
-    template<size_t NBytes> size_t
+    template<size_t N> size_t
     hash_fnv1a (const uint8_t* bytes, size_t hash_base = HashParamsFnv1<sizeof(size_t)>::Base);
 
     template<size_t N> constexpr size_t
@@ -29,7 +29,72 @@ namespace Srl { namespace Tools {
     inline size_t
     hash_fnv1a (const uint8_t* bytes, size_t nbytes, size_t hash_base = HashParamsFnv1<sizeof(size_t)>::Base);
 
-    template<typename T> struct HashFnv1a;
+    template<class T> struct HashFnv1a { };
+
+    template <class Key, class Val, size_t NBuckets = 256>
+    class HashTable {
+
+    public:
+        HashTable();
+
+        Val* get (const Val& val);
+        /* fst -> exists? snd -> entry */
+        std::pair<bool, Val*> insert (const Key& key, const Val& val);
+        std::pair<bool, Val*> insert_hash (size_t hash, const Val& val);
+
+        ~HashTable() { clear<Val>(); }
+
+        HashTable(HashTable&& m)
+        {
+            *this = m;
+        }
+
+        HashTable(const HashTable& m)
+        {
+            *this = m;
+        }
+
+        HashTable& operator= (HashTable&& m)
+        {
+            this->heap = std::move(m.heap);
+            memcpy(this->table, m.table, sizeof(table));
+
+            return *this;
+        }
+
+        HashTable& operator= (const HashTable& m)
+        {
+            this->heap = m.heap;
+            memcpy(this->table, m.table, sizeof(table));
+
+            return *this;
+        }
+
+    private: 
+        struct Entry {
+            Entry (size_t hash_, const Val& val_)
+                : hash(hash_), val(val_) { }
+
+            size_t hash;
+            Val    val;
+            Entry* next = nullptr;
+        };
+
+        HashFnv1a<Key> hash_fnc;
+
+        Entry* table[NBuckets];
+        Heap<Entry> heap;
+
+
+        template<class T>
+        typename std::enable_if<std::is_trivially_destructible<T>::value, void>::type
+        clear() { }
+
+        template<class T>
+        typename std::enable_if<!std::is_trivially_destructible<T>::value, void>::type
+        clear();
+    };
+
 
 } }
 

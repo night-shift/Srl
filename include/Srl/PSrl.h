@@ -4,9 +4,7 @@
 #include "Common.h"
 #include "Parser.h"
 #include "Blocks.h"
-#include "TpTools.hpp"
-
-#include <unordered_map>
+#include "Hash.h"
 
 namespace Srl {
 
@@ -22,13 +20,13 @@ namespace Srl {
         virtual SourceSeg parse_in(Lib::In& source) override;
 
     private :
-        Type   scope            = Type::Null;
-        size_t n_hashed_strings = 0;
+        Type   scope     = Type::Null;
+        size_t n_strings = 0;
 
-        std::unordered_map<size_t, size_t>  hashed_strings { 128 };
-        std::vector<Lib::MemBlock>          indexed_strings;
-        Lib::Heap<uint8_t>                  string_buffer;
-        std::stack<Type>                    scope_stack;
+        std::vector<Lib::MemBlock>            indexed_strings;
+        Lib::Heap<uint8_t>                    string_buffer;
+        std::stack<Type>                      scope_stack;
+        Lib::HashTable<Lib::MemBlock, size_t> hashed_strings;
 
         void push_scope (Type scope_type);
         void pop_scope  ();

@@ -43,7 +43,7 @@ namespace Srl { namespace TpTools {
     }
 
     template<class T>
-    bool paste_type(T& target, Type src_type, const uint8_t* src_mem);
+    bool apply_type(T& target, Type src_type, const uint8_t* src_mem);
 
     inline const std::string& get_name (Type type) { return Aux::type_name_lookup[(size_t)type]; }
 
@@ -109,12 +109,8 @@ namespace Srl { namespace TpTools {
         {
             int64_t val = value.pblock().i64;
 
-            if(!std::is_signed<T>::value && val >> (7) * 8 & 0x80) {
                 /*trying to assign a negative value to an unsigned type */
-                return false;
-            }
-
-            if(overflows<T>(val)) {
+            if((!std::is_signed<T>::value && val < 0) || overflows<T>(val)) {
                 return false;
             }
 
@@ -164,7 +160,7 @@ namespace Srl { namespace TpTools {
     case Type::type : return Aux::try_apply<T, Type::type>(target, value);
 
     template<class T>
-    bool paste_type(T& target, const Value& value)
+    bool apply_type(T& target, const Value& value)
     {
         static_assert(is_scalar(SrlType<T>::type), "Cannot paste non-literal type.");
 

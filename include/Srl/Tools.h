@@ -17,6 +17,7 @@ namespace Tools {
     size_t      type_to_string (const Value& value, std::vector<uint8_t>& out);
 
     std::pair<bool, Value> string_to_type (const String& string_wrap, Type hint = Type::Null);
+    std::pair<bool, Value> string_to_type (const uint8_t* str, size_t str_len, Type hint = Type::Null);
 
     std::vector<uint8_t> bytes_to_hex (const uint8_t* bytes, size_t nbytes);
     std::vector<uint8_t> hex_to_bytes (const uint8_t* str, size_t str_len);

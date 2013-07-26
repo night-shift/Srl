@@ -3,7 +3,7 @@
 
 #include "Hash.h"
 
-namespace Srl { namespace Tools {
+namespace Srl { namespace Lib {
 
     namespace Aux {
 
@@ -54,6 +54,79 @@ namespace Srl { namespace Tools {
         return hash_base;
     }
 
+    template<class K, class V, size_t N>
+    HashTable<K, V, N>::HashTable()
+    {
+        memset(this->table, 0, N * sizeof(Entry*));
+    }
+
+    template<class K, class V, size_t N>
+    V* HashTable<K, V, N>::get(const V& val)
+    {
+        auto hash = hash_fnc(val);
+        Entry* entry = table[hash % N];
+        V* rslt;
+
+        while(!rslt && entry) {
+
+            if(entry->hash == hash) {
+                rslt = &entry->val;
+            } else {
+                entry = entry->next;
+            }
+        }
+
+        return rslt;
+    }
+        
+    template<class K, class V, size_t N>
+    std::pair<bool, V*> HashTable<K, V, N>::insert(const K& key, const V& val)
+    {
+        auto hash = hash_fnc(key);
+        return insert_hash(hash, val);
+    }
+
+    template<class K, class V, size_t N>
+    std::pair<bool, V*> HashTable<K, V, N>::insert_hash(size_t hash, const V& val)
+    {
+        auto bucket = hash % N;
+
+        Entry* entry = table[bucket];
+        Entry* last = nullptr;
+
+        while(entry) {
+
+            if(entry->hash == hash) return { true, &entry->val };
+
+            last = entry;
+            entry = entry->next;
+        }
+
+        entry = this->heap.create(hash, val);
+
+        if(last) {
+            last->next = entry;
+
+        } else {
+            table[bucket] = entry;
+        }
+
+        return { false, &entry->val };
+    }
+
+    template<class K, class V, size_t N> 
+    template<class T>
+    typename std::enable_if<!std::is_trivially_destructible<T>::value, void>::type
+    HashTable<K, V, N>::clear()
+    {
+        for(auto i = 0U; i < N; i++) {
+            auto* entry = table[i];
+            while(entry) {
+                entry->~V();
+                entry = entry->next;
+            }
+        }
+    }
 } }
 
 #endif

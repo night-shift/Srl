@@ -125,23 +125,20 @@ void PSrl::write_head(Flag flag, const MemBlock& str, Out& out)
 
     flag |= FNamed;
 
-    auto hash = Tools::hash_fnv1a(str.ptr, str.size);
-    auto itr  = this->hashed_strings.find(hash);
+    bool exist; size_t* index;
+    tie(exist, index) = this->hashed_strings.insert(str, this->n_strings);
 
-    if(itr != this->hashed_strings.end()) {
-        auto found_index = itr->second;
+    if(exist) {
 
         out.write_byte(flag | FIndexed);
-        encode_integer(found_index, out);
+        encode_integer(*index, out);
 
     } else {
         out.write_byte(flag);
-
-        auto index = this->n_hashed_strings++;
-        this->hashed_strings.insert({ hash, index });
-
         encode_integer(str.size, out);
         out.write(str);
+
+        this->n_strings++;
     }
 }
 /* the above in reverse */
@@ -166,7 +163,7 @@ pair<Flag, MemBlock> PSrl::read_head(In& source)
         auto block = source.read_block(size, error);
 
         if(source.is_streaming()) {
-            block = copy_block(this->string_buffer, block);
+            block = Aux::copy(this->string_buffer, block);
         }
 
         auto& str = *this->indexed_strings.insert(indexed_strings.end(), block);
@@ -193,6 +190,7 @@ void PSrl::parse_out(const Value& value, const MemBlock& name, Out& out)
     /* scope-starts carry no additional information */
     if(TpTools::is_scope(type)) {
         this->push_scope(type);
+
         return;
     }
 
@@ -233,6 +231,7 @@ Parser::SourceSeg PSrl::parse_in(In& source)
             error();
         }
         this->pop_scope();
+
         return SourceSeg(Type::Scope_End);
     }
 

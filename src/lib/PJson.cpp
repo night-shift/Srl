@@ -145,7 +145,8 @@ void PJson::parse_out(const Value& value, const MemBlock& name, Out& out)
         out.write(value.data(), value.size());
 
     } else {
-        insert_in_quotes(out, { value.data(), value.size() }, true);
+        bool escape = type != Type::Binary;
+        insert_in_quotes(out, { value.data(), value.size() }, escape);
     }
 }
 
@@ -295,16 +296,15 @@ void PJson::process_char(In& source, State& state, bool& out_move)
 
 void PJson::process_literal(const MemBlock& data, State& state)
 {
-    String wrap(data.ptr, data.size, Encoding::UTF8);
+    bool success; 
 
-    auto conv = Tools::string_to_type(wrap);
+    tie(success, state.parsed_value) = Tools::string_to_type(data.ptr, data.size);
 
-    if(!conv.first) {
+    if(!success) {
         throw_exception(state, String("Failed to convert string \'"
-                        + wrap.unwrap<char>(false) + "\' to literal."));
+                        + String(data).unwrap(false) + "\' to literal."));
     }
 
-    state.parsed_value = conv.second;
     state.complete = true;
 }
 

@@ -68,6 +68,14 @@ namespace Srl { namespace Lib {
     }
 
     template<class T>
+    template<class... Args>
+    T* Heap<T>::create (const Args&... args)
+    {
+        auto* mem = get_mem(1);
+        return new (mem) T { args... };
+    }
+
+    template<class T>
     void Heap<T>::clear()
     {
         this->segments.clear();
@@ -90,18 +98,6 @@ namespace Srl { namespace Lib {
         this->segments.emplace_back(alloc_sz);
 
         return &this->segments.back();
-    }
-
-    inline MemBlock copy_block(Heap<uint8_t>& heap, const MemBlock& block)
-    {
-        if(block.size < 1) {
-            return block;
-        }
-
-        auto* mem = heap.get_mem(block.size);
-        memcpy(mem, block.ptr, block.size);
-
-        return { mem, block.size };
     }
 
 } }

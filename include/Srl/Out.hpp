@@ -2,18 +2,9 @@
 #define SRL_OUT_HPP
 
 #include "Out.h"
+#include "Aux.h"
 
 namespace Srl { namespace Lib {
-
-    namespace Aux {
-        template<size_t N> void copy(const uint8_t* src, uint8_t* dst)
-        {
-            *dst = *src;
-            copy<N - 1>(src + 1, dst + 1);
-        }
-
-        template<> inline void copy<0>(const uint8_t*, uint8_t*) { }
-    }
 
     inline uint8_t* Out::alloc(size_t nbytes)
     {

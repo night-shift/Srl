@@ -19,12 +19,12 @@ namespace {
 
     size_t hash_fnc(const MemBlock& block)
     {
-        return Tools::hash_fnv1a(block.ptr, block.size);
+        return hash_fnv1a(block.ptr, block.size);
     }
 
     size_t hash_fnc(const String& str)
     {
-        return Tools::hash_fnv1a(str.data(), str.size());
+        return hash_fnv1a(str.data(), str.size());
     }
 }
 
@@ -46,7 +46,7 @@ Storage& Storage::operator= (Storage&& s)
     this->data_heap  = move(s.data_heap);
     this->value_heap = move(s.value_heap);
     this->node_heap  = move(s.node_heap);
-    this->str_heap   = move(s.str_heap);
+    this->str_table  = move(s.str_table);
 
     return *this;
 }
@@ -78,35 +78,39 @@ size_t Storage::hash_string(const String& str)
 template<class T>
 Link<T>* Storage::create_link(const T& val, const String& name, Heap<Link<T>>& heap)
 {
-    static const String empty_str = String(MemBlock(), Storage::Name_Encoding);
+    static const String empty_str  = String(MemBlock(), Storage::Name_Encoding);
 
-     auto name_conv = name.encoding() == Storage::Name_Encoding
-        ? MemBlock(name.data(), name.size())
-        : convert_string(name, this->str_buffer, Storage::Name_Encoding);
-
-    auto name_hash = hash_fnc(name_conv);
-
+    size_t name_hash = 0;
     const String* str_ptr = nullptr;
 
     if(name.size() > 0) {
-        auto* mem = this->str_heap.get_mem(1);
 
-        auto* ptr = new(mem) String(name_conv, Storage::Name_Encoding);
-        if(ptr->block.can_store_local()) {
-            ptr->block.move_to_local();
+        auto conv = name.encoding() == Storage::Name_Encoding
+            ? MemBlock(name.data(), name.size())
+            : convert_string(name, this->str_buffer, Storage::Name_Encoding);
 
-        } else {
-            ptr->block.extern_data = copy_block(this->data_heap, name_conv).ptr;
+        name_hash = hash_fnc(conv);
+
+        bool exist; String* ptr;
+        tie(exist, ptr) = this->str_table.insert_hash(name_hash, conv);
+
+        if(!exist) {
+            if(ptr->block.can_store_local()) {
+                ptr->block.move_to_local();
+
+            } else {
+                ptr->block.extern_data = Aux::copy(this->data_heap, conv).ptr;
+            }
         }
+
         str_ptr = ptr;
 
     } else {
+        name_hash = hash_fnv1a<0>(nullptr);
         str_ptr = &empty_str;
     }
 
-    auto* mem = heap.get_mem(1);
-
-    auto* link = new(mem) Link<T>(name_hash, val);
+    auto* link = heap.create(name_hash, val);
     link->field.name_ptr = str_ptr;
 
     return link;
@@ -156,7 +160,7 @@ Link<Value>* Storage::store_value(const Value& value, const String& name)
         block.move_to_local();
 
     } else {
-        block.extern_data = copy_block(this->data_heap, { block.extern_data, block.size }).ptr;
+        block.extern_data = Aux::copy(this->data_heap, { block.extern_data, block.size }).ptr;
     }
 
     return link;

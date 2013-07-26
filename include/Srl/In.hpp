@@ -2,31 +2,9 @@
 #define SRL_IN_HPP
 
 #include "In.h"
-#include "Cast.hpp"
+#include "Aux.h"
 
 namespace Srl { namespace Lib {
-
-    namespace Aux {
-
-        template<class = void>
-        constexpr size_t max_len(size_t max) { return max; }
-
-        template<class Sub, class Token, class... Tail>
-        constexpr size_t max_len(size_t max = 0)
-        {
-            return max_len<Tail...>(std::tuple_size<Token>::value > max ? std::tuple_size<Token>::value : max);
-        }
-
-        constexpr size_t dec_saturate(size_t n)
-        {
-            return n > 0 ? n - 1 : 0;
-        }
-
-        template<size_t N, class T> bool comp(const uint8_t* a, const T* b)
-        {
-            return N == 0 || (*a == *b && comp<dec_saturate(N)>(a + 1, b + 1));
-        }
-    }
 
     template<class T>
     T In::cast_move(const OutOfBounds& out_of_bounds)
@@ -37,7 +15,7 @@ namespace Srl { namespace Lib {
             return T();
         }
 
-        return Read_Cast<T>(block.ptr);
+        return Aux::Read_Cast<T>(block.ptr);
     }
 
     template<class... Tokens>

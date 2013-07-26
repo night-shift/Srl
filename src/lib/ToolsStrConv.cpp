@@ -1,4 +1,5 @@
 #include "Srl/Srl.h"
+#include "Srl/Internal.h"
 
 #include <limits>
 #include <math.h>
@@ -86,56 +87,6 @@ namespace {
             memcmp(to_compare + offset, str + offset, str_len - offset) == 0;
     }
 
-    pair<bool, Value> string_to_type_converted(const uint8_t* str, size_t str_len, Type hint)
-    {
-        Tools::trim_space(str, str_len);
-
-        if(str_len < 1) {
-            return { false, Value(Type::Null) };
-        }
-
-        if(str_len >= 4 && str[0] >= 'f') {
-
-            if((str[0] == 't' || str[0] == 'T') && compare_strings(str, str_len, str_true, 1)) {
-                return { true, true };
-            }
-
-            if((str[0] == 'f' || str[0] == 'F') && compare_strings(str, str_len, str_false, 1)) {
-                return { true, false };
-            }
-
-            if((str[0] == 'n' || str[0] == 'N') && compare_strings(str, str_len, str_null, 1)) {
-                return { true, Value(Type::Null) };
-            }
-        }
-
-        bool success = false;
-
-        if(!TpTools::is_fp(hint)) {
-            bool is_signed;
-            uint64_t i;
-
-            tie(i, is_signed, success) = string_to_int(str, str_len);
-
-            if(success) {
-                return is_signed ? make_pair(true, Value(-(int64_t)i)) : make_pair(true, Value(i));
-            }
-        }
-
-        double fp;
-        tie(fp, success) = string_to_double(str, str_len);
-
-        return success ? make_pair(true, Value(fp)) : make_pair(false, Value(Type::Null));
-    }
-
-    void copy_to_vector(vector<uint8_t>& vec, const uint8_t* data, size_t size)
-    {
-        if(vec.size() < size) {
-            vec.resize(size);
-        }
-        memcpy(vec.data(), data, size);
-    }
-
     template<Type TP>
     typename enable_if<TpTools::is_num(TP) && !TpTools::is_fp(TP), size_t>::type
     conv_type(const Value& value, vector<uint8_t>& out)
@@ -171,7 +122,7 @@ namespace {
             ptr++;
         }
 
-        copy_to_vector(out, ptr, str_len);
+        Aux::copy_to_vec(out, ptr, str_len);
 
         return str_len;
     }
@@ -219,7 +170,7 @@ namespace {
         const char* str = value.pblock().ui64 ? str_true : str_false;
         size_t size = (value.pblock().ui64 ? sizeof(str_true) : sizeof(str_false)) - 1;
 
-        copy_to_vector(out, (const uint8_t*)str, size);
+        Aux::copy_to_vec(out, (const uint8_t*)str, size);
 
         return size;
     }
@@ -228,7 +179,7 @@ namespace {
     typename enable_if<type == Type::Null, size_t>::type
     conv_type(const Value&, vector<uint8_t>& out)
     {
-        copy_to_vector(out, (const uint8_t*)str_null, sizeof(str_null) - 1);
+        Aux::copy_to_vec(out, (const uint8_t*)str_null, sizeof(str_null) - 1);
         return sizeof(str_null) - 1;
     }
 }
@@ -254,10 +205,52 @@ void Tools::trim_space(const uint8_t*& str, size_t& str_len)
     }
 }
 
+pair<bool, Value> Tools::string_to_type(const uint8_t* str, size_t str_len, Type hint)
+{
+    Tools::trim_space(str, str_len);
+
+    if(str_len < 1) {
+        return { false, Value(Type::Null) };
+    }
+
+    if(str_len >= 4 && str[0] >= 'f') {
+
+        if((str[0] == 't' || str[0] == 'T') && compare_strings(str, str_len, str_true, 1)) {
+            return { true, true };
+        }
+
+        if((str[0] == 'f' || str[0] == 'F') && compare_strings(str, str_len, str_false, 1)) {
+            return { true, false };
+        }
+
+        if((str[0] == 'n' || str[0] == 'N') && compare_strings(str, str_len, str_null, 1)) {
+            return { true, Value(Type::Null) };
+        }
+    }
+
+    bool success = false;
+
+    if(!TpTools::is_fp(hint)) {
+        bool is_signed;
+        uint64_t i;
+
+        tie(i, is_signed, success) = string_to_int(str, str_len);
+
+        if(success) {
+            return is_signed ? make_pair(true, Value(-(int64_t)i)) : make_pair(true, Value(i));
+        }
+    }
+
+    double fp;
+    tie(fp, success) = string_to_double(str, str_len);
+
+    return success ? make_pair(true, Value(fp)) : make_pair(false, Value(Type::Null));
+}
+
 pair<bool, Value> Tools::string_to_type(const String& string_wrap, Type hint)
 {
     if(string_wrap.encoding() == Encoding::UTF8) {
-        return string_to_type_converted(string_wrap.data(), string_wrap.size(), hint);
+        return string_to_type(string_wrap.data(), string_wrap.size(), hint);
 
     } else {
         auto vec = Tools::convert_charset(Encoding::UTF8, string_wrap, false);
@@ -265,7 +258,7 @@ pair<bool, Value> Tools::string_to_type(const String& string_wrap, Type hint)
             return make_pair(false, Value(Type::Null));
         }
 
-        return string_to_type_converted(vec.data(), vec.size(), hint);
+        return string_to_type(vec.data(), vec.size(), hint);
     }
 }
 

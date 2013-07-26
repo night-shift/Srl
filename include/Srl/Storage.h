@@ -5,7 +5,7 @@
 #include "Value.h"
 #include "Blocks.h"
 #include "String.h"
-#include "Heap.h"
+#include "Hash.h"
 
 namespace Srl { namespace Lib {
 
@@ -16,6 +16,13 @@ namespace Srl { namespace Lib {
 
         Link(size_t hash_, const T& field_)
             : hash(hash_), field(field_) { }
+    };
+
+    template<> struct HashFnv1a<String> {
+        inline size_t operator() (const String& str)
+        {
+            return hash_fnv1a(str.data(), str.size());
+        }
     };
 
     class Storage {
@@ -40,10 +47,10 @@ namespace Srl { namespace Lib {
         inline std::deque<Node*>&     nodes();
 
    private :
-        Heap<Link<Value>>     value_heap;
-        Heap<Link<Node>>      node_heap;
-        Heap<String>          str_heap;
-        Heap<uint8_t>         data_heap;
+        Heap<Link<Value>>         value_heap;
+        Heap<Link<Node>>          node_heap;
+        Heap<uint8_t>             data_heap;
+        HashTable<String, String> str_table;
 
         std::deque<Node*>     stored_nodes;
         std::vector<uint8_t>  str_buffer;
@@ -53,6 +60,7 @@ namespace Srl { namespace Lib {
         template<class T>
         Link<T>* create_link(const T& val, const String& name, Heap<Link<T>>& heap);
     };
+
 
 } }
 

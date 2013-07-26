@@ -35,13 +35,14 @@ namespace Srl {
 
         inline bool operator== (const String& a) const;
 
-        inline const uint8_t* data()     const;
-        inline size_t         size()     const;
-        inline Encoding       encoding() const;
+        inline const uint8_t* data()     const { return this->block.data();   }
+        inline size_t         size()     const { return this->block.size;     }
+        inline Encoding       encoding() const { return this->block.encoding; }
 
     private:
         Lib::PackedBlock block;
     };
+
 }
 
 #endif
