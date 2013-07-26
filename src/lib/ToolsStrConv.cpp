@@ -151,7 +151,7 @@ namespace {
 
         if(val == 0) {
             if(out.size() < 1) out.resize(1);
-            out[0] = '0'
+            out[0] = '0';
             return 1;
         }
 
@@ -186,14 +186,12 @@ namespace {
             return conv_type<Type::I64>((int64_t)val, out);
         }
 
-        int sz_buf = 0;
+        int sz_buf = out.size();
         int sz = 64;
 
-        while(sz > sz_buf) {
-
-            sz_buf = sz + 1 /* string terminator */;
-
-            if(out.size() < (size_t)sz_buf) {
+        do {
+            if(sz_buf < sz + 1) /* string terminator */ {
+                sz_buf = sz + 1;
                 out.resize(sz_buf);
             }
 
@@ -202,7 +200,11 @@ namespace {
             if(sz < 0) {
                 throw Exception("Error occurred on converting floating point value to string.");
             }
-        }
+
+            if(sz > sz_buf)
+                printf("%i ", sz);
+
+        } while(sz > sz_buf);
 
         while(sz > 1 && *(out.data() + sz - 1) == '0') {
             sz--;

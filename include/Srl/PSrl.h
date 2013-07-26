@@ -6,7 +6,7 @@
 #include "Blocks.h"
 #include "TpTools.hpp"
 
-#include <map>
+#include <unordered_map>
 
 namespace Srl {
 
@@ -25,18 +25,18 @@ namespace Srl {
         Type   scope            = Type::Null;
         size_t n_hashed_strings = 0;
 
-        std::map<size_t, size_t>   hashed_strings;
-        std::vector<Lib::MemBlock> indexed_strings;
-        Lib::Heap<uint8_t>         string_buffer;
-        std::stack<Type>           scope_stack;
+        std::unordered_map<size_t, size_t>  hashed_strings { 256 };
+        std::vector<Lib::MemBlock>          indexed_strings;
+        Lib::Heap<uint8_t>                  string_buffer;
+        std::stack<Type>                    scope_stack;
 
         void push_scope (Type scope_type);
         void pop_scope  ();
 
         SourceSeg read_num (uint8_t flag, const Lib::MemBlock& name, Lib::In& source);
 
-        void write_flag (uint8_t flag, const Lib::MemBlock& str, Lib::Out& out);
-        std::pair<uint8_t, Lib::MemBlock> read_flag (Lib::In& source);
+        void write_head (uint8_t flag, const Lib::MemBlock& str, Lib::Out& out);
+        std::pair<uint8_t, Lib::MemBlock> read_head (Lib::In& source);
     };
 }
 

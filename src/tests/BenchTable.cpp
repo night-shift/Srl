@@ -139,6 +139,8 @@ void Tests::run_benches()
     Tree tree;
     tree.root().insert("map", data);
 
+    print_log("Running with " + to_string(Benchmark_Iterations) + " iterations...\n");
+
     run_bench(
         tree,
         PSrl(), "PSrl",
@@ -147,5 +149,4 @@ void Tests::run_benches()
         PJson(true), "PJson w/o space"
     );
 
-    print_log("Running with " + to_string(Benchmark_Iterations) + " iterations...\n");
 }

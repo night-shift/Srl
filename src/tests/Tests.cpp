@@ -26,6 +26,8 @@ void Tests::print_log(const std::string& message)
     }
 }
 
+#include <unordered_map>
+
 int main(int argc, char** args)
 {
     for(int i = 0; i < argc; i++) {

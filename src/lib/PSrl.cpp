@@ -116,7 +116,7 @@ namespace {
  * If no, associate the string with the n-th occurrence of a new string,
  * write the length of that string and the string itself.
  * */
-void PSrl::write_flag(Flag flag, const MemBlock& str, Out& out)
+void PSrl::write_head(Flag flag, const MemBlock& str, Out& out)
 {
     if(str.size < 1 || scope == Type::Null || scope == Type::Array) {
         out.write_byte(flag);
@@ -147,7 +147,7 @@ void PSrl::write_flag(Flag flag, const MemBlock& str, Out& out)
     }
 }
 /* the above in reverse */
-pair<Flag, MemBlock> PSrl::read_flag(In& source)
+pair<Flag, MemBlock> PSrl::read_head(In& source)
 {
     auto flag = source.cast_move<uint8_t>(error);
 
@@ -189,7 +189,7 @@ void PSrl::parse_out(const Value& value, const MemBlock& name, Out& out)
         return;
     }
 
-    this->write_flag(flag, name, out);
+    this->write_head(flag, name, out);
     
     auto type = value.type();
     /* scope-starts carry no additional information */
@@ -228,7 +228,7 @@ void PSrl::parse_out(const Value& value, const MemBlock& name, Out& out)
 Parser::SourceSeg PSrl::parse_in(In& source)
 {
     Flag flag; MemBlock name;
-    tie(flag, name) = this->read_flag(source);
+    tie(flag, name) = this->read_head(source);
 
     if(!flag) {
         if(this->scope_stack.size() < 1) {
