@@ -25,7 +25,7 @@ namespace Srl {
         Type   scope            = Type::Null;
         size_t n_hashed_strings = 0;
 
-        std::unordered_map<size_t, size_t>  hashed_strings { 256 };
+        std::unordered_map<size_t, size_t>  hashed_strings { 128 };
         std::vector<Lib::MemBlock>          indexed_strings;
         Lib::Heap<uint8_t>                  string_buffer;
         std::stack<Type>                    scope_stack;

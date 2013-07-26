@@ -2,7 +2,6 @@
 #define SRL_HASH_HPP
 
 #include "Hash.h"
-#include "Blocks.h"
 
 namespace Srl { namespace Tools {
 
@@ -55,13 +54,6 @@ namespace Srl { namespace Tools {
         return hash_base;
     }
 
-
-    template<> struct HashFnv1a<Lib::MemBlock> {
-        inline size_t operator() (const Lib::MemBlock& s) const
-        {
-            return hash_fnv1a(s.ptr, s.size);
-        }
-    };
 } }
 
 #endif

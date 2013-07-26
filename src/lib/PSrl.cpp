@@ -125,9 +125,7 @@ void PSrl::write_head(Flag flag, const MemBlock& str, Out& out)
 
     flag |= FNamed;
 
-    Tools::HashFnv1a<MemBlock> hash_function;
-
-    auto hash = hash_function(str);
+    auto hash = Tools::hash_fnv1a(str.ptr, str.size);
     auto itr  = this->hashed_strings.find(hash);
 
     if(itr != this->hashed_strings.end()) {

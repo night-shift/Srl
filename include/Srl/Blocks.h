@@ -16,6 +16,8 @@ namespace Srl {
 
             const uint8_t* ptr;
             size_t         size;
+
+            
         };
 
         struct PackedBlock {

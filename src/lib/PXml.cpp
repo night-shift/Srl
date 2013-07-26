@@ -244,8 +244,8 @@ void PXml::process_tag_close(const MemBlock& block)
         error();
     }
 
-    auto& closing_tag = this->current_tag();
-    this->process_scope(closing_tag, block);
+    auto& closing = this->current_tag();
+    this->process_scope(closing, block);
 
     /* root tag closed -> document is parsed */
     if(this->tag_index == 0) {
@@ -253,23 +253,22 @@ void PXml::process_tag_close(const MemBlock& block)
         return;
     }
 
-    this->tag_index = closing_tag.parent_tag;
-    auto& parent_tag = *this->tags[this->tag_index];
+    this->tag_index = closing.parent_tag;
+    auto& parent = *this->tags[this->tag_index];
+    auto name_hash = Tools::hash_fnv1a(closing.name.ptr, closing.name.size);
 
-    Tools::HashFnv1a<MemBlock> hash_fnc;
     /* guess: it's a container if all child tags have the same name */
-    if(parent_tag.n_child_tags < 1) {
-        parent_tag.child_name_hash = hash_fnc(closing_tag.name);
-
+    if(parent.n_child_tags < 1) {
+        parent.child_name_hash = name_hash;
     } else {
         bool consistent =
-            parent_tag.child_names_consistent &&
-            parent_tag.child_name_hash == hash_fnc(closing_tag.name);
+            parent.child_names_consistent &&
+            parent.child_name_hash == name_hash;
 
-        parent_tag.child_names_consistent = consistent;
+        parent.child_names_consistent = consistent;
     }
 
-    parent_tag.n_child_tags++;
+    parent.n_child_tags++;
 }
 
 void PXml::process_scope(XmlTag& tag, const MemBlock& closing_tag)
