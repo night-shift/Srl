@@ -7,6 +7,7 @@
 #include <stack>
 #include <set>
 #include <unordered_map>
+#include <map>
 #include <limits>
 #include <fstream>
 #include <sstream>
@@ -21,8 +22,6 @@ bool in_text_format = false;
 struct TestClassH {
 
     const string SCOPE = "TestClassH";
-
-
 };
 
 struct TestClassG {

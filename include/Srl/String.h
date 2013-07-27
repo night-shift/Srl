@@ -42,7 +42,6 @@ namespace Srl {
     private:
         Lib::PackedBlock block;
     };
-
 }
 
 #endif

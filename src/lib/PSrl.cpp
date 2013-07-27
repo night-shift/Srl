@@ -195,7 +195,7 @@ void PSrl::parse_out(const Value& value, const MemBlock& name, Out& out)
     }
 
     /* do nothing on null-type, flag already carries bool value */
-    if(type == Type::Null | type == Type::Bool) {
+    if(type == Type::Null || type == Type::Bool) {
         return;
     }
 

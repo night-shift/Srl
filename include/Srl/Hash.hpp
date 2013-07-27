@@ -26,7 +26,8 @@ namespace Srl { namespace Lib {
     template<size_t N>
     constexpr size_t hash_fnv1a (const char(&str)[N], size_t hash_base)
     {
-        return hash_fnv1a<N>(str, hash_base);
+        static_assert(N > 0, "String must be null-terminated.");
+        return hash_fnv1a<N - 1>((const uint8_t*)str, hash_base);
     }
 
     inline size_t hash_fnv1a(const uint8_t* bytes, size_t nbytes, size_t hash_base)
@@ -61,18 +62,18 @@ namespace Srl { namespace Lib {
     }
 
     template<class K, class V, size_t N>
-    V* HashTable<K, V, N>::get(const V& val)
+    V* HashTable<K, V, N>::get(const K& key)
     {
-        auto hash = hash_fnc(val);
+        auto hash = hash_fnc(key);
         Entry* entry = table[hash % N];
-        V* rslt;
+        V* rslt = nullptr;
 
         while(!rslt && entry) {
 
             if(entry->hash == hash) {
                 rslt = &entry->val;
             } else {
-                entry = entry->next;
+                entry = entry->hash > hash ? entry->le : entry->gr;
             }
         }
 
@@ -90,7 +91,6 @@ namespace Srl { namespace Lib {
     std::pair<bool, V*> HashTable<K, V, N>::insert_hash(size_t hash, const V& val)
     {
         auto bucket = hash % N;
-
         Entry* entry = table[bucket];
         Entry* last = nullptr;
 
@@ -99,13 +99,14 @@ namespace Srl { namespace Lib {
             if(entry->hash == hash) return { true, &entry->val };
 
             last = entry;
-            entry = entry->next;
+            entry = entry->hash > hash ? entry->le : entry->gr;
         }
 
         entry = this->heap.create(hash, val);
 
         if(last) {
-            last->next = entry;
+            auto& slot = last->hash > hash ? last->le : last->gr;
+            slot = entry;
 
         } else {
             table[bucket] = entry;
@@ -119,12 +120,16 @@ namespace Srl { namespace Lib {
     typename std::enable_if<!std::is_trivially_destructible<T>::value, void>::type
     HashTable<K, V, N>::clear()
     {
+        std::function<void(Entry*)> unfold;
+
+        unfold = [&unfold](Entry* e) {
+            if(e->le) unfold(e->le);
+            if(e->gr) unfold(e->gr);
+            e->val.~V();
+        };
+
         for(auto i = 0U; i < N; i++) {
-            auto* entry = table[i];
-            while(entry) {
-                entry->~V();
-                entry = entry->next;
-            }
+            if(table[i]) unfold(table[i]);
         }
     }
 } }

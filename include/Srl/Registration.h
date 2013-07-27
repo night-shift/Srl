@@ -6,7 +6,6 @@
 #include "Exception.h"
 #include "Resolve.h"
 
-#include <map>
 #include <functional>
 
 namespace Srl {
@@ -15,16 +14,22 @@ namespace Srl {
 
     namespace Lib {
 
+        template<> struct HashFnv1a<String> {
+            inline size_t operator() (const String& str)
+            {
+                return hash_fnv1a(str.data(), str.size());
+            }
+        };
+
         class Registrations {
 
         public:
             template<class T>
             void add(const String& id)
             {
-                auto hash = hash_fnv1a(id.data(), id.size());
-                auto itr  = this->lookup.insert({ hash, [](){ return Ctor<T>::Create_New(); } });
+                auto r = this->table.insert(id, [](){ return Ctor<T>::Create_New(); });
 
-                if(!itr.second) {
+                if(r.first) {
                     throw Exception("Class id " + id.unwrap(false) + " duplicated.");
                 }
             }
@@ -32,18 +37,17 @@ namespace Srl {
             template<class T>
             T* create(const String& id)
             {
-                auto hash = hash_fnv1a(id.data(), id.size());
-                auto itr = this->lookup.find(hash);
+                auto* fnc = this->table.get(id);
 
-                if(itr == this->lookup.end()) {
+                if(!fnc) {
                     throw Exception("Class id " + id.unwrap(false) + " not registered.");
                 }
 
-                return static_cast<T*>(itr->second());
+                return static_cast<T*>((*fnc)());
             }
 
         private:
-            std::map<size_t, std::function<void*(void)>> lookup;
+            HashTable<String, std::function<void*(void)>, 16> table;
         };
 
         Registrations* registrations();

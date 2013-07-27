@@ -49,7 +49,7 @@ int main(int argc, char** args)
         }
     }
 
-      if(Tests::Run_Benchmarks) {
+    if(Tests::Run_Benchmarks) {
         Tests::run_benches();
 
     } else {

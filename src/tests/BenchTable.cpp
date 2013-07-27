@@ -5,6 +5,7 @@
 #include <fstream>
 #include <memory>
 #include <unistd.h>
+#include <map>
 
 using namespace std;
 using namespace Srl;

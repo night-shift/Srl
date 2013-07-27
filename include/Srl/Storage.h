@@ -18,13 +18,6 @@ namespace Srl { namespace Lib {
             : hash(hash_), field(field_) { }
     };
 
-    template<> struct HashFnv1a<String> {
-        inline size_t operator() (const String& str)
-        {
-            return hash_fnv1a(str.data(), str.size());
-        }
-    };
-
     class Storage {
 
     public :

@@ -4,6 +4,8 @@
 #include "Common.h"
 #include "Heap.h"
 
+#include<functional>
+
 namespace Srl { namespace Lib {
 
     /* Fowler–Noll–Vo hash function, suggested parameters from http://isthe.com/chongo/tech/comp/fnv/ */
@@ -31,13 +33,13 @@ namespace Srl { namespace Lib {
 
     template<class T> struct HashFnv1a { };
 
-    template <class Key, class Val, size_t NBuckets = 256>
+    template <class Key, class Val, size_t NBuckets = 32>
     class HashTable {
 
     public:
         HashTable();
 
-        Val* get (const Val& val);
+        Val* get (const Key& key);
         /* fst -> exists? snd -> entry */
         std::pair<bool, Val*> insert (const Key& key, const Val& val);
         std::pair<bool, Val*> insert_hash (size_t hash, const Val& val);
@@ -77,14 +79,14 @@ namespace Srl { namespace Lib {
 
             size_t hash;
             Val    val;
-            Entry* next = nullptr;
+            Entry* le = nullptr;
+            Entry* gr = nullptr;
         };
 
         HashFnv1a<Key> hash_fnc;
 
         Entry* table[NBuckets];
         Heap<Entry> heap;
-
 
         template<class T>
         typename std::enable_if<std::is_trivially_destructible<T>::value, void>::type
