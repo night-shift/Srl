@@ -11,8 +11,8 @@ namespace Srl { namespace Lib {
 
     template<class T> struct Link {
 
-        size_t     hash;
-        T          field;
+        size_t hash;
+        T      field;
 
         Link(size_t hash_, const T& field_)
             : hash(hash_), field(field_) { }

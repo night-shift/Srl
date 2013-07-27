@@ -18,7 +18,7 @@ namespace Srl { namespace Lib {
         void clear ();
 
     private:
-        static const size_t Max_Cap_Size  = 524288 / sizeof(T);
+        static const size_t Max_Cap_Size  = 262144 / sizeof(T);
 
         size_t   cap     = 0;
         Segment* crr_seg = nullptr;

@@ -129,7 +129,6 @@ void PSrl::write_head(Flag flag, const MemBlock& str, Out& out)
     tie(exist, index) = this->hashed_strings.insert(str, this->n_strings);
 
     if(exist) {
-
         out.write_byte(flag | FIndexed);
         encode_integer(*index, out);
 

@@ -56,12 +56,6 @@ namespace Srl { namespace Lib {
     }
 
     template<class K, class V, size_t N>
-    HashTable<K, V, N>::HashTable()
-    {
-        memset(this->table, 0, N * sizeof(Entry*));
-    }
-
-    template<class K, class V, size_t N>
     V* HashTable<K, V, N>::get(const K& key)
     {
         auto hash = hash_fnc(key);
@@ -104,13 +98,10 @@ namespace Srl { namespace Lib {
 
         entry = this->heap.create(hash, val);
 
-        if(last) {
-            auto& slot = last->hash > hash ? last->le : last->gr;
-            slot = entry;
+        auto& slot = last ? last->hash > hash ? last->le : last->gr
+                          : table[bucket];
 
-        } else {
-            table[bucket] = entry;
-        }
+        slot = entry;
 
         return { false, &entry->val };
     }

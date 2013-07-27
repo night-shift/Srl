@@ -37,8 +37,6 @@ namespace Srl { namespace Lib {
     class HashTable {
 
     public:
-        HashTable();
-
         Val* get (const Key& key);
         /* fst -> exists? snd -> entry */
         std::pair<bool, Val*> insert (const Key& key, const Val& val);
@@ -46,31 +44,11 @@ namespace Srl { namespace Lib {
 
         ~HashTable() { clear<Val>(); }
 
-        HashTable(HashTable&& m)
-        {
-            *this = m;
-        }
+        HashTable() { }
 
-        HashTable(const HashTable& m)
-        {
-            *this = m;
-        }
+        HashTable(const HashTable& m) = default;
 
-        HashTable& operator= (HashTable&& m)
-        {
-            this->heap = std::move(m.heap);
-            memcpy(this->table, m.table, sizeof(table));
-
-            return *this;
-        }
-
-        HashTable& operator= (const HashTable& m)
-        {
-            this->heap = m.heap;
-            memcpy(this->table, m.table, sizeof(table));
-
-            return *this;
-        }
+        HashTable& operator= (HashTable&& m) = default;
 
     private: 
         struct Entry {
@@ -85,7 +63,7 @@ namespace Srl { namespace Lib {
 
         HashFnv1a<Key> hash_fnc;
 
-        Entry* table[NBuckets];
+        Entry* table[NBuckets] { };
         Heap<Entry> heap;
 
         template<class T>
