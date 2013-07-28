@@ -58,7 +58,7 @@ namespace Srl { namespace Lib {
     template<class T>
     T* Heap<T>::get_mem(size_t n_elems)
     {
-        if(this->crr_seg == nullptr || this->crr_seg->left < n_elems) {
+        if(!this->crr_seg || this->crr_seg->left < n_elems) {
             this->crr_seg = this->alloc(n_elems);
         }
 

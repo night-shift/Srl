@@ -337,9 +337,8 @@ void PXml::read_attributes(MemBlock& tag, In& source, bool& out_closed)
 
 PXml::XmlTag& PXml::create_tag(const MemBlock& name, Type type, size_t parent_tag, const MemBlock& data)
 {
-    auto* mem = this->tag_buffer.get_mem(1);
-    auto* tag = new(mem) XmlTag(name, type, parent_tag, data);
-
+    auto* tag = this->tag_buffer.create(name, type, parent_tag, data);
     this->tags.push_back(tag);
+
     return *tag;
 }

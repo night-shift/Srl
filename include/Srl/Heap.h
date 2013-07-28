@@ -29,7 +29,7 @@ namespace Srl { namespace Lib {
 
         struct Segment {
 
-            Segment(size_t size_);
+            Segment (size_t size_);
             ~Segment();
             Segment (Segment&& s)      { *this = std::move(s); }
             Segment (const Segment& s) { *this = s; }
@@ -37,9 +37,9 @@ namespace Srl { namespace Lib {
             Segment& operator= (Segment&&);
             Segment& operator= (const Segment&);
 
-            size_t  left = 0;
-            T*      data = nullptr;
-            size_t  size;
+            uint32_t left = 0;
+            uint32_t size;
+            T*       data = nullptr;
         };
 
     };

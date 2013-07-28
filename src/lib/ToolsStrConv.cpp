@@ -53,13 +53,11 @@ namespace {
             }
             is_signed = true;
             idx = 1;
-            str++;
-
         }
 
         uint64_t tmp = 0;
-        for(char c = *str; idx < str_len;
-            c = *++str, idx++) {
+        for(char c; idx < str_len; idx++) {
+            c = str[idx];
 
             if(c >= '0' && c <= '9') {
                 tmp = val * 10 + c - '0';
