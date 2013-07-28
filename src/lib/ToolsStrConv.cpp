@@ -152,9 +152,6 @@ namespace {
                 throw Exception("Error occurred on converting floating point value to string.");
             }
 
-            if(sz > sz_buf)
-                printf("%i ", sz);
-
         } while(sz > sz_buf);
 
         while(sz > 1 && *(out.data() + sz - 1) == '0') {
