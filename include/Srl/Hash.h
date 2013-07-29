@@ -10,30 +10,30 @@ namespace Srl { namespace Lib {
 
     /* Fowler–Noll–Vo hash function, suggested parameters from http://isthe.com/chongo/tech/comp/fnv/ */
 
-    template<size_t machine_word_size> struct HashParamsFnv1;
+    template<size_t machine_word_size> struct ParamsFnv1;
 
-    template<> struct HashParamsFnv1<8> {
+    template<> struct ParamsFnv1<8> {
         static const uint64_t Prime = 0x100000001B3;
         static const uint64_t Base  = 0xCBF29CE484222325;
     };
 
-    template<> struct HashParamsFnv1<4> {
+    template<> struct ParamsFnv1<4> {
         static const uint32_t Prime = 0x01000193;
         static const uint32_t Base  = 0x811C9DC5;
     };
 
     template<size_t N> size_t
-    hash_fnv1a (const uint8_t* bytes, size_t hash_base = HashParamsFnv1<sizeof(size_t)>::Base);
+    hash_fnv1a (const uint8_t* bytes, size_t hash_base = ParamsFnv1<sizeof(size_t)>::Base);
 
     template<size_t N> constexpr size_t
-    hash_fnv1a (const char(&str)[N], size_t hash_base = HashParamsFnv1<sizeof(size_t)>::Base);
+    hash_fnv1a (const char(&str)[N], size_t hash_base = ParamsFnv1<sizeof(size_t)>::Base);
 
     inline size_t
-    hash_fnv1a (const uint8_t* bytes, size_t nbytes, size_t hash_base = HashParamsFnv1<sizeof(size_t)>::Base);
+    hash_fnv1a (const uint8_t* bytes, size_t nbytes, size_t hash_base = ParamsFnv1<sizeof(size_t)>::Base);
 
-    template<class T> struct HashFnv1a { };
+    template<class T> struct Fnv1a { };
 
-    template <class Key, class Val, size_t NBuckets = 32>
+    template <class Key, class Val, size_t Buckets = 32, class HashFnc = Fnv1a<Key>>
     class HashTable {
 
     public:
@@ -61,9 +61,9 @@ namespace Srl { namespace Lib {
             Entry* gr = nullptr;
         };
 
-        HashFnv1a<Key> hash_fnc;
+        HashFnc hash_fnc;
 
-        Entry* table[NBuckets] { };
+        Entry* table[Buckets] { };
         Heap<Entry> heap;
 
         template<class T>

@@ -21,7 +21,7 @@ namespace Srl {
             
         };
 
-        template<> struct HashFnv1a<MemBlock> {
+        template<> struct Fnv1a<MemBlock> {
             inline size_t operator() (const MemBlock& s) const
             {
                 return hash_fnv1a(s.ptr, s.size);

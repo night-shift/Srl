@@ -59,16 +59,16 @@ namespace {
         for(char c; idx < str_len; idx++) {
             c = str[idx];
 
-            if(c >= '0' && c <= '9') {
-                tmp = val * 10 + c - '0';
-                if(tmp < val) {
-                    /* overflow */
-                    break;
-                }
-                val = tmp;
-            } else {
+            if(c < '0' || c > '9') {
                 break;
             }
+
+            tmp = val * 10 + c - '0';
+            if(tmp < val) {
+                /* overflow */
+                break;
+            }
+            val = tmp;
         }
 
         bool success = idx >= str_len && (!is_signed || val <= numeric_limits<int64_t>::max());

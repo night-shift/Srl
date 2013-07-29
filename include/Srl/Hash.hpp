@@ -9,7 +9,7 @@ namespace Srl { namespace Lib {
 
         template<size_t N> void fnv1a_unfold(const uint8_t* bytes, size_t& hash)
         {
-            hash = (hash ^ *bytes) * HashParamsFnv1<sizeof(size_t)>::Prime;
+            hash = (hash ^ *bytes) * ParamsFnv1<sizeof(size_t)>::Prime;
             fnv1a_unfold<N - 1>(bytes + 1, hash);
         }
 
@@ -26,7 +26,6 @@ namespace Srl { namespace Lib {
     template<size_t N>
     constexpr size_t hash_fnv1a (const char(&str)[N], size_t hash_base)
     {
-        static_assert(N > 0, "String must be null-terminated.");
         return hash_fnv1a<N - 1>((const uint8_t*)str, hash_base);
     }
 
@@ -55,68 +54,64 @@ namespace Srl { namespace Lib {
         return hash_base;
     }
 
-    template<class K, class V, size_t N>
-    V* HashTable<K, V, N>::get(const K& key)
+    template<class K, class V, size_t N, class H>
+    V* HashTable<K, V, N, H>::get(const K& key)
     {
         auto hash = hash_fnc(key);
         Entry* entry = table[hash % N];
-        V* rslt = nullptr;
 
-        while(!rslt && entry) {
-
+        while(entry) {
             if(entry->hash == hash) {
-                rslt = &entry->val;
+                return &entry->val;
+
             } else {
                 entry = entry->hash > hash ? entry->le : entry->gr;
             }
         }
 
-        return rslt;
+        return nullptr;
     }
         
-    template<class K, class V, size_t N>
-    std::pair<bool, V*> HashTable<K, V, N>::insert(const K& key, const V& val)
+    template<class K, class V, size_t N, class H>
+    std::pair<bool, V*> HashTable<K, V, N, H>::insert(const K& key, const V& val)
     {
         auto hash = hash_fnc(key);
         return insert_hash(hash, val);
     }
 
-    template<class K, class V, size_t N>
-    std::pair<bool, V*> HashTable<K, V, N>::insert_hash(size_t hash, const V& val)
+    template<class K, class V, size_t N, class H>
+    std::pair<bool, V*> HashTable<K, V, N, H>::insert_hash(size_t hash, const V& val)
     {
-        auto bucket = hash % N;
+        auto bucket  = hash % N;
         Entry* entry = table[bucket];
-        Entry* last = nullptr;
+        Entry* node  = nullptr;
 
         while(entry) {
 
             if(entry->hash == hash) return { true, &entry->val };
 
-            last = entry;
+            node = entry;
             entry = entry->hash > hash ? entry->le : entry->gr;
         }
 
-        entry = this->heap.create(hash, val);
-
-        auto& slot = last ? last->hash > hash ? last->le : last->gr
+        auto& slot = node ? node->hash > hash ? node->le : node->gr
                           : table[bucket];
 
-        slot = entry;
+        slot = this->heap.create(hash, val);
 
-        return { false, &entry->val };
+        return { false, &slot->val };
     }
 
-    template<class K, class V, size_t N> 
-    template<class T>
+    template<class K, class V, size_t N, class H> template<class T>
     typename std::enable_if<!std::is_trivially_destructible<T>::value, void>::type
-    HashTable<K, V, N>::clear()
+    HashTable<K, V, N, H>::clear()
     {
         std::function<void(Entry*)> unfold;
 
         unfold = [&unfold](Entry* e) {
+            e->val.~V();
             if(e->le) unfold(e->le);
             if(e->gr) unfold(e->gr);
-            e->val.~V();
         };
 
         for(auto i = 0U; i < N; i++) {

@@ -14,7 +14,7 @@ namespace Srl {
 
     namespace Lib {
 
-        template<> struct HashFnv1a<String> {
+        template<> struct Fnv1a<String> {
             inline size_t operator() (const String& str)
             {
                 return hash_fnv1a(str.data(), str.size());
