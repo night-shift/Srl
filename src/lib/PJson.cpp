@@ -18,7 +18,7 @@ namespace {
 
         Tools::hex_to_bytes(hex_buffer, 2, block.ptr + 2, 4);
 
-        return Tools::convert_charset(Encoding::UTF8, String(hex_buffer, 2, Encoding::UTF16), buf, true, idx);
+        return Tools::conv_charset(Encoding::UTF8, String(hex_buffer, 2, Encoding::UTF16), buf, true, idx);
     };
 
     constexpr array<const char, 2> ar(const char c)
@@ -55,7 +55,7 @@ namespace {
         out.write('\"');
     }
 
-    template<size_t C> void fill_table(uint8_t* table, uint8_t char_valid, uint8_t char_invalid)
+    template<size_t C> void fill_table(uint8_t* table)
     {
         bool valid = (C >= '0' && C <= '9') ||
             C == 't' || C == 'r' || C == 'u' ||
@@ -65,12 +65,12 @@ namespace {
             C == '+' || C == '.' || C == '-' ||
             C == 'E' || C == 'i';
 
-        table[C] = valid ? char_valid : char_invalid;
+        table[C] = valid;
 
-        fill_table<C + 1>(table, char_valid, char_invalid);
+        fill_table<C + 1>(table);
     }
 
-    template<> void fill_table<256>(uint8_t*, uint8_t, uint8_t) { }
+    template<> void fill_table<256>(uint8_t*) { }
 
     void skip_comment(Lib::In& source)
     {
@@ -94,7 +94,7 @@ namespace {
 
 /* Parse out ****************************************************/
 
-void PJson::parse_out(const Value& value, const MemBlock& name, Out& out)
+void PJson::write(const Value& value, const MemBlock& name, Out& out)
 {
     auto type = value.type();
     this->insert_spacing(type, out);
@@ -171,12 +171,12 @@ void PJson::insert_spacing(Type type, Out& out)
 
 /* Parse in ****************************************************/
 
-PJson::LiteralTable::LiteralTable()
+PJson::LitTable::LitTable()
 {
-    fill_table<0>(this->table, LiteralTable::Char_Valid, LiteralTable::Char_Invalid);
+    fill_table<0>(this->table);
 }
 
-Parser::SourceSeg PJson::parse_in(In& source)
+pair<Lib::MemBlock, Value> PJson::read(In& source)
 {
     State state;
     while(!state.complete) {
@@ -212,12 +212,12 @@ Parser::SourceSeg PJson::parse_in(In& source)
             default  : this->process_char(source, state, move);
         }
 
-        if(move) {
+        if(srl_likely(move)) {
             source.move(1, error);
         }
     }
 
-    return SourceSeg(state.parsed_value, state.name);
+    return { state.name, state.value };
 }
 
 void PJson::process_bracket(char bracket, State& state)
@@ -241,7 +241,7 @@ void PJson::process_bracket(char bracket, State& state)
         this->scope_type = type;
     }
 
-    state.parsed_value = Value(type);
+    state.value = Value(type);
     state.complete = true;
 }
 
@@ -263,7 +263,7 @@ void PJson::process_string(const MemBlock& content, State& state)
 {
     /* container elements don't have a name */
     if(state.reading_value || this->scope_type == Type::Array) {
-        state.parsed_value = Value(content, Encoding::UTF8);
+        state.value = Value(content, Encoding::UTF8);
         state.complete = true;
 
     } else {
@@ -278,13 +278,17 @@ void PJson::process_string(const MemBlock& content, State& state)
 /* values not in quotes are literals */
 void PJson::process_char(In& source, State& state, bool& out_move)
 {
-    bool is_scalar = this->lookup.table[*source.pointer()] == LiteralTable::Char_Valid;
+    bool is_literal = this->lookup.table[*source.pointer()];
 
-    if(is_scalar) {
+    if(is_literal) {
 
-        auto block = source.read_block_until(error, ',', ' ', '}', ']', '\n');
+        bool likely_fp = false;
+        In::Notify exp ('e', likely_fp);
+        In::Notify dec ('.', likely_fp);
 
-        this->process_literal(block, state);
+        auto block = source.read_block_until(error, ',', ' ', '}', ']', exp, dec);
+
+        this->process_literal(block, state, likely_fp ? Type::FP64 : Type::Null);
 
         if(*source.pointer() == '}' || *source.pointer() == ']') {
             /* The bracket has a double meaning here, first it delimits the literal,
@@ -294,15 +298,15 @@ void PJson::process_char(In& source, State& state, bool& out_move)
     }
 }
 
-void PJson::process_literal(const MemBlock& data, State& state)
+void PJson::process_literal(const MemBlock& str, State& state, Type hint)
 {
     bool success; 
 
-    tie(success, state.parsed_value) = Tools::string_to_type(data.ptr, data.size);
+    tie(success, state.value) = Tools::str_to_type(str.ptr, str.size, hint);
 
     if(!success) {
-        throw_exception(state, String("Failed to convert string \'"
-                        + String(data).unwrap(false) + "\' to literal."));
+        throw_exception(state, String("Failed to convert string "
+                        + String(str).unwrap(false) + " to literal."));
     }
 
     state.complete = true;
@@ -314,7 +318,7 @@ void PJson::throw_exception(State& state, const String& info)
         ? string((const char*)state.name.ptr, state.name.size)
         : "";
 
-    MemBlock content(state.parsed_value.data(), state.parsed_value.size());
+    MemBlock content(state.value.data(), state.value.size());
 
     auto msg = "In field " + name + (content.ptr != nullptr && content.size > 0
             ? "\' at \'" + string((const char*)content.ptr, content.size) + "\'."

@@ -3,7 +3,6 @@
 
 #include "Tools.h"
 #include "String.h"
-#include "Storage.h"
 
 namespace Srl {
 
@@ -11,7 +10,7 @@ namespace Srl {
     std::basic_string<TChar> String::unwrap(bool throw_error) const
     {
         return this->block.size < 1 ? std::basic_string<TChar>()
-            : Tools::convert_charset<TChar>(*this, throw_error);
+            : Tools::conv_charset<TChar>(*this, throw_error);
     }
 
     inline bool String::operator== (const String& a) const
@@ -24,7 +23,7 @@ namespace Srl {
             return cmp(a.block.data(), a.block.size);
 
         } else {
-            auto tmp = Tools::convert_charset(this->block.encoding, a, false);
+            auto tmp = Tools::conv_charset(this->block.encoding, a, false);
             return cmp(tmp.data(), tmp.size());
         }
     }

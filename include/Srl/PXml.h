@@ -22,8 +22,8 @@ namespace Srl {
         void set_insert_attributes(bool val) { this->skip_whitespace = val; }
 
         virtual void
-        parse_out(const Value& value, const Lib::MemBlock& name, Lib::Out& out) override;
-        virtual SourceSeg parse_in(Lib::In& source) override;
+        write(const Value& value, const Lib::MemBlock& name, Lib::Out& out) override;
+        virtual std::pair<Lib::MemBlock, Value> read(Lib::In& source) override;
 
     private :
         bool skip_whitespace,

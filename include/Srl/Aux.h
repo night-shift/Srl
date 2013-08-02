@@ -2,39 +2,38 @@
 #define SRL_AUX_H
 
 #include "Blocks.h"
+#include "Heap.h"
 
 #include <type_traits>
 
 namespace Srl { namespace Lib { namespace Aux {
 
+    #define srl_unlikely(expr) __builtin_expect((expr), 0)
+    #define srl_likely(expr)   __builtin_expect((expr), 1)
+
     template<class T>
-    T Read_Cast(const uint8_t* address)
+    T read (const uint8_t* address)
     {
         static_assert(std::is_integral<T>::value ||
                       std::is_floating_point<T>::value, "Aux to non-numeric type.");
 
         assert(address != nullptr && "Attempting to read from nullptr");
 
-        #ifndef SRL_UNALIGNED_READ /* default: aligned reads */
-            if(reinterpret_cast<size_t>(address) % sizeof(T) == 0) {
+        if((size_t)address % sizeof(T) == 0) {
+            return *(const T*)address;
 
-                return *reinterpret_cast<const T*>(address);
-
-            } else {
-                T t;
-                memcpy(reinterpret_cast<uint8_t*>(&t), address, sizeof(T));
-                return t;
-            }
-        #else
-            return *reinterpret_cast<const T*>(address);
-        #endif
+        } else {
+            T t;
+            memcpy((uint8_t*)&t, address, sizeof(T));
+            return t;
+        }
     }
 
     template<class = void>
-    constexpr size_t max_len(size_t max) { return max; }
+    constexpr size_t max_len (size_t max) { return max; }
 
     template<class Sub, class Token, class... Tail>
-    constexpr size_t max_len(size_t max = 0)
+    constexpr size_t max_len (size_t max = 0)
     {
         return max_len<Tail...>(std::tuple_size<Token>::value > max ? std::tuple_size<Token>::value : max);
     }
@@ -44,37 +43,37 @@ namespace Srl { namespace Lib { namespace Aux {
         return n > 0 ? n - 1 : 0;
     }
 
-    template<size_t N, class T> bool comp(const uint8_t* a, const T* b)
+    template<size_t N, class T> bool comp (const uint8_t* a, const T* b)
     {
         return N == 0 || (*a == *b && comp<dec_saturate(N)>(a + 1, b + 1));
     }
     
-    template<size_t N> void copy(const uint8_t* src, uint8_t* dst)
+    template<size_t N> void copy (const uint8_t* src, uint8_t* dst)
     {
         *dst = *src;
         copy<N - 1>(src + 1, dst + 1);
     }
 
-    template<> inline void copy<0>(const uint8_t*, uint8_t*) { }
+    template<> inline void copy<0> (const uint8_t*, uint8_t*) { }
 
-    inline void copy_to_vec(std::vector<uint8_t>& vec, const uint8_t* src, size_t n)
+    inline void copy_to_vec (std::vector<uint8_t>& vec, const uint8_t* src, size_t n)
     {
         if(vec.size() < n) vec.resize(n);
         memcpy(vec.data(), src, n);
     }
 
-    inline void copy_to_vec(std::vector<uint8_t>& vec, const MemBlock& block)
+    inline void copy_to_vec (std::vector<uint8_t>& vec, const MemBlock& block)
     {
         copy_to_vec(vec, block.ptr, block.size);
     }
 
-    inline MemBlock copy(std::vector<uint8_t>& vec, const MemBlock& block)
+    inline MemBlock copy (std::vector<uint8_t>& vec, const MemBlock& block)
     {
         copy_to_vec(vec, block);
         return { vec.data(), block.size };
     }
 
-    inline MemBlock copy(Heap<uint8_t>& heap, const MemBlock& block)
+    inline MemBlock copy (Heap<uint8_t>& heap, const MemBlock& block)
     {
         if(block.size < 1) return block;
 

@@ -13,64 +13,72 @@ namespace Srl { namespace Lib {
     class In {
 
     public :
-        typedef std::function<void()>  OutOfBounds;
+        typedef std::function<void()>  Error;
         typedef std::function<size_t(In&, std::vector<uint8_t>&, size_t idx)> Substitute;
 
+        struct Notify {
+            Notify(char token_, bool& note_) : token(token_), note(&note_) { }
+            char  token;
+            bool* note;
+        };
+
         In(const uint8_t* data, size_t data_size)
-            :  start(data), end(data + data_size + 1), current_pos(data)  { }
+            :  start(data), end(data + data_size + 1), pos(data)  { }
 
         In(std::istream& stream_);
 
         inline bool           is_streaming() const;
         inline const uint8_t* pointer()      const;
 
-        inline void move           (size_t steps, const OutOfBounds& out_of_bounds);
-        inline const uint8_t* peek (size_t steps, const OutOfBounds& out_of_bounds);
+        inline void move           (size_t steps, const Error& error);
+        inline const uint8_t* peek (size_t steps, const Error& error);
         inline bool try_peek       (size_t steps);
-        inline MemBlock read_block (size_t steps, const OutOfBounds& out_of_bounds);
+        inline MemBlock read_block (size_t steps, const Error& error);
 
         template<class T>
-        T cast_move (const OutOfBounds& out_of_bounds);
+        T read_move (const Error& error);
 
         template<class... Tokens>
-        size_t move_until (const OutOfBounds& out_of_bounds, const Tokens&... tokens);
+        size_t move_until (const Error& error, const Tokens&... tokens);
 
         template<class... Tokens>
-        MemBlock read_block_until (const OutOfBounds& out_of_bounds, const Tokens&... tokens);
+        MemBlock read_block_until (const Error& error, const Tokens&... tokens);
 
         template<class... Tokens>
-        size_t read_substitue (const OutOfBounds& out_of_bounds, uint8_t delimiter,
+        size_t read_substitue (const Error& error, uint8_t delimiter,
                                std::vector<uint8_t>& buffer, const Tokens&... tokens);
 
         template<class... Tokens>
-        size_t move_while (const OutOfBounds& out_of_bounds, const Tokens&... tokens);
+        size_t move_while (const Error& error, const Tokens&... tokens);
 
-        inline void skip_space(const OutOfBounds& out_of_bounds);
+        inline void skip_space(const Error& error);
 
-        template<size_t N = 1, class... Tokens>
-        bool is_at_token (const char head, const Tokens&... tokens);
+        template<size_t N = 1, class... Tail>
+        bool is_at_token (const char head, const Tail&... tail);
 
-        template<size_t N, class... Tokens>
-        bool is_at_token (const std::array<const char, N>& head, const Tokens&... tokens);
+        template<size_t N, class... Tail>
+        bool is_at_token (const std::array<const char, N>& head, const Tail&... tail);
 
-        inline bool is_at_token();
+        template<size_t N = 1, class... Tail>
+        bool is_at_token(const Notify& head, const Tail&... tail);
+
+        bool is_at_token() { return false; }
 
     private :
         static const size_t Stream_Buffer_Size = 8192;
 
-        const uint8_t* start       = nullptr;
-        const uint8_t* end         = nullptr;
-        const uint8_t* current_pos = nullptr;
+        const uint8_t* start = nullptr;
+        const uint8_t* end   = nullptr;
+        const uint8_t* pos   = nullptr;
 
         bool streaming       = false;
         std::istream* stream = nullptr;
         bool eof_reached     = false;
 
-        int buffer_acc = 0;
-        std::vector<uint8_t> buffers[2];
+        int swap_mod = 0;
+        std::vector<uint8_t> swap[2];
 
-        const uint8_t* buffer_anchor = nullptr;
-
+        const uint8_t* anchor = nullptr;
 
         template<class Sub, class Token, class... Tail>
         size_t substitute_token(std::vector<uint8_t>& buffer, size_t idx, size_t left, const Sub& sub,
@@ -88,10 +96,10 @@ namespace Srl { namespace Lib {
 
 
         template<bool Not, class... Tokens>
-        size_t move_until (const OutOfBounds& out_of_bounds, const Tokens&... tokens);
+        size_t move_until (const Error& error, const Tokens&... tokens);
 
         bool try_fetch_data(size_t nbytes);
-        void fetch_data(size_t nbytes, const OutOfBounds& out_of_bounds);
+        void fetch_data(size_t nbytes, const Error& error);
     };
 
 } }

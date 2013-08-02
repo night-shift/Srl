@@ -151,13 +151,13 @@ namespace {
         assert(prefix_is_raw(prefix));
 
         return prefix <= 0xBF ? prefix & 0xFF >> 3
-             : prefix & 1 ? in.cast_move<uint32_t>(error)
-             : in.cast_move<uint16_t>(error);
+             : prefix & 1 ? in.read_move<uint32_t>(error)
+             : in.read_move<uint16_t>(error);
     }
 
     template<Type TP> Value read_num(In& in)
     {
-        auto val = in.cast_move<typename TpTools::Real<TP>::type>(error);
+        auto val = in.read_move<typename TpTools::Real<TP>::type>(error);
         return Value(val);
     }
 
@@ -244,7 +244,7 @@ namespace {
 
         if(0x0D << 4 & prefix) {
            type = prefix <= 0xDD ? Type::Array : Type::Object;
-           size = prefix & 0x01 ? in.cast_move<uint32_t>(error) : in.cast_move<uint16_t>(error);
+           size = prefix & 0x01 ? in.read_move<uint32_t>(error) : in.read_move<uint16_t>(error);
 
         } else {
             assert(1 << 7 & prefix);
@@ -272,7 +272,7 @@ namespace {
     }
 }
 
-void PMsgPack::parse_out(const Value& value, const MemBlock& name, Out& out)
+void PMsgPack::write(const Value& value, const MemBlock& name, Out& out)
 {
     auto type = value.type();
 
@@ -312,7 +312,7 @@ void PMsgPack::write_scope(Type type, Out& out)
    this->scope = &this->scope_stack.top();
 }
 
-Parser::SourceSeg PMsgPack::parse_in(In& source)
+pair<MemBlock, Value> PMsgPack::read(In& source)
 {
     if(this->scope) {
 
@@ -323,18 +323,18 @@ Parser::SourceSeg PMsgPack::parse_in(In& source)
             this->scope_stack.pop();
             this->scope = this->scope_stack.size() > 0 ? &this->scope_stack.top() : nullptr;
 
-            return SourceSeg(Type::Scope_End);
+            return { MemBlock(), Type::Scope_End };
         }
 
         this->scope->elements--;
     }
 
     MemBlock name;
-    auto prefix = source.cast_move<uint8_t>(error);
+    auto prefix = source.read_move<uint8_t>(error);
 
     if(this->scope && this->scope->type == Type::Object) {
         name = prefix_is_raw(prefix) ? read_name(prefix, this->buffer, source) : name;
-        prefix = source.cast_move<uint8_t>(error);
+        prefix = source.read_move<uint8_t>(error);
     }
 
     if(prefix_is_scope(prefix)) {
@@ -344,18 +344,18 @@ Parser::SourceSeg PMsgPack::parse_in(In& source)
         this->scope_stack.emplace(type, size);
         this->scope = &this->scope_stack.top();
 
-        return SourceSeg(type, name); 
+        return { name, type }; 
     }
 
     if(prefix_is_scalar(prefix)) {
-        return { read_scalar(prefix, source), name };
+        return { name, read_scalar(prefix, source) };
     }
 
     if(prefix_is_raw(prefix)) {
-        return { read_raw(prefix, source), name };
+        return { name, read_raw(prefix, source) };
     }
 
     /* shouldn't end here */
     error();
-    return SourceSeg(Type::Null);
+    return { MemBlock(), Type::Null };
 }

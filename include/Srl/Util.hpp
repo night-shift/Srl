@@ -10,7 +10,9 @@ namespace Srl {
 
     namespace Lib { namespace Aux {
 
-        template<class T, class = void> struct StoreSwitch {
+        template<class T, class = void> struct TypeSwitch {
+            static const Type type = Type::Object;
+
             static std::function<void()> Insert(const T& o, Tree& tree) {
                 return [&o, &tree] { tree.root().insert(o); };
             }
@@ -20,7 +22,9 @@ namespace Srl {
         };
 
         template<class T>
-        struct StoreSwitch<T, typename std::enable_if<has_resolve_method<T>::value>::type> {
+        struct TypeSwitch<T, typename std::enable_if<TpTools::is_scope(Switch<T>::type)>::type> {
+            static const Type type = Switch<T>::type;
+
             static std::function<void()> Insert(const T& o, Tree& tree) {
                 return [&o, &tree] { Switch<T>::Insert(tree.root(), o); };
             }
@@ -52,7 +56,8 @@ namespace Srl {
     {
         TParser copy = parser;
         Tree tree(name);
-        tree.parse_out(copy, out, Lib::Aux::StoreSwitch<Object>::Insert(object, tree));
+        tree.write(Lib::Aux::TypeSwitch<Object>::type, copy, out,
+                   Lib::Aux::TypeSwitch<Object>::Insert(object, tree));
     }
 
     template<class Object, class TParser>
@@ -105,7 +110,7 @@ namespace Srl {
     {
         TParser copy = parser;
         Tree tree;
-        tree.parse_in(copy, in, Lib::Aux::StoreSwitch<Object>::Paste(tree, object));
+        tree.read_source(copy, in, Lib::Aux::TypeSwitch<Object>::Paste(tree, object));
     }
 }
 

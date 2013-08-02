@@ -69,6 +69,7 @@ namespace {
     const uint64_t mask_msb       = 128U; /* 0...1000 0000 msb in a block, tells us more blocks are comming */
     const uint64_t mask_reset_msb = 127U; /* 0...0111 1111 */
 
+    /* variable length quantity encoding */
     void encode_integer(uint64_t integer, Out& out)
     {
         uint8_t buffer[10];
@@ -125,10 +126,10 @@ void PSrl::write_head(Flag flag, const MemBlock& str, Out& out)
 
     flag |= FNamed;
 
-    bool exist; size_t* index;
-    tie(exist, index) = this->hashed_strings.insert(str, this->n_strings);
+    bool exists; size_t* index;
+    tie(exists, index) = this->hashed_strings.insert(str, this->n_strings);
 
-    if(exist) {
+    if(exists) {
         out.write_byte(flag | FIndexed);
         encode_integer(*index, out);
 
@@ -143,7 +144,7 @@ void PSrl::write_head(Flag flag, const MemBlock& str, Out& out)
 /* the above in reverse */
 pair<Flag, MemBlock> PSrl::read_head(In& source)
 {
-    auto flag = source.cast_move<uint8_t>(error);
+    auto flag = source.read_move<uint8_t>(error);
 
     if(!(flag & FNamed) || scope == Type::Null || scope == Type::Array) {
         return { flag, MemBlock() };
@@ -171,7 +172,7 @@ pair<Flag, MemBlock> PSrl::read_head(In& source)
     }
 }
 
-void PSrl::parse_out(const Value& value, const MemBlock& name, Out& out)
+void PSrl::write(const Value& value, const MemBlock& name, Out& out)
 {
     auto flag = build_flag(value);
 
@@ -220,7 +221,7 @@ void PSrl::parse_out(const Value& value, const MemBlock& name, Out& out)
     }
 }
 
-Parser::SourceSeg PSrl::parse_in(In& source)
+pair<Lib::MemBlock, Value> PSrl::read(In& source)
 {
     Flag flag; MemBlock name;
     tie(flag, name) = this->read_head(source);
@@ -231,14 +232,14 @@ Parser::SourceSeg PSrl::parse_in(In& source)
         }
         this->pop_scope();
 
-        return SourceSeg(Type::Scope_End);
+        return { MemBlock(), Type::Scope_End };
     }
 
     if(is_scope(flag)) {
         auto tp = flag & FObject ? Type::Object : Type::Array;
         this->push_scope(tp);
 
-        return SourceSeg(Value(tp), name);
+        return { name, tp };
     }
 
     if(flag & FNum) {
@@ -251,40 +252,41 @@ Parser::SourceSeg PSrl::parse_in(In& source)
         auto block = source.read_block(size, error);
         auto type = flag & FBinary ? Type::Binary : Type::String;
 
-        return SourceSeg(Value(block, type, Encoding::UTF8), name);
+        return { name, Value(block, type, Encoding::UTF8) };
     }
 
     if(flag & FNull) {
-        return SourceSeg(Value(Type::Null), name);
+        return { name, Type::Null };
     }
 
     /* shouldn't end down here */
     error();
-    return SourceSeg(Type::Null);
+    return { name, Type::Null };
+;
 }
 
-Parser::SourceSeg PSrl::read_num(Flag flag, const MemBlock& name, In& source)
+pair<Lib::MemBlock, Value> PSrl::read_num(Flag flag, const MemBlock& name, In& source)
 {
     if(flag & (FTrue | FFalse)) {
         bool val = flag & FTrue;
-        return { Value(val), name };
+        return { name, val };
     }
 
     if(flag & FFP32) {
-        float val = source.cast_move<float>(error);
-        return { Value(val), name };
+        float val = source.read_move<float>(error);
+        return { name, val };
     }
 
     if(flag & FFP64) {
-        double val = source.cast_move<double>(error);
-        return { Value(val), name };
+        double val = source.read_move<double>(error);
+        return { name, val };
     }
 
     uint64_t integer = decode_integer(source);
 
     return flag & FSigned
-        ? SourceSeg(Value(-(int64_t)integer), name)
-        : SourceSeg(Value(integer), name);
+        ? make_pair(name, Value(-(int64_t)integer))
+        : make_pair(name, Value(integer));
 }
 
 void PSrl::push_scope(Type scope_type)

@@ -39,13 +39,13 @@ int main(int argc, char** args)
             istringstream is(string(args[i] + 3));
             int in;
             is >> in;
-            if(in > 0) { Tests::Benchmark_Objects = in; }
+            if(in >= 0) { Tests::Benchmark_Objects = in; }
 
         } else if(string(args[i], 3) == "-i=") {
             istringstream is(string(args[i] + 3));
             int in;
             is >> in;
-            if(in > 0) { Tests::Benchmark_Iterations = in; }
+            if(in >= 0) { Tests::Benchmark_Iterations = in; }
         }
     }
 

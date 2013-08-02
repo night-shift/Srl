@@ -3,6 +3,7 @@
 
 #include "Common.h"
 #include "Heap.h"
+#include "Aux.h"
 
 namespace Srl { namespace Lib {
 
@@ -58,7 +59,7 @@ namespace Srl { namespace Lib {
     template<class T>
     T* Heap<T>::get_mem(size_t n_elems)
     {
-        if(!this->crr_seg || this->crr_seg->left < n_elems) {
+        if(srl_unlikely(!this->crr_seg || this->crr_seg->left < n_elems)) {
             this->crr_seg = this->alloc(n_elems);
         }
 

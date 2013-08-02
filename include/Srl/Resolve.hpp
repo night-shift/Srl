@@ -45,8 +45,8 @@ namespace Srl { namespace Lib {
 
     template<class TString> std::pair<Encoding, MemBlock> wrap_string(const TString& str)
     {
-        static_assert(is_character_array<TString>::value
-                      || is_character<TString>::value
+        static_assert(is_char_array<TString>::value
+                      || is_char<TString>::value
                       || is_basic_string<TString>::value
                       || is_cstr_pointer<TString>::value,
 
@@ -60,7 +60,7 @@ namespace Srl { namespace Lib {
     template<class TChar>
     Encoding get_encoding()
     {
-        static_assert(is_character<TChar>::value, "Srl error. Not a character type.");
+        static_assert(is_char<TChar>::value, "Srl error. Not a character type.");
 
         return sizeof(TChar) == 1 ? Encoding::UTF8
              : sizeof(TChar) == 2 ? Encoding::UTF16
@@ -104,7 +104,7 @@ namespace Srl { namespace Lib {
                 Aux::check_type_value(val_type, id);
                 Aux::check_size(TpTools::get_size(val_type), value.size(), id);
 
-                auto tmp_string = Tools::type_to_string(value);
+                auto tmp_string = Tools::type_to_str(value);
                 str = String(tmp_string).unwrap<T>();
             }
         }
@@ -112,7 +112,7 @@ namespace Srl { namespace Lib {
 
     /* single characters are also strings */
     template<class T>
-    struct Switch<T, typename std::enable_if<is_character<T>::value>::type> {
+    struct Switch<T, typename std::enable_if<is_char<T>::value>::type> {
         static const Type type = Type::String;
 
         static void Insert(const T& c, Node& node, const String& name)
@@ -137,7 +137,7 @@ namespace Srl { namespace Lib {
 
     /* intercept character arrays and handle those like strings */
     template<class T>
-    struct Switch<T, typename std::enable_if<is_character_array<T>::value>::type> {
+    struct Switch<T, typename std::enable_if<is_char_array<T>::value>::type> {
 
         static const Type type = Type::String;
 
@@ -247,7 +247,7 @@ namespace Srl { namespace Lib {
         {
             String wrap(value.data(), value.size(), value.encoding());
 
-            auto conv = Tools::string_to_type(wrap);
+            auto conv = Tools::str_to_type(wrap);
 
             if(!conv.first) {
                 auto msg = "Cannot convert string \'"
@@ -464,7 +464,7 @@ namespace Srl { namespace Lib {
 
     /* Arrays are treated like containers */
     template<class T>
-    struct Switch<T, typename std::enable_if<std::is_array<T>::value && !is_character_array<T>::value>::type> {
+    struct Switch<T, typename std::enable_if<std::is_array<T>::value && !is_char_array<T>::value>::type> {
         static const Type type = Type::Array;
         typedef typename array_type<T>::type E;
 
@@ -684,7 +684,7 @@ namespace Srl { namespace Lib {
                 std::vector<uint8_t> buffer;
                 String wrap(value.data(), value.size(), value.encoding());
 
-                auto conv_size = Tools::convert_charset(encoding, wrap, buffer, true);
+                auto conv_size = Tools::conv_charset(encoding, wrap, buffer, true);
 
                 check_size(size, conv_size, id);
                 memcpy(dst, buffer.data(), size);

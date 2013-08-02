@@ -81,7 +81,7 @@ namespace {
 
 /* Parse out ****************************************************/
 
-void PXml::parse_out(const Value& value, const MemBlock& name, Out& out)
+void PXml::write(const Value& value, const MemBlock& name, Out& out)
 {
     auto type = value.type();
 
@@ -119,7 +119,7 @@ PXml::XmlTag& PXml::current_tag()
     return *this->tags[this->tag_index];
 }
 
-Parser::SourceSeg PXml::parse_in(In& source)
+pair<Lib::MemBlock, Value> PXml::read(In& source)
 {
     /* Completely parse the document in one go and afterwards 'feed' the caller on
      * request with the results. The document is parsed after the root is closed. */
@@ -135,11 +135,11 @@ Parser::SourceSeg PXml::parse_in(In& source)
 
     if(tag.type == Type::Scope_End || TpTools::is_scope(tag.type)) {
 
-        return SourceSeg(Value(tag.type), tag.name);
+        return { tag.name, Value(tag.type) };
 
     } else {
 
-        return SourceSeg(Value(tag.data, Encoding::UTF8), tag.name);
+        return { tag.name, Value(tag.data, Encoding::UTF8) };
     }
 }
 
@@ -255,7 +255,7 @@ void PXml::process_tag_close(const MemBlock& block)
 
     this->tag_index = closing.parent_tag;
     auto& parent = *this->tags[this->tag_index];
-    auto name_hash = hash_fnv1a(closing.name.ptr, closing.name.size);
+    auto name_hash = murmur_hash2(closing.name.ptr, closing.name.size);
 
     /* guess: it's a container if all child tags have the same name */
     if(parent.n_child_tags < 1) {

@@ -18,12 +18,12 @@ namespace Srl {
             : skip_whitespace(skip_whitespace_) {  }
 
         Format get_format() const           { return Format::Text; }
-
         void set_skip_whitespace (bool val) { this->skip_whitespace = val; }
 
         virtual void
-        parse_out(const Value& value, const Lib::MemBlock& name, Lib::Out& out) override;
-        virtual SourceSeg parse_in(Lib::In& source) override;
+        write(const Value& value, const Lib::MemBlock& name, Lib::Out& out) override;
+        virtual std::pair<Lib::MemBlock, Value>
+        read(Lib::In& source) override;
 
     private :
         bool             skip_whitespace;
@@ -37,22 +37,18 @@ namespace Srl {
         struct State {
 
             Lib::MemBlock name;
-            Value         parsed_value = { Type::Null };
+            Value         value = { Type::Null };
 
             bool complete      = false, name_processed = false,
                  reading_value = false;
         };
 
-        struct LiteralTable {
-            static const uint8_t Char_Invalid = 0;
-            static const uint8_t Char_Valid   = 1;
-
+        struct LitTable {
             uint8_t table[256];
-
-            LiteralTable();
+            LitTable();
         };
 
-        LiteralTable lookup;
+        LitTable lookup;
 
         void insert_spacing  (Type type, Lib::Out& out);
 
@@ -60,8 +56,8 @@ namespace Srl {
         void process_bracket (char bracket, State& state);
         void process_char    (Lib::In& source, State& state, bool& out_move);
 
-        void process_string  (const Lib::MemBlock& data, State& state);
-        void process_literal (const Lib::MemBlock& data, State& state);
+        void process_string  (const Lib::MemBlock& str, State& state);
+        void process_literal (const Lib::MemBlock& str, State& state, Type hint);
 
         void throw_exception (State& state, const String& info);
     };

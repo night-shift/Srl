@@ -4,37 +4,18 @@
 #include "Common.h"
 #include "Heap.h"
 
-#include<functional>
+#include <math.h>
 
 namespace Srl { namespace Lib {
 
-    /* Fowler–Noll–Vo hash function, suggested parameters from http://isthe.com/chongo/tech/comp/fnv/ */
+    inline size_t murmur_hash2 (const uint8_t * bytes, size_t nbytes);
 
-    template<size_t machine_word_size> struct ParamsFnv1;
-
-    template<> struct ParamsFnv1<8> {
-        static const uint64_t Prime = 0x100000001B3;
-        static const uint64_t Base  = 0xCBF29CE484222325;
+    template<class T> struct Mmh2 {
+        size_t operator() (const T& t) const { return murmur_hash2(t.data(), t.size()); }
     };
 
-    template<> struct ParamsFnv1<4> {
-        static const uint32_t Prime = 0x01000193;
-        static const uint32_t Base  = 0x811C9DC5;
-    };
-
-    template<size_t N> size_t
-    hash_fnv1a (const uint8_t* bytes, size_t hash_base = ParamsFnv1<sizeof(size_t)>::Base);
-
-    template<size_t N> constexpr size_t
-    hash_fnv1a (const char(&str)[N], size_t hash_base = ParamsFnv1<sizeof(size_t)>::Base);
-
-    inline size_t
-    hash_fnv1a (const uint8_t* bytes, size_t nbytes, size_t hash_base = ParamsFnv1<sizeof(size_t)>::Base);
-
-    template<class T> struct Fnv1a { };
-
-    template <class Key, class Val, size_t Buckets = 32, class HashFnc = Fnv1a<Key>>
-    class HashTable {
+    template <class Key, class Val, class HashFnc = Mmh2<Key>>
+    class HTable {
 
     public:
         Val* get (const Key& key);
@@ -42,13 +23,16 @@ namespace Srl { namespace Lib {
         std::pair<bool, Val*> insert (const Key& key, const Val& val);
         std::pair<bool, Val*> insert_hash (size_t hash, const Val& val);
 
-        ~HashTable() { clear<Val>(); }
+        ~HTable() { clear<Val>(); }
 
-        HashTable() { }
+        HTable(size_t buckets = 128, double load_factor_ = 1.0)
+            : load_factor(load_factor_ < 0.1 ? 0.1 : load_factor_),
+              /* ensure n buckets is power of 2 */
+              cap(pow(2, ceil(log2(buckets)))) { }
 
-        HashTable(const HashTable& m) = default;
+        HTable(const HTable& m) = default;
 
-        HashTable& operator= (HashTable&& m) = default;
+        HTable& operator= (HTable&& m) = default;
 
     private: 
         struct Entry {
@@ -56,15 +40,22 @@ namespace Srl { namespace Lib {
                 : hash(hash_), val(val_) { }
 
             size_t hash;
+            Entry* next = nullptr;
             Val    val;
-            Entry* le = nullptr;
-            Entry* gr = nullptr;
         };
 
-        HashFnc hash_fnc;
+        double load_factor;
+        size_t cap;
 
-        Entry* table[Buckets] { };
+        size_t limit    = 0; 
+        size_t elements = 0;
+
+        std::vector<Entry*> table;
+        HashFnc hash_fnc;
         Heap<Entry> heap;
+
+        void   redistribute();
+        size_t get_bucket(size_t hash);
 
         template<class T>
         typename std::enable_if<std::is_trivially_destructible<T>::value, void>::type
@@ -75,9 +66,6 @@ namespace Srl { namespace Lib {
         clear();
     };
 
-
 } }
-
-#include "Hash.hpp"
 
 #endif

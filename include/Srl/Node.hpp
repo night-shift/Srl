@@ -148,11 +148,11 @@ namespace Srl {
                           Type node_type, const String& scope_name, const Args&... args)
     {
         if(this->tree->just_parse) {
-            this->tree->parse_value(Value(node_type), scope_name);
+            this->tree->write(Value(node_type), scope_name);
 
             Insert(*this, args...);
 
-            this->tree->parse_value(Value(Type::Scope_End), scope_name);
+            this->tree->write(Value(Type::Scope_End), scope_name);
 
         } else {
            auto& new_node = this->insert_node(node_type, scope_name);

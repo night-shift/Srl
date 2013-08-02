@@ -53,7 +53,7 @@ namespace Srl {
     {
         TParser copy = parser;
         Tree tree;
-        tree.parse_in(copy, source);
+        tree.read_source(copy, source);
 
         return std::move(tree);
     }
@@ -63,7 +63,7 @@ namespace Srl {
             static void Insert(const T& o, Tree& tree) { tree.root().insert(o); };
         };
         template<class T> struct
-        InsertSwitch<T, typename std::enable_if<has_resolve_method<T>::value>::type> {
+        InsertSwitch<T, typename std::enable_if<TpTools::is_scope(Switch<T>::type)>::type> {
             static void Insert(const T& o, Tree& tree) {
                 Switch<T>::Insert(tree.root(), o);
             }

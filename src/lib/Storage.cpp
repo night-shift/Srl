@@ -7,24 +7,24 @@ using namespace Lib;
 
 namespace {
 
-    MemBlock convert_string(const String& in, vector<uint8_t>& buffer, Encoding encoding)
+    MemBlock conv_str(const String& in, vector<uint8_t>& buffer, Encoding encoding)
     {
         if(in.encoding() == encoding) {
             return MemBlock(in.data(), in.size());
         }
-        auto size = Tools::convert_charset(encoding, in, buffer, true);
+        auto size = Tools::conv_charset(encoding, in, buffer, true);
 
         return MemBlock(buffer.data(), size);
     }
 
     size_t hash_fnc(const MemBlock& block)
     {
-        return hash_fnv1a(block.ptr, block.size);
+        return murmur_hash2(block.ptr, block.size);
     }
 
     size_t hash_fnc(const String& str)
     {
-        return hash_fnv1a(str.data(), str.size());
+        return murmur_hash2(str.data(), str.size());
     }
 }
 
@@ -65,7 +65,7 @@ String Storage::conv_string(const String& str)
 {
     return str.encoding() == Storage::Name_Encoding
         ? str
-        : convert_string(str, this->str_buffer, Storage::Name_Encoding);
+        : conv_str(str, this->str_buffer, Storage::Name_Encoding);
 }
 
 size_t Storage::hash_string(const String& str)
@@ -87,14 +87,14 @@ Link<T>* Storage::create_link(const T& val, const String& name, Heap<Link<T>>& h
 
         auto conv = name.encoding() == Storage::Name_Encoding
             ? MemBlock(name.data(), name.size())
-            : convert_string(name, this->str_buffer, Storage::Name_Encoding);
+            : conv_str(name, this->str_buffer, Storage::Name_Encoding);
 
         name_hash = hash_fnc(conv);
 
-        bool exist; String* ptr;
-        tie(exist, ptr) = this->str_table.insert_hash(name_hash, conv);
+        bool exists; String* ptr;
+        tie(exists, ptr) = this->str_table.insert_hash(name_hash, conv);
 
-        if(!exist) {
+        if(!exists) {
             if(ptr->block.can_store_local()) {
                 ptr->block.move_to_local();
 
@@ -106,7 +106,7 @@ Link<T>* Storage::create_link(const T& val, const String& name, Heap<Link<T>>& h
         str_ptr = ptr;
 
     } else {
-        name_hash = hash_fnv1a<0>(nullptr);
+        name_hash = murmur_hash2(nullptr, 0);
         str_ptr = &empty_str;
     }
 

@@ -14,22 +14,10 @@ namespace Srl {
 
     struct Parser {
 
-        struct SourceSeg {
-
-            SourceSeg(Value val_, Lib::MemBlock name_ = { })
-                : value(val_), name(name_) { }
-
-            SourceSeg(Type type)
-                : SourceSeg(Value(type)) { }
-
-            Value         value;
-            Lib::MemBlock name;
-        };
-
         virtual Format get_format() const = 0;
 
-        virtual void parse_out(const Value& value, const Lib::MemBlock& name, Lib::Out& out) = 0;
-        virtual SourceSeg parse_in(Lib::In& source) = 0;
+        virtual void write(const Value& value, const Lib::MemBlock& name, Lib::Out& out) = 0;
+        virtual std::pair<Lib::MemBlock, Value> read(Lib::In& source) = 0;
     };
 }
 

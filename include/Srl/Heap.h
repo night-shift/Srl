@@ -46,6 +46,4 @@ namespace Srl { namespace Lib {
 
 } }
 
-#include "Heap.hpp"
-
 #endif

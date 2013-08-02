@@ -15,7 +15,7 @@ namespace {
     const char str_false[] = "false";
     const char str_null[]  = "null";
 
-    tuple<double, bool> string_to_double(const uint8_t* str, size_t str_len)
+    tuple<double, bool> str_to_double(const uint8_t* str, size_t str_len)
     {
         const size_t buffer_size = 64;
         char buffer[buffer_size];
@@ -40,7 +40,7 @@ namespace {
         }
     }
 
-    tuple<uint64_t, bool, bool> string_to_int(const uint8_t* str, size_t str_len)
+    tuple<uint64_t, bool, bool> str_to_int(const uint8_t* str, size_t str_len)
     {
         size_t   idx = 0;
         uint64_t val = 0;
@@ -64,7 +64,7 @@ namespace {
             }
 
             tmp = val * 10 + c - '0';
-            if(tmp < val) {
+            if(srl_unlikely(tmp < val)) {
                 /* overflow */
                 break;
             }
@@ -77,12 +77,12 @@ namespace {
     }
 
     template<typename TCharAr>
-    bool compare_strings(const uint8_t* str, size_t str_len, const TCharAr& to_compare, size_t offset = 0)
+    bool cmp_str(const uint8_t* str, size_t str_len, const TCharAr& to_compare, size_t offset = 0)
     {
         assert(str_len >= offset);
 
         return str_len == sizeof(TCharAr) - 1 &&
-            memcmp(to_compare + offset, str + offset, str_len - offset) == 0;
+               memcmp(to_compare + offset, str + offset, str_len - offset) == 0;
     }
 
     template<Type TP>
@@ -200,7 +200,7 @@ void Tools::trim_space(const uint8_t*& str, size_t& str_len)
     }
 }
 
-pair<bool, Value> Tools::string_to_type(const uint8_t* str, size_t str_len, Type hint)
+pair<bool, Value> Tools::str_to_type(const uint8_t* str, size_t str_len, Type hint)
 {
     Tools::trim_space(str, str_len);
 
@@ -210,15 +210,15 @@ pair<bool, Value> Tools::string_to_type(const uint8_t* str, size_t str_len, Type
 
     if(str_len >= 4 && str[0] >= 'f') {
 
-        if((str[0] == 't' || str[0] == 'T') && compare_strings(str, str_len, str_true, 1)) {
+        if((str[0] == 't' || str[0] == 'T') && cmp_str(str, str_len, str_true, 1)) {
             return { true, true };
         }
 
-        if((str[0] == 'f' || str[0] == 'F') && compare_strings(str, str_len, str_false, 1)) {
+        if((str[0] == 'f' || str[0] == 'F') && cmp_str(str, str_len, str_false, 1)) {
             return { true, false };
         }
 
-        if((str[0] == 'n' || str[0] == 'N') && compare_strings(str, str_len, str_null, 1)) {
+        if((str[0] == 'n' || str[0] == 'N') && cmp_str(str, str_len, str_null, 1)) {
             return { true, Value(Type::Null) };
         }
     }
@@ -229,38 +229,38 @@ pair<bool, Value> Tools::string_to_type(const uint8_t* str, size_t str_len, Type
         bool is_signed;
         uint64_t i;
 
-        tie(i, is_signed, success) = string_to_int(str, str_len);
+        tie(i, is_signed, success) = str_to_int(str, str_len);
 
         if(success) {
             return is_signed ? make_pair(true, Value(-(int64_t)i)) : make_pair(true, Value(i));
         }
-    }
+    } 
 
     double fp;
-    tie(fp, success) = string_to_double(str, str_len);
+    tie(fp, success) = str_to_double(str, str_len);
 
     return success ? make_pair(true, Value(fp)) : make_pair(false, Value(Type::Null));
 }
 
-pair<bool, Value> Tools::string_to_type(const String& string_wrap, Type hint)
+pair<bool, Value> Tools::str_to_type(const String& string_wrap, Type hint)
 {
     if(string_wrap.encoding() == Encoding::UTF8) {
-        return string_to_type(string_wrap.data(), string_wrap.size(), hint);
+        return str_to_type(string_wrap.data(), string_wrap.size(), hint);
 
     } else {
-        auto vec = Tools::convert_charset(Encoding::UTF8, string_wrap, false);
+        auto vec = Tools::conv_charset(Encoding::UTF8, string_wrap, false);
         if(vec.size() < 1) {
             return make_pair(false, Value(Type::Null));
         }
 
-        return string_to_type(vec.data(), vec.size(), hint);
+        return str_to_type(vec.data(), vec.size(), hint);
     }
 }
 
 #define SRL_TYPE_TO_STR(id, idx, real, size) \
     case Type::id : return conv_type<Type::id>(value, out);
 
-size_t Tools::type_to_string(const Value& value, vector<uint8_t>& out)
+size_t Tools::type_to_str(const Value& value, vector<uint8_t>& out)
 {
     switch(value.type()) {
         /* defined in Type.h */
@@ -272,18 +272,18 @@ size_t Tools::type_to_string(const Value& value, vector<uint8_t>& out)
 
 #undef SRL_TYPE_TO_STR
 
-string Tools::type_to_string(const Value& value)
+string Tools::type_to_str(const Value& value)
 {
     vector<uint8_t> buffer;
-    auto size = Tools::type_to_string(value, buffer);
+    auto size = Tools::type_to_str(value, buffer);
 
     return size > 0 ? string((const char*)buffer.data(), size) : string();
 }
 
-vector<uint8_t> Tools::convert_charset(Encoding target_encoding, const String& string_wrap, bool throw_error)
+vector<uint8_t> Tools::conv_charset(Encoding target_encoding, const String& string_wrap, bool throw_error)
 {
     vector<uint8_t> buffer;
-    auto converted_total = convert_charset(target_encoding, string_wrap, buffer, throw_error);
+    auto converted_total = conv_charset(target_encoding, string_wrap, buffer, throw_error);
     buffer.resize(converted_total);
 
     return move(buffer);
@@ -311,7 +311,7 @@ namespace {
     }
 }
 
-size_t Tools::convert_charset(Encoding target_encoding, const String& str_wrap,
+size_t Tools::conv_charset(Encoding target_encoding, const String& str_wrap,
                               vector<uint8_t>& buffer,  bool throw_error, size_t buffer_index)
 {
     if(str_wrap.size() < 1) {

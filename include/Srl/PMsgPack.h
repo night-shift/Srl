@@ -15,8 +15,8 @@ namespace Srl {
         Format get_format() const { return Format::Binary; }
 
         virtual void
-        parse_out (const Value& value, const Lib::MemBlock& name, Lib::Out& out) override;
-        virtual SourceSeg parse_in (Lib::In& source) override;
+        write (const Value& value, const Lib::MemBlock& name, Lib::Out& out) override;
+        virtual std::pair<Lib::MemBlock, Value> read (Lib::In& source) override;
 
     private:
         struct Scope {

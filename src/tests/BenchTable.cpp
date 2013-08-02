@@ -100,12 +100,12 @@ void run_bench(Tree& tree, const T& parser, const string& name, const Tail&... t
             auto p = parser;
             int depth = 0;
             while(true) {
-                auto seg = p.parse_in(src); 
-                if(TpTools::is_scope(seg.value.type())) {
+                auto seg = p.read(src); 
+                if(TpTools::is_scope(seg.second.type())) {
                     depth++;
                     continue;
                 }
-                if(seg.value.type() == Type::Scope_End) {
+                if(seg.second.type() == Type::Scope_End) {
                     depth--;
                     if(depth <= 0) {
                         break;

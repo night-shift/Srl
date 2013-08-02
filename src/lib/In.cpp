@@ -10,10 +10,10 @@ In::In(istream& stream_) : streaming(true), stream(&stream_)
     this->try_fetch_data(0);
 }
 
-void In::fetch_data(size_t nbytes, const OutOfBounds& out_of_bounds)
+void In::fetch_data(size_t nbytes, const Error& error)
 {
     if(!this->streaming || !this->try_fetch_data(nbytes)) {
-        out_of_bounds();
+        error();
     }
 }
 
@@ -38,13 +38,13 @@ bool In::try_fetch_data(size_t nbytes)
         return false;
     }
 
-    auto left = this->end - this->current_pos;
+    auto left = this->end - this->pos;
 
     auto read_len = (nbytes < Stream_Buffer_Size ? Stream_Buffer_Size : nbytes) - left;
 
 
-    auto preserve_pos = this->buffer_anchor != nullptr
-        ? this->buffer_anchor - start
+    auto preserve_pos = this->anchor != nullptr
+        ? this->anchor - start
         : (this->end - start) - left;
 
     /* small extra margin to make sure memory around the current position will be preserved in any case */
@@ -52,28 +52,29 @@ bool In::try_fetch_data(size_t nbytes)
     auto margin = preserve_pos < margin_sz ? margin_sz - (margin_sz - preserve_pos) : margin_sz;
 
     auto preserve_sz = this->end - (this->start + preserve_pos - margin);
-    auto n_buffer_sz = preserve_sz + read_len;
+    auto bufsz = preserve_sz + read_len;
 
-    auto& buffer_prev = this->buffers[this->buffer_acc];
-    this->buffer_acc = (this->buffer_acc + 1) % 2;
-    auto& buffer = this->buffers[this->buffer_acc];
+    auto& bufprev = this->swap[this->swap_mod];
 
-    if(buffer.size() < n_buffer_sz) {
-        buffer.resize(n_buffer_sz);
+    this->swap_mod = (this->swap_mod + 1) % 2;
+    auto& buf = this->swap[this->swap_mod];
+
+    if(buf.size() < bufsz) {
+        buf.resize(bufsz);
     }
 
     if(preserve_sz > 0) {
-        memcpy(buffer.data(), &buffer_prev[preserve_pos - margin], preserve_sz);
+        memcpy(buf.data(), &bufprev[preserve_pos - margin], preserve_sz);
     }
 
-    this->stream->read((char*)&buffer[preserve_sz], read_len);
+    this->stream->read((char*)&buf[preserve_sz], read_len);
     auto bytes_read = (size_t)this->stream->gcount();
 
-    this->current_pos = &buffer[preserve_sz - left];
-    buffer_anchor  = buffer_anchor == nullptr ? nullptr : &buffer[margin];
+    this->pos  = &buf[preserve_sz - left];
+    anchor = anchor ? nullptr : &buf[margin];
 
-    this->start = buffer.data();
-    this->end   = buffer.data() + bytes_read + preserve_sz;
+    this->start = buf.data();
+    this->end   = buf.data() + bytes_read + preserve_sz;
 
     if(bytes_read + left < nbytes) {
 

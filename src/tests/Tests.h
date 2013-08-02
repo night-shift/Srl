@@ -2,6 +2,7 @@
 #define TESTS_H
 
 #include "Srl/Srl.h"
+#include "Srl/Internal.h"
 
 #include <iostream>
 

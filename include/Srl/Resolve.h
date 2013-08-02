@@ -128,7 +128,7 @@ namespace Lib {
                                   sizeof(begin<T>(0)) == sizeof(char);
     };
 
-    template<class T> struct is_character {
+    template<class T> struct is_char {
         typedef typename std::remove_const<T>::type TNC;
         static const bool value =
             std::is_same<char, TNC>::value     || std::is_same<wchar_t, TNC>::value ||
@@ -139,22 +139,22 @@ namespace Lib {
         typedef typename std::remove_pointer<typename std::decay<T>::type>::type type;
     };
 
-    template<class T> struct is_character_array {
+    template<class T> struct is_char_array {
         static const bool value =
             std::is_array<T>::value &&
-            is_character<typename array_type<T>::type>::value;
+            is_char<typename array_type<T>::type>::value;
     };
 
     template<class T> struct is_cstr_pointer {
         static const bool value =
             std::is_pointer<T>::value &&
             std::is_const<typename std::remove_pointer<T>::type>::value &&
-            is_character<typename std::remove_pointer<T>::type>::value;
+            is_char<typename std::remove_pointer<T>::type>::value;
     };
 
     template<class T> struct is_numeric {
         static const bool value =
-            !is_character<T>::value &&
+            !is_char<T>::value &&
             (std::is_floating_point<T>::value || std::is_integral<T>::value);
     };
 

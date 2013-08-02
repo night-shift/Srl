@@ -120,7 +120,7 @@ namespace {
     size_t hash_string(const String& str, Storage& storage)
     {
         return str.encoding() == Storage::Name_Encoding 
-            ? hash_fnv1a(str.data(), str.size())
+            ? murmur_hash2(str.data(), str.size())
             : storage.hash_string(str);
     }
 
@@ -150,7 +150,7 @@ namespace {
 void Node::insert_value(const Value& new_value, const String& name_)
 {
     if(this->tree->just_parse) {
-        this->tree->parse_value(new_value, name_);
+        this->tree->write(new_value, name_);
 
     } else {
         auto* link = this->tree->storage.store_value(new_value, name_);
@@ -196,19 +196,19 @@ Node& Node::node(const String& name_) const
     return find_link<Throw | Hash>(hash, this->nodes, name_)->field;
 }
 
-void Node::parse_in(In& source, Parser& parser)
+void Node::read_source(In& source, Parser& parser)
 {
     while(true) {
 
-        auto seg  = parser.parse_in(source);
-        auto& val = seg.value;
+        MemBlock seg_name; Value val;
+        tie(seg_name, val) = parser.read(source);
 
         if(val.type() == Type::Scope_End) {
             this->parsed = true;
             break;
         }
 
-        auto field_name = String(seg.name, Encoding::UTF8);
+        auto field_name = String(seg_name, Encoding::UTF8);
 
         if(!TpTools::is_scope(val.type())) {
             /* new value */
@@ -220,25 +220,27 @@ void Node::parse_in(In& source, Parser& parser)
             auto* link = this->tree->storage.create_node(*this->tree, val.type(), field_name);
             this->nodes.push_back(link);
 
-            link->field.parse_in(source, parser);
+            link->field.read_source(source, parser);
         }
     }
 }
 
 Node Node::consume_node(const String& id)
 {
-    auto* found = find_link_remove(id, this->nodes, this->tree->storage);
+    auto* stored = find_link_remove(id, this->nodes, this->tree->storage);
 
-    if(found != nullptr) {
-        return *found;
+    if(stored) {
+        return *stored;
     }
 
     auto id_conv = this->tree->storage.conv_string(id);
 
     while(!this->parsed) {
 
-        auto seg = this->tree->temp_parser->parse_in(*this->tree->temp_in);
-        auto tp = seg.value.type();
+        MemBlock seg_name; Value val;
+        tie(seg_name, val) = this->tree->temp_parser->read(*this->tree->temp_in);
+
+        auto tp = val.type();
 
         if(tp == Type::Scope_End) {
             this->parsed = true;
@@ -246,17 +248,17 @@ Node Node::consume_node(const String& id)
         }
 
         if(TpTools::is_scope(tp)) {
-            if(compare(id_conv, seg.name)) {
+            if(compare(id_conv, seg_name)) {
                 return Node(this->tree, tp, false);
             }
 
-            auto* link = this->tree->storage.create_node(*this->tree, tp, seg.name);
+            auto* link = this->tree->storage.create_node(*this->tree, tp, seg_name);
             this->nodes.push_back(link);
 
-            link->field.parse_in(*this->tree->temp_in, *this->tree->temp_parser);
+            link->field.read_source(*this->tree->temp_in, *this->tree->temp_parser);
 
         } else {
-            auto* link = this->tree->storage.store_value(seg.value, seg.name);
+            auto* link = this->tree->storage.store_value(val, seg_name);
             this->values.push_back(link);
         }
     }
@@ -266,18 +268,20 @@ Node Node::consume_node(const String& id)
 
 Value Node::consume_value(const String& id)
 {
-    auto* val = find_link_remove(id, this->values, this->tree->storage);
+    auto* stored = find_link_remove(id, this->values, this->tree->storage);
 
-    if(val != nullptr) {
-        return *val;
+    if(stored) {
+        return *stored;
     }
 
     auto name_conv = this->tree->storage.conv_string(id);
 
     while(!this->parsed) {
 
-        auto seg = this->tree->temp_parser->parse_in(*this->tree->temp_in);
-        auto tp = seg.value.type();
+        MemBlock seg_name; Value val;
+        tie(seg_name, val) = this->tree->temp_parser->read(*this->tree->temp_in);
+
+        auto tp = val.type();
 
         if(tp == Type::Scope_End) {
             this->parsed = true;
@@ -285,17 +289,17 @@ Value Node::consume_value(const String& id)
         }
 
         if(!TpTools::is_scope(tp)) {
-            if(compare(name_conv, seg.name)) { 
-                return seg.value;
+            if(compare(name_conv, seg_name)) { 
+                return val;
             }
 
-            auto* link = this->tree->storage.store_value(seg.value, seg.name);
+            auto* link = this->tree->storage.store_value(val, seg_name);
             this->values.push_back(link);
 
         } else {
-            auto* link = this->tree->storage.create_node(*this->tree, tp, seg.name);
+            auto* link = this->tree->storage.create_node(*this->tree, tp, seg_name);
             this->nodes.push_back(link);
-            link->field.parse_in(*this->tree->temp_in, *this->tree->temp_parser);
+            link->field.read_source(*this->tree->temp_in, *this->tree->temp_parser);
         }
     }
 
@@ -313,8 +317,10 @@ Node Node::consume_node(bool throw_exception)
     }
 
     while(!this->parsed) {
-        auto seg = this->tree->temp_parser->parse_in(*this->tree->temp_in);
-        auto tp = seg.value.type();
+        MemBlock seg_name; Value val;
+        tie(seg_name, val) = this->tree->temp_parser->read(*this->tree->temp_in);
+
+        auto tp = val.type();
 
         if(tp == Type::Scope_End) {
             this->parsed = true;
@@ -325,7 +331,7 @@ Node Node::consume_node(bool throw_exception)
             return Node(this->tree, tp, false);
 
         } else {
-            auto* link = this->tree->storage.store_value(seg.value, seg.name);
+            auto* link = this->tree->storage.store_value(val, seg_name);
             this->values.push_back(link);
         }
     }
@@ -348,8 +354,10 @@ Value Node::consume_value(bool throw_exception)
     }
 
     while(!this->parsed) {
-        auto seg = this->tree->temp_parser->parse_in(*this->tree->temp_in);
-        auto tp = seg.value.type();
+        MemBlock seg_name; Value val;
+        tie(seg_name, val) = this->tree->temp_parser->read(*this->tree->temp_in);
+
+        auto tp = val.type();
 
         if(tp == Type::Scope_End) {
             this->parsed = true;
@@ -357,12 +365,12 @@ Value Node::consume_value(bool throw_exception)
         }
 
         if(!TpTools::is_scope(tp)) {
-            return seg.value;
+            return val;
 
         } else {
-            auto* link = this->tree->storage.create_node(*this->tree, tp, seg.name);
+            auto* link = this->tree->storage.create_node(*this->tree, tp, seg_name);
             this->nodes.push_back(link);
-            link->field.parse_in(*this->tree->temp_in, *this->tree->temp_parser);
+            link->field.read_source(*this->tree->temp_in, *this->tree->temp_parser);
         }
     }
 
@@ -376,10 +384,10 @@ Value Node::consume_value(bool throw_exception)
 void Node::to_source()
 {
     Value scope_start = Value(this->scope_type);
-    this->tree->parse_value(scope_start, *this->name_ptr);
+    this->tree->write(scope_start, *this->name_ptr);
 
     for(auto v : this->values) {
-        this->tree->parse_value(v->field, v->field.name());
+        this->tree->write(v->field, v->field.name());
     }
 
     for(auto n : this->nodes) {
@@ -387,21 +395,24 @@ void Node::to_source()
     }
 
     Value scope_end = Value(Type::Scope_End);
-    this->tree->parse_value(scope_end, *this->name_ptr);
+    this->tree->write(scope_end, *this->name_ptr);
 }
 
 void Node::consume_scope()
 {
     int depth = 0;
 
+    auto& parser = *this->tree->temp_parser;
+    auto& source = *this->tree->temp_in;
+
     while(!this->parsed) {
-        auto seg = this->tree->temp_parser->parse_in(*this->tree->temp_in);
-        if(TpTools::is_scope(seg.value.type())) {
+        auto tp = parser.read(source).second.type();
+        if(TpTools::is_scope(tp)) {
             depth++;
             continue;
         }
 
-        if(seg.value.type() == Type::Scope_End) {
+        if(tp == Type::Scope_End) {
             depth--;
             if(depth <= 0) {
                 this->parsed = true;

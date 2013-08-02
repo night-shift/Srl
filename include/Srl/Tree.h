@@ -51,16 +51,16 @@ namespace Srl {
         Lib::In*  temp_in     = nullptr;
         bool      just_parse  = false;
 
-        void parse_value (const Value& value, const String& name);
-        void parse_out (Parser& parser, Lib::Out& out, const std::function<void()>& store_switch);
+        void write (const Value& value, const String& name);
+        void write (Type type, Parser& parser, Lib::Out& out, const std::function<void()>& store_switch);
 
         void set_output (Parser& parser, Lib::Out& out);
 
-        void parse_out_convert (const Value& value, const String& name, Parser& parser);
-        Value convert_type (const Value& value);
+        void write_conv (const Value& value, const String& name, Parser& parser);
+        Value conv_type (const Value& value);
 
-        void parse_in (Parser& parser, Lib::In& source);
-        void parse_in (Parser& parser, Lib::In& source, const std::function<void()>& restore_switch);
+        void read_source (Parser& parser, Lib::In& source);
+        void read_source (Parser& parser, Lib::In& source, const std::function<void()>& restore_switch);
 
         template<class TParser>
         static Tree From_Source (Lib::In& source, const TParser& parser);

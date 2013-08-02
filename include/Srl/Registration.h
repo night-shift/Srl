@@ -14,10 +14,10 @@ namespace Srl {
 
     namespace Lib {
 
-        template<> struct Fnv1a<String> {
+        template<> struct Mmh2<String> {
             inline size_t operator() (const String& str)
             {
-                return hash_fnv1a(str.data(), str.size());
+                return murmur_hash2(str.data(), str.size());
             }
         };
 
@@ -27,9 +27,9 @@ namespace Srl {
             template<class T>
             void add(const String& id)
             {
-                auto r = this->table.insert(id, [](){ return Ctor<T>::Create_New(); });
+                bool exists = this->insert(id, [] { return Ctor<T>::Create_New(); });
 
-                if(r.first) {
+                if(exists) {
                     throw Exception("Class id " + id.unwrap(false) + " duplicated.");
                 }
             }
@@ -37,7 +37,7 @@ namespace Srl {
             template<class T>
             T* create(const String& id)
             {
-                auto* fnc = this->table.get(id);
+                auto* fnc = this->find(id);
 
                 if(!fnc) {
                     throw Exception("Class id " + id.unwrap(false) + " not registered.");
@@ -47,7 +47,11 @@ namespace Srl {
             }
 
         private:
-            HashTable<String, std::function<void*(void)>, 16> table;
+            HTable<String, std::function<void*(void)>> table { 32 };
+
+            bool insert (const String& id, const std::function<void*(void)>& fnc);
+            std::function<void*(void)>* find (const String& id);
+            
         };
 
         Registrations* registrations();

@@ -130,7 +130,7 @@ namespace Srl {
         void  insert_value (const Value& value, const String& name);
 
         void  to_source   ();
-        void  parse_in    (Lib::In& source, Parser& parser);
+        void  read_source (Lib::In& source, Parser& parser);
 
         void  consume_scope ();
         Node  consume_node  (bool throw_exception);

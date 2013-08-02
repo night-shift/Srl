@@ -40,10 +40,10 @@ namespace Srl { namespace Lib {
         inline std::deque<Node*>&     nodes();
 
    private :
-        Heap<Link<Value>>         value_heap;
-        Heap<Link<Node>>          node_heap;
-        Heap<uint8_t>             data_heap;
-        HashTable<String, String> str_table;
+        Heap<Link<Value>>      value_heap;
+        Heap<Link<Node>>       node_heap;
+        Heap<uint8_t>          data_heap;
+        HTable<String, String> str_table;
 
         std::deque<Node*>     stored_nodes;
         std::vector<uint8_t>  str_buffer;

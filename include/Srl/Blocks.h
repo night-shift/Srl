@@ -4,7 +4,6 @@
 #include "Common.h"
 #include "Type.h"
 #include "Enums.h"
-#include "Hash.h"
 
 namespace Srl {
 
@@ -17,15 +16,6 @@ namespace Srl {
 
             const uint8_t* ptr;
             size_t         size;
-
-            
-        };
-
-        template<> struct Fnv1a<MemBlock> {
-            inline size_t operator() (const MemBlock& s) const
-            {
-                return hash_fnv1a(s.ptr, s.size);
-            }
         };
 
         struct PackedBlock {

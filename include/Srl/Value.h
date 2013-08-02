@@ -17,7 +17,7 @@ namespace Srl {
     public:
         template<class T> Value (const T& val);
 
-        Value(Type type_)
+        Value(Type type_ = Type::Null)
             : block({ nullptr, 0 }, type_, Encoding::Unknown) { }
 
         Value(const Lib::MemBlock& data_, Type type_)
