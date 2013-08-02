@@ -115,8 +115,7 @@ namespace Srl { namespace Lib {
         for(auto i = 0U; i < old_dim; i++) {
             auto* entry = table[i];
             while(entry) {
-                auto hash = entry->hash;
-                auto bucket = get_bucket(hash);
+                auto bucket = get_bucket(entry->hash);
                 auto* slot = ntable[bucket];
 
                 if(slot) while(true) {
@@ -142,7 +141,8 @@ namespace Srl { namespace Lib {
     template<class K, class V, class H>
     V* HTable<K, V, H>::get(const K& key)
     {
-        if(srl_unlikely(elements < 1)) return nullptr;
+        if(srl_unlikely(elements < 1))
+            return nullptr;
 
         auto hash    = hash_fnc(key);
         auto bucket  = get_bucket(hash);
@@ -170,7 +170,8 @@ namespace Srl { namespace Lib {
     template<class K, class V, class H>
     std::pair<bool, V*> HTable<K, V, H>::insert_hash(size_t hash, const V& val)
     {
-        if(srl_unlikely(this->elements >= this->limit)) this->redistribute();
+        if(srl_unlikely(this->elements >= this->limit))
+            this->redistribute();
 
         auto bucket  = get_bucket(hash);
         Entry* entry = table[bucket];
@@ -178,7 +179,8 @@ namespace Srl { namespace Lib {
 
         while(entry) {
 
-            if(entry->hash == hash) return { true, &entry->val };
+            if(entry->hash == hash)
+                return { true, &entry->val };
 
             node = entry;
             entry = entry->next;
