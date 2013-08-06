@@ -14,11 +14,11 @@ namespace Srl {
     class PJson : public Parser {
 
     public :
-        PJson(bool skip_whitespace_ = false)
-            : skip_whitespace(skip_whitespace_) {  }
+        PJson(bool compact_ = false)
+            : compact(compact_) {  }
 
         Format get_format() const           { return Format::Text; }
-        void set_skip_whitespace (bool val) { this->skip_whitespace = val; }
+        void   set_compact (bool val) { this->compact = val; }
 
         virtual void
         write(const Value& value, const Lib::MemBlock& name, Lib::Out& out) override;
@@ -26,7 +26,7 @@ namespace Srl {
         read(Lib::In& source) override;
 
     private :
-        bool             skip_whitespace;
+        bool             compact;
         std::stack<Type> scope_stack;
         Type             scope_type   = Type::Null;
         bool             scope_closed = true;

@@ -14,13 +14,6 @@ namespace Srl {
 
     namespace Lib {
 
-        template<> struct Mmh2<String> {
-            inline size_t operator() (const String& str)
-            {
-                return murmur_hash2(str.data(), str.size());
-            }
-        };
-
         class Registrations {
 
         public:

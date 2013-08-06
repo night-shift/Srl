@@ -120,7 +120,7 @@ namespace {
     size_t hash_string(const String& str, Storage& storage)
     {
         return str.encoding() == Storage::Name_Encoding 
-            ? murmur_hash2(str.data(), str.size())
+            ? Aux::hash_fnc(str.data(), str.size())
             : storage.hash_string(str);
     }
 
@@ -419,6 +419,30 @@ void Node::consume_scope()
             }
         }
     }
+}
+
+pair<bool, size_t> Node::insert_shared (const void* obj)
+{
+    bool exists; size_t* key;
+    auto& table = this->tree->storage.shared_table_store;
+
+    tie(exists, key) = table.insert(obj, table.num_entries());
+
+    return { exists, *key };
+}
+
+pair<bool, void*> Node::find_shared (size_t key, const function<void*(void)>& create)
+{
+    auto& table = this->tree->storage.shared_table_restore;
+    auto* obj = table.get(key);
+    bool inserted_new = false;
+
+    if(!obj) {
+        obj = table.insert(key, create()).second;
+        inserted_new = true;
+    }
+
+    return { inserted_new, obj };
 }
 
 void Node::forall_nodes(const function<void(Node*)>& fnc, bool recursive) const

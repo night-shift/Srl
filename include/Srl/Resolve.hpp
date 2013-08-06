@@ -41,6 +41,14 @@ namespace Srl { namespace Lib {
 
         template<class TChar, class ID>
         void copy_string(TChar* dst, size_t size, const Value& value, const ID& id);
+
+        template<class T, class Item, class ID>
+        typename std::enable_if<is_polymorphic<T*>::value, void>::type
+        ptr_insert(T* const p, Item& item, const ID& id) { Switch<T*>::Insert(p, item, id); }
+
+        template<class T, class Item, class ID>
+        typename std::enable_if<!is_polymorphic<T*>::value, void>::type
+        ptr_insert(T* const p, Item& item, const ID& id) { Switch<T>::Insert(*p, item, id); }
     }
 
     template<class TString> std::pair<Encoding, MemBlock> wrap_string(const TString& str)
@@ -182,8 +190,7 @@ namespace Srl { namespace Lib {
 
         static std::pair<Encoding, MemBlock> Wrap(const T& pointer)
         {
-            size_t size = 0;
-            while(*(pointer + size) != 0) { size++; }
+            size_t size = strlen(pointer);
 
             return std::make_pair(
                 get_encoding<typename std::remove_pointer<T>::type>(),
@@ -311,7 +318,7 @@ namespace Srl { namespace Lib {
         {
             Aux::check_type_scope(node.type(), id);
 
-            Context ctx(*const_cast<Node*>(&node), Mode::Paste);
+            Context ctx(node, Mode::Paste);
             o.srl_resolve(ctx);
         }
     };
@@ -342,9 +349,11 @@ namespace Srl { namespace Lib {
         template<class ID = String>
         static void Paste(T& o, Node& node, const ID& id = Aux::Str_Empty)
         {
+            typedef typename std::remove_pointer<T>::type U;
+
             Aux::check_type_scope(node.type(), id);
 
-            Context ctx(*const_cast<Node*>(&node), Mode::Paste);
+            Context ctx(node, Mode::Paste);
             String type_id;
             ctx(Aux::Str_type_id, type_id);
 
@@ -353,7 +362,7 @@ namespace Srl { namespace Lib {
                 delete o;
             }
 
-            o = Lib::registrations()->create<typename std::remove_pointer<T>::type>(type_id);
+            o = Lib::registrations()->create<U>(type_id);
             o->srl_resolve(ctx);
         }
     };
@@ -557,7 +566,7 @@ namespace Srl { namespace Lib {
         {
             Aux::check_type_scope(node.type(), id);
 
-            Context ctx(*const_cast<Node*>(&node), Mode::Paste);
+            Context ctx(node, Mode::Paste);
             Paste<0>(ctx, tpl);
         }
 
@@ -575,52 +584,92 @@ namespace Srl { namespace Lib {
         Insert(Node&, const std::tuple<T...>&) { }
     };
 
-    /* shared / unique_ptr, special case for polymorphic types */
-    template<class T> struct Switch<T, typename std::enable_if<is_ptr_wrap<T>::value>::type> {
+    /* unique_ptr */
+    template<class T> struct Switch<T, typename std::enable_if<is_unique_ptr<T>::value>::type> {
         typedef typename T::element_type E;
         static const Type type = Switch<E>::type;
 
-        template<class Wrap>
-        static void Insert(const T& p, Wrap& wrap, const String& name)
+        static void Insert(const T& p, Node& node, const String& name)
         {
-            ElemSwitch<E>::Insert(p, wrap, name);
+            auto* ptr = p.get();
+            Aux::ptr_insert<E>(ptr, node, name);
         }
 
-        template<class Wrap, class ID = String>
-        static void Paste(T& p, Wrap& wrap, const ID& id = Aux::Str_Empty)
+
+        template<class Item, class ID = String>
+        static void Paste(T& p, Item& item, const ID& id = Aux::Str_Empty)
         {
-            ElemSwitch<E>::Paste(p, wrap, id);
+            E* content = nullptr;
+            Apply(content, item, id);
+            p = T(content);
         }
 
-        template<class C, class = void>
-        struct ElemSwitch {
-            template<class Wrap>
-            static void Insert(const T& p, Wrap& wrap, const String& name)
-            {
-                Switch<E>::Insert(*p.get(), wrap, name);
+        template<class C, class Item, class ID>
+        static typename std::enable_if<is_polymorphic<C*>::value, void>::type
+        Apply(C*& p, Item& item, const ID& id)
+        {
+            Switch<C*>::Paste(p, item, id);
+        }
+
+        template<class C, class Item, class ID>
+        static typename std::enable_if<!is_polymorphic<C*>::value, void>::type
+        Apply(C*& p, Item& item, const ID& id)
+        { 
+            p = Ctor<C>::Create_New();
+            Switch<C>::Paste(*p, item, id);
+        }
+    };
+
+    /* shared_ptr */
+    template<class T> struct Switch<T, typename std::enable_if<is_shared_ptr<T>::value>::type> {
+        typedef typename T::element_type E;
+        static const Type type = Type::Object;
+
+        static void Insert(const T& p, Node& node, const String& name)
+        {
+            auto key = node.insert_shared(p.get());
+            node.open_scope(&Insert_Key, Type::Object, name, p, !key.first, key.second);
+        }
+
+        static void Insert_Key(Node& node, const T& p, const bool& first, const size_t& key)
+        {
+            node.insert_value(key, "srl_shared_key");
+            if(first) {
+                Aux::ptr_insert<E>(p.get(), node, String("srl_shared_value"));
             }
-            template<class Wrap, class ID>
-            static void Paste(T& p, Wrap& wrap, const ID& id)
-            {
-                p = T(Ctor<C>::Create_New());
-                Switch<E>::Paste(*p.get(), wrap, id);
+        }
+
+        template<class ID>
+        static void Paste(T& p, Node& node, const ID&)
+        {
+            size_t key = node.unwrap_field<size_t>("srl_shared_key");
+            bool inserted_new; void* obj;
+
+            std::tie(inserted_new, obj) = node.find_shared(key, [&p, &node] {
+                E* e = nullptr;
+                Apply(e, node);
+                p = std::shared_ptr<E>(e);
+                return &p;
+            });
+            if(!inserted_new) {
+                p = *static_cast<std::shared_ptr<E>*>(obj);
             }
-        };
+        }
 
         template<class C>
-        struct ElemSwitch<C, typename std::enable_if<is_polymorphic<C*>::value>::type> {
-            static void Insert(const T& p, Node& node, const String& name)
-            {
-                Switch<E*>::Insert(p.get(), node, name);
-            }
-            template<class ID>
-            static void Paste(T& p, Node& node, const ID& id)
-            {
-                C* ptr = p.get();
-                Switch<C*>::Paste(ptr, node, id);
-                p = T(ptr);
-            }
-        };
+        static typename std::enable_if<is_polymorphic<C*>::value, void>::type
+        Apply(C*& p, Node& node)
+        {
+            node.paste_field("srl_shared_value", p);
+        }
+
+        template<class C>
+        static typename std::enable_if<!is_polymorphic<C*>::value, void>::type
+        Apply(C*& p, Node& node)
+        { 
+            p = Ctor<C>::Create_New();
+            node.paste_field("srl_shared_value", *p);
+        }
     };
 
     /* handle raw binary-data through Srl::BitWrap */
@@ -664,6 +713,21 @@ namespace Srl { namespace Lib {
             } else {
                 memcpy(data_dst, mem_block.ptr, size);
             }
+        }
+    };
+
+    template<class T> struct Switch<VecWrap<T>> {
+        static const Type type = Switch<BitWrap>::type;
+
+        static void Insert(const VecWrap<T>& wrap, Node& node, const String& name)
+        {
+            Switch<BitWrap>::Insert(wrap.bitwrap, node, name);
+        }
+
+        template<class ID = String>
+        static void Paste(VecWrap<T>& wrap, const Value& value, const ID& id = Aux::Str_Empty)
+        {
+            Switch<BitWrap>::Paste(wrap.bitwrap, value, id);
         }
     };
 

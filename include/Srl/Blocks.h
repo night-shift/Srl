@@ -5,9 +5,7 @@
 #include "Type.h"
 #include "Enums.h"
 
-namespace Srl {
-
-    namespace Lib {
+namespace Srl { namespace Lib {
 
         struct MemBlock {
 

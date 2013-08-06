@@ -85,7 +85,7 @@ void PXml::write(const Value& value, const MemBlock& name, Out& out)
 {
     auto type = value.type();
 
-    if(!this->skip_whitespace) {
+    if(!this->compact) {
         out.write_times(this->scope_depth - (type == Type::Scope_End ? 1 : 0), '\t');
     }
 
@@ -101,7 +101,7 @@ void PXml::write(const Value& value, const MemBlock& name, Out& out)
         insert_inner_value(out, value, name_block);
     }
 
-    if(!this->skip_whitespace) {
+    if(!this->compact) {
         out.write('\n');
     }
 }
@@ -192,7 +192,7 @@ void PXml::parse_document(Lib::In& source)
         MemBlock content = this->read_content(source);
 
         if(content.size > 0) {
-            if(this->current_tag().n_child_tags > 0) {
+            if(this->current_tag().nchild_tags > 0) {
                 /* tag has attributes and inner value */
                 this->process_tag_open(MemBlock(), content);
                 this->process_tag_close();
@@ -255,20 +255,21 @@ void PXml::process_tag_close(const MemBlock& block)
 
     this->tag_index = closing.parent_tag;
     auto& parent = *this->tags[this->tag_index];
-    auto name_hash = murmur_hash2(closing.name.ptr, closing.name.size);
+
+    auto& name = closing.name;
 
     /* guess: it's a container if all child tags have the same name */
-    if(parent.n_child_tags < 1) {
-        parent.child_name_hash = name_hash;
+    if(parent.nchild_tags < 1) {
+        parent.child_names = Aux::hash_fnc(name.ptr, name.size);
     } else {
         bool consistent =
-            parent.child_names_consistent &&
-            parent.child_name_hash == name_hash;
+            parent.names_consistent &&
+            parent.child_names ==  Aux::hash_fnc(name.ptr, name.size);
 
-        parent.child_names_consistent = consistent;
+        parent.names_consistent = consistent;
     }
 
-    parent.n_child_tags++;
+    parent.nchild_tags++;
 }
 
 void PXml::process_scope(XmlTag& tag, const MemBlock& closing_tag)
@@ -279,8 +280,8 @@ void PXml::process_scope(XmlTag& tag, const MemBlock& closing_tag)
                         + tag.name_string() + ">.");
     }
 
-    tag.type = tag.n_child_tags > 0 || this->tag_index == 0
-        ? tag.child_names_consistent && tag.n_child_tags > 1 ? Type::Array : Type::Object
+    tag.type = tag.nchild_tags > 0 || this->tag_index == 0
+        ? tag.names_consistent && tag.nchild_tags > 1 ? Type::Array : Type::Object
         : closing_tag.size < 1  && tag.data.size < 1 ? Type::Array : Type::String;
 
     if(TpTools::is_scope(tag.type)) {

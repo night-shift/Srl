@@ -11,20 +11,17 @@ namespace Srl { namespace Lib { namespace Aux {
     #define srl_unlikely(expr) __builtin_expect((expr), 0)
     #define srl_likely(expr)   __builtin_expect((expr), 1)
 
+    #define srl_noinline __attribute__ ((noinline))
+
     template<class T>
     T read (const uint8_t* address)
     {
-        static_assert(std::is_integral<T>::value ||
-                      std::is_floating_point<T>::value, "Aux to non-numeric type.");
-
-        assert(address != nullptr && "Attempting to read from nullptr");
-
         if((size_t)address % sizeof(T) == 0) {
-            return *(const T*)address;
+            return *reinterpret_cast<const T*>(address);
 
         } else {
             T t;
-            memcpy((uint8_t*)&t, address, sizeof(T));
+            memcpy(reinterpret_cast<uint8_t*>(&t), address, sizeof(T));
             return t;
         }
     }

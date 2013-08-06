@@ -64,7 +64,7 @@ namespace {
             }
 
             tmp = val * 10 + c - '0';
-            if(srl_unlikely(tmp < val)) {
+            if(tmp < val) {
                 /* overflow */
                 break;
             }

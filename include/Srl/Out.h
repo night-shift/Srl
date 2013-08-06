@@ -50,7 +50,7 @@ namespace Srl { namespace Lib {
         };
 
     private:
-        static const size_t Stream_Buffer_Size  = 8192;
+        static const size_t Stream_Buffer_Size  = 4096;
 
         Heap<uint8_t> buffer;
 

@@ -81,8 +81,6 @@ namespace {
             buffer[sz++] = (uint8_t)block;
         }
 
-        assert(sz < 10);
-
         /* just the lowest 7 bits left */
         buffer[sz++] = (uint8_t)integer;
         out.write(buffer, sz);
@@ -90,6 +88,7 @@ namespace {
 
     uint64_t decode_integer(In& source)
     {
+
         uint8_t  block       = *source.pointer();
         uint64_t out_integer = mask_reset_msb & block;
 

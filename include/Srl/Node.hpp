@@ -87,7 +87,6 @@ namespace Srl {
 
         return std::move(r);
     }
-
   
     template<class T>
     typename std::enable_if<TpTools::is_scope(Lib::Switch<T>::type), void>::type

@@ -32,7 +32,7 @@ namespace Srl { namespace Lib {
 
         inline void move           (size_t steps, const Error& error);
         inline const uint8_t* peek (size_t steps, const Error& error);
-        inline bool try_peek       (size_t steps);
+        inline bool     try_peek   (size_t steps);
         inline MemBlock read_block (size_t steps, const Error& error);
 
         template<class T>
@@ -93,7 +93,6 @@ namespace Srl { namespace Lib {
         template<class Sub, size_t N>
         typename std::enable_if<std::is_same<Sub, In::Substitute>::value, size_t>::type
         replace(const Sub& sub, std::vector<uint8_t>& buffer, size_t idx);
-
 
         template<bool Not, class... Tokens>
         size_t move_until (const Error& error, const Tokens&... tokens);

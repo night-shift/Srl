@@ -108,7 +108,7 @@ void PJson::write(const Value& value, const MemBlock& name, Out& out)
         insert_in_quotes(out, name);
         out.write(':');
 
-        if(!this->skip_whitespace) {
+        if(!this->compact) {
             out.write(' ');
         }
     }
@@ -155,7 +155,7 @@ void PJson::insert_spacing(Type type, Out& out)
     if(!this->scope_closed && type != Type::Scope_End) {
         out.write(',');
     }
-    if(this->skip_whitespace) {
+    if(this->compact) {
         return;
     }
     auto depth = type == Type::Scope_End
@@ -212,7 +212,7 @@ pair<Lib::MemBlock, Value> PJson::read(In& source)
             default  : this->process_char(source, state, move);
         }
 
-        if(srl_likely(move)) {
+        if(move) {
             source.move(1, error);
         }
     }
@@ -283,10 +283,9 @@ void PJson::process_char(In& source, State& state, bool& out_move)
     if(is_literal) {
 
         bool likely_fp = false;
-        In::Notify exp ('e', likely_fp);
         In::Notify dec ('.', likely_fp);
 
-        auto block = source.read_block_until(error, ',', ' ', '}', ']', exp, dec);
+        auto block = source.read_block_until(error, ',', ' ', '}', ']', dec);
 
         this->process_literal(block, state, likely_fp ? Type::FP64 : Type::Null);
 
@@ -318,10 +317,8 @@ void PJson::throw_exception(State& state, const String& info)
         ? string((const char*)state.name.ptr, state.name.size)
         : "";
 
-    MemBlock content(state.value.data(), state.value.size());
-
-    auto msg = "In field " + name + (content.ptr != nullptr && content.size > 0
-            ? "\' at \'" + string((const char*)content.ptr, content.size) + "\'."
+    auto msg = "In field " + name + (state.value.data() && state.value.size() > 0
+            ? "\' at \'" + string((const char*)state.value.data(), state.value.size()) + "\'."
             : "." );
 
     throw Exception("Unable to parse JSON document. " + info.unwrap<char>(false) + " " + msg);

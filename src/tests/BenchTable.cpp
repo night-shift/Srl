@@ -28,7 +28,7 @@ struct BStruct {
 
     void srl_resolve(Context& ctx)
     {
-        ctx ("struct", strct) ("vec", str_vec) ("fp_vec", fp_vec);
+        ctx ("struct", strct) ("vec", str_vec) ("fp_vec", VecWrap<double>(fp_vec));
     }
 };
 
@@ -85,13 +85,9 @@ void run_bench(Tree& tree, const T& parser, const string& name, const Tail&... t
         measure([&](){ source = tree.to_source(parser); },   "\tparse out  ms: ");
         measure([&](){ Tree::From_Source(source, parser); }, "\tparse in   ms: ");
 
-        ofstream fs("File");
-        measure([&](){ tree.to_source(fs, parser); },        "\twrite file ms: ");
-        fs.close();
-
-        ifstream fsi("File");
-        measure([&](){ Tree::From_Source(fsi, parser); },    "\tread file  ms: ");
-        fsi.close();
+        measure([&](){ ofstream fs("File"); tree.to_source(fs, parser); },        "\twrite file ms: ", []{ }, 1);
+        
+        measure([&](){ ifstream fsi("File"); Tree::From_Source(fsi, parser); },    "\tread file  ms: ", []{ }, 1);
 
         unlink("File");
 
@@ -127,6 +123,7 @@ void run_bench(Tree& tree, const T& parser, const string& name, const Tail&... t
 void Tests::run_benches()
 {
     Verbose = true;
+
     print_log("\nGenerating data with " + to_string(Benchmark_Objects) + " objects...");
 
     map<string, BStruct> data;

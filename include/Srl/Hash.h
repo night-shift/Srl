@@ -5,16 +5,59 @@
 #include "Heap.h"
 
 #include <math.h>
+#include <functional>
 
 namespace Srl { namespace Lib {
 
-    inline size_t murmur_hash2 (const uint8_t * bytes, size_t nbytes);
+    namespace Aux {
 
-    template<class T> struct Mmh2 {
-        size_t operator() (const T& t) const { return murmur_hash2(t.data(), t.size()); }
+        template<size_t word_length> struct Arch;
+
+        template<> struct Arch<8> {
+            static const uint64_t Prime = 0x100000001B3;
+            static const uint64_t Base  = 0xCBF29CE484222325;
+        };
+
+        template<> struct Arch<4> {
+            static const uint32_t Prime = 0x01000193;
+            static const uint32_t Base  = 0x811C9DC5;
+        };
+
+        inline size_t fnv1a(const uint8_t* bytes, size_t nbytes)
+        {
+            const auto apply = [](uint8_t byte, size_t hash) {
+                return (hash ^ byte) * Arch<sizeof(size_t)>::Prime;
+            };
+
+            size_t h = Aux::Arch<sizeof(size_t)>::Base;
+
+            for(; nbytes >= 4; nbytes -= 4, bytes += 4) {
+                h = apply(bytes[0], h);
+                h = apply(bytes[1], h);
+                h = apply(bytes[2], h);
+                h = apply(bytes[3], h);
+            }
+
+            switch(nbytes % 4) {
+                case 3 : h = apply(bytes[2], h);
+                case 2 : h = apply(bytes[1], h);
+                case 1 : h = apply(bytes[0], h);
+            }
+
+            return h;
+        }
+
+        inline size_t hash_fnc(const uint8_t* bytes, size_t nbytes)
+        {
+            return fnv1a(bytes, nbytes);
+        }
+    }
+
+    template<class T> struct HashSrl {
+        size_t operator() (const T& t) const { return Aux::hash_fnc(t.data(), t.size()); }
     };
 
-    template <class Key, class Val, class HashFnc = Mmh2<Key>>
+    template <class Key, class Val, class HashFnc = HashSrl<Key>>
     class HTable {
 
     public:
@@ -33,6 +76,10 @@ namespace Srl { namespace Lib {
         HTable(const HTable& m) = default;
 
         HTable& operator= (HTable&& m) = default;
+
+        void foreach_entry(const std::function<void(size_t, Val&)>& fnc);
+
+        size_t num_entries() const { return this->elements; }
 
     private: 
         struct Entry {

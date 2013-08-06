@@ -251,13 +251,7 @@ public :
             return this->raw_binary;
         });
 
-        auto wrap_huge = BitWrap(&huge_binary[0], huge_binary.size(), [this](size_t size) {
-            TEST(size == binary_sz)
-            this->huge_binary.resize(size);
-            return &huge_binary[0];
-        });
-
-        ctx ("huge_binary", wrap_huge)
+        ctx ("huge_binary", VecWrap<uint8_t>(huge_binary))
             ("string", string_)
             (u"string_u16", string_u16)
             (U"string_u32", string_u32)

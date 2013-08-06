@@ -19,12 +19,12 @@ namespace {
 
     size_t hash_fnc(const MemBlock& block)
     {
-        return murmur_hash2(block.ptr, block.size);
+        return Aux::hash_fnc(block.ptr, block.size);
     }
 
     size_t hash_fnc(const String& str)
     {
-        return murmur_hash2(str.data(), str.size());
+        return Aux::hash_fnc(str.data(), str.size());
     }
 }
 
@@ -47,6 +47,8 @@ Storage& Storage::operator= (Storage&& s)
     this->value_heap = move(s.value_heap);
     this->node_heap  = move(s.node_heap);
     this->str_table  = move(s.str_table);
+    this->shared_table_store  = move(s.shared_table_store);
+    this->shared_table_restore  = move(s.shared_table_restore);
 
     return *this;
 }
@@ -78,7 +80,8 @@ size_t Storage::hash_string(const String& str)
 template<class T>
 Link<T>* Storage::create_link(const T& val, const String& name, Heap<Link<T>>& heap)
 {
-    static const String empty_str  = String(MemBlock(), Storage::Name_Encoding);
+    static const String empty_str = String(MemBlock(), Storage::Name_Encoding);
+    static const size_t empty_hash = hash_fnc(empty_str);
 
     size_t name_hash = 0;
     const String* str_ptr = nullptr;
@@ -106,8 +109,8 @@ Link<T>* Storage::create_link(const T& val, const String& name, Heap<Link<T>>& h
         str_ptr = ptr;
 
     } else {
-        name_hash = murmur_hash2(nullptr, 0);
-        str_ptr = &empty_str;
+        name_hash = empty_hash;
+        str_ptr   = &empty_str;
     }
 
     auto* link = heap.create(name_hash, val);

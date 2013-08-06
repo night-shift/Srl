@@ -79,7 +79,7 @@ namespace Srl { namespace Lib {
 
     inline const uint8_t* In::peek(size_t steps, const Error& error)
     {
-        if(srl_unlikely(this->pos + steps >= this->end)) {
+        if(this->pos + steps >= this->end) {
             this->fetch_data(steps, error);
         }
         return this->pos;
@@ -87,7 +87,7 @@ namespace Srl { namespace Lib {
 
     inline bool In::try_peek(size_t steps)
     {
-        return srl_likely(this->pos + steps < this->end) || this->try_fetch_data(steps);
+        return this->pos + steps < this->end || this->try_fetch_data(steps);
     }
 
     inline MemBlock In::read_block(size_t steps, const Error& error)

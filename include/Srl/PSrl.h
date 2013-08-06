@@ -9,10 +9,10 @@
 namespace Srl {
 
     namespace Lib { 
-        template<> struct Mmh2<MemBlock> {
+        template<> struct HashSrl<MemBlock> {
             inline size_t operator() (const MemBlock& s) const
             {
-                return murmur_hash2(s.ptr, s.size);
+                return Aux::hash_fnc(s.ptr, s.size);
             }
         };
     }

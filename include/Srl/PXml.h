@@ -13,20 +13,20 @@ namespace Srl {
     class PXml : public Parser {
 
     public :
-        PXml(bool skip_whitespace_ = false)
-            : skip_whitespace(skip_whitespace_) {  }
+        PXml(bool compact_ = false)
+            : compact(compact_) {  }
 
         Format get_format() const     { return Format::Text; }
 
-        void set_skip_whitespace(bool val) { this->skip_whitespace = val; }
-        void set_insert_attributes(bool val) { this->skip_whitespace = val; }
+        void set_compact(bool val) { this->compact = val; }
+        void set_insert_attributes(bool val) { this->compact = val; }
 
         virtual void
         write(const Value& value, const Lib::MemBlock& name, Lib::Out& out) override;
         virtual std::pair<Lib::MemBlock, Value> read(Lib::In& source) override;
 
     private :
-        bool skip_whitespace,
+        bool compact,
              document_parsed = false;
 
         size_t scope_depth  = 0,
@@ -37,9 +37,9 @@ namespace Srl {
                    const Lib::MemBlock& data_ )
                 : parent_tag(parent_tag_), type(type_), name(name_), data(data_) { }
 
-            size_t n_child_tags           = 0;
-            size_t child_name_hash        = 0;
-            bool   child_names_consistent = true;
+            size_t nchild_tags      = 0;
+            size_t child_names      = 0;
+            bool   names_consistent = true;
 
             size_t parent_tag;
             Type   type;

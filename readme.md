@@ -248,7 +248,7 @@ Select a format by...
 auto tree = Tree::From_Source<Srl::PSrl>(source);
 // ...or by passing an instance
 Srl::PXml xml;
-xml.set_skip_whitespace(true);
+xml.set_compact(true);
 auto bytes = tree.to_source(xml);
 ```
 Output encoding for text-based formats is UTF-8. Input is also expected to be UTF-8. As of now no BOM-checking is done, so make sure text documents have the 

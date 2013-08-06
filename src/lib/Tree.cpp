@@ -112,9 +112,7 @@ void Tree::write_conv(const Value& value, const String& val_name, Parser& parser
         parser.write(value, name_conv, *this->temp_stream);
 
     } else {
-        parser.write(
-            this->conv_type(value), name_conv, *this->temp_stream
-        );
+        parser.write(this->conv_type(value), name_conv, *this->temp_stream);
     }
 }
 

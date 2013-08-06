@@ -15,20 +15,22 @@ namespace {
        Negative FixNum 111xxxxx 0xe0 - 0xff */
     bool write_pfixnum(uint64_t i, Out& out)
     {
-        if(i <= 0x7F) {
-            out.write_byte(i);
-            return true;
+        if(i > 0x7F) {
+            return false;
         }
-        return false;
+
+        out.write_byte(i);
+        return true;
     }
 
     bool write_nfixnum(int64_t i, Out& out)
     {
-        if(i < 0 && i >= -31) {
-            out.write_byte(0xE0 | (uint8_t)-i);
-            return true;
+        if(i > -1 || i < -31) {
+            return false;
         } 
-        return false;
+
+        out.write_byte(0xE0 | (uint8_t)-i);
+        return true;
     }
 
     template<Type TP> typename enable_if<TpTools::is_num(TP) && !TpTools::is_fp(TP), void>::type

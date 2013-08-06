@@ -83,15 +83,20 @@ namespace Lib {
         static const bool value = sizeof(test<T>(0)) == sizeof(char);
     };
 
-    template<class T> struct is_ptr_wrap {
+    template<class T> struct is_unique_ptr {
         static const bool value = false;
     };
 
-    template<class T> struct is_ptr_wrap<std::unique_ptr<T>> {
+    template<class T> struct is_unique_ptr<std::unique_ptr<T>> {
         static const bool value = true;
     };
 
-    template<class T> struct is_ptr_wrap<std::shared_ptr<T>> {
+
+    template<class T> struct is_shared_ptr {
+        static const bool value = false;
+    };
+
+    template<class T> struct is_shared_ptr<std::shared_ptr<T>> {
         static const bool value = true;
     };
 
