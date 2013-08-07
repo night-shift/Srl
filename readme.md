@@ -65,6 +65,8 @@ extensions.insert(".hpp");
 auto extension = extensions.value(2).unwrap<string>();
 // unwrap nodes
 auto vec = extensions.unwrap<vector<string>>();
+// paste nodes
+extensions.paste(vec);
 // translate the tree - to plain bytes...
 vector<uint8_t> bytes = tree.to_source<PJson>();
 // ...or to a stream
@@ -236,7 +238,7 @@ struct SomeStruct {
     // pass the bit-wrap
     ctx ("data", wrap);
 
-    // or simply use the shortcut for serializing vectors as binary data
+    // or just use the shortcut for serializing vectors as binary blobs
     ctx ("datavec", VecWrap<uint8_t>(binary));
   }
 };
@@ -267,7 +269,7 @@ Select a format by...
 ```cpp
 // ...passing the corresponding type as a template parameter
 auto tree = Tree::From_Source<Srl::PSrl>(source);
-// ...or by passing an instance
+// ...by passing an instance
 Srl::PXml xml;
 xml.set_compact(true);
 auto bytes = tree.to_source(xml);

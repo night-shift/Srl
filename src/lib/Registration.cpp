@@ -10,15 +10,15 @@ Registrations* Lib::registrations()
     static Registrations rslt;
     return &rslt;
 }
-bool Registrations::insert(const String& id, const function<void*(void)>& fnc)
+bool Registrations::insert(const String& id, Registrations::Make&& make)
 {
     bool exists; void* v;
-    tie(exists, v) = this->table.insert(id, fnc);
+    tie(exists, v) = this->table.insert(id, make);
 
     return exists;
 }
 
-function<void*(void)>* Registrations::find (const String& id)
+Registrations::Make* Registrations::find (const String& id)
 {
     return this->table.get(id);
 }

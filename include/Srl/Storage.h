@@ -56,7 +56,7 @@ namespace Srl {
 
         inline std::vector<uint8_t>&  str_conv_buffer();
         inline std::vector<uint8_t>&  type_conv_buffer();
-        inline std::list<Node*>&       nodes();
+        inline std::list<Node*>&      nodes();
 
    private :
         Heap<Link<Value>>      value_heap;

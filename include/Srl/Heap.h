@@ -12,6 +12,13 @@ namespace Srl { namespace Lib {
     friend class Out;
 
     public:
+        
+        Heap() = default;
+        Heap(const Heap&) = default;
+
+        Heap(Heap&& m) { *this = std::forward<Heap>(m); };
+        Heap& operator= (Heap&& m);
+
         T* get_mem (size_t n_elems);
         template<class... Args>
         T* create (const Args&... args);
@@ -31,7 +38,7 @@ namespace Srl { namespace Lib {
 
             Segment (size_t size_);
             ~Segment();
-            Segment (Segment&& s)      { *this = std::move(s); }
+            Segment (Segment&& s)      { *this = std::forward<Segment>(s); }
             Segment (const Segment& s) { *this = s; }
 
             Segment& operator= (Segment&&);
@@ -43,6 +50,18 @@ namespace Srl { namespace Lib {
         };
 
     };
+
+    template<class T>
+    Heap<T>& Heap<T>::operator= (Heap<T>&& m)
+    {
+        this->clear();
+        this->cap = m.cap;
+        this->crr_seg = m.crr_seg;
+        this->segments = std::move(m.segments);
+        m.clear();
+
+        return *this;
+    }
 
     template<class T>
     Heap<T>::Segment::~Segment()

@@ -22,21 +22,23 @@ namespace Srl { namespace Lib {
     class HTable {
 
     public:
-        Val* get (const Key& key);
-        /* fst -> exists? snd -> entry */
-        std::pair<bool, Val*> insert (const Key& key, const Val& val);
-        std::pair<bool, Val*> insert_hash (size_t hash, const Val& val);
-
-        ~HTable() { clear<Val>(); }
-
         HTable(size_t buckets = 128, double load_factor_ = 1.0)
             : load_factor(load_factor_ < 0.1 ? 0.1 : load_factor_),
               /* ensure n buckets is power of 2 */
               cap(pow(2, ceil(log2(buckets)))) { }
 
+        ~HTable() { clear<Val>(); }
+
         HTable(const HTable& m) = default;
 
-        HTable& operator= (HTable&& m) = default;
+        HTable(HTable&& m) { *this = std::forward<HTable>(m); }
+
+        HTable& operator= (HTable&& m);
+
+        Val* get (const Key& key);
+        /* fst -> exists? snd -> entry */
+        std::pair<bool, Val*> insert (const Key& key, const Val& val);
+        std::pair<bool, Val*> insert_hash (size_t hash, const Val& val);
 
         void foreach_entry(const std::function<void(size_t, Val&)>& fnc);
 
@@ -73,6 +75,26 @@ namespace Srl { namespace Lib {
         typename std::enable_if<!std::is_trivially_destructible<T>::value, void>::type
         clear();
     };
+
+    template<class K, class V, class H>
+    HTable<K, V, H>& HTable<K, V, H>::operator= (HTable<K, V, H>&& m)
+    {
+        this->clear<V>();
+
+        this->limit    = m.limit;
+        this->elements = m.elements;
+
+        m.limit    = 0;
+        m.elements = 0;
+
+        this->cap         = m.cap;
+        this->load_factor = m.load_factor;
+
+        this->heap  = std::move(m.heap);
+        this->table = std::move(m.table);
+
+        return *this;
+    }
 
     namespace Aux {
 

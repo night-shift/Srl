@@ -43,11 +43,11 @@ bool test_node_api()
         TEST(values_w_name.size() == 1)
 
         size_t counted_nodes = 0;
-        root.forall_nodes([&counted_nodes](...) { counted_nodes++; }, recursive);
+        root.foreach_node([&counted_nodes](...) { counted_nodes++; }, recursive);
         TEST(counted_nodes == n_nodes)
 
         size_t counted_values = 0;
-        root.forall_values([&counted_values](...) { counted_values++; }, recursive);
+        root.foreach_value([&counted_values](...) { counted_values++; }, recursive);
         TEST(counted_values == n_values)
 
         auto before = root.num_nodes();
@@ -58,7 +58,7 @@ bool test_node_api()
         root.remove_value("field0");
         TEST(root.num_values() == (before - 1))
 
-        root.forall_nodes([](Node* node) {
+        root.foreach_node([](Node* node) {
             auto values = node->all_values();
             for(auto v : values) {
                 node->remove_value(v->name());
@@ -66,7 +66,7 @@ bool test_node_api()
         }, recursive);
 
         counted_values = 0;
-        root.forall_values([&counted_values](...) { counted_values++; }, recursive);
+        root.foreach_value([&counted_values](...) { counted_values++; }, recursive);
 
         TEST(counted_values == root.num_values())
 
@@ -331,6 +331,55 @@ bool test_polymorphic_classes()
     return true;
 }
 
+struct Shared {
+
+    shared_ptr<Base> base0;
+    weak_ptr<Base>   base1;
+
+    void srl_resolve(Context& ctx)
+    {
+        ctx("base0", base0) ("base1", base1);
+    }
+};
+
+bool test_shared_references()
+{
+    const string SCOPE = "Serializing shared references";
+    print_log("\t" + SCOPE + "...");
+
+    shared_ptr<Base> res0;
+    shared_ptr<Base> res1;
+    weak_ptr<Base>   res2;
+
+    try {
+    
+        {
+            auto s0 = shared_ptr<Base>(new DerivedA());
+            weak_ptr<Base> s1 = s0;
+
+            Shared shared { s0, s1 };
+
+            auto bytes = Srl::Store<PJson>(shared);
+            auto tree = Tree::From_Source<PJson>(bytes);
+
+            res0 = tree.root().node("base0").unwrap<shared_ptr<Base>>();
+            res1 = tree.root().node("base1").unwrap<shared_ptr<Base>>();
+            res2 = tree.root().node("base1").unwrap<weak_ptr<Base>>();
+        }
+
+        TEST(res0.get() == res1.get())
+        TEST(res0.get() == res2.lock().get())
+
+    } catch(Exception& ex) {
+
+        print_log(string(ex.what()) + "\n");
+        return false;
+    }
+
+    print_log("ok.\n");
+    return true;
+}
+
 bool Tests::test_misc()
 {
     print_log("\nTest misc\n");
@@ -340,6 +389,7 @@ bool Tests::test_misc()
     success &= test_string_escaping();
     success &= test_node_api();
     success &= test_polymorphic_classes();
+    success &= test_shared_references();
 
     return success;
 }

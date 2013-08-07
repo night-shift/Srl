@@ -10,7 +10,6 @@
 #include "BitWrap.h"
 #include "Tools.h"
 #include "TpTools.hpp"
-#include "Hash.h"
 #include "Registration.h"
 
 namespace Srl { namespace Lib {
@@ -317,7 +316,7 @@ namespace Srl { namespace Lib {
 
         static void Insert(Node& node, const T& o)
         {
-            /* ugly const-cast, but necessary for making a single resolve function possible */
+            /* const-cast necessary for making a single resolve function possible */
             Context ctx(node, Mode::Insert);
             const_cast<T*>(&o)->srl_resolve(ctx);
         }
@@ -371,8 +370,9 @@ namespace Srl { namespace Lib {
                 delete o;
             }
 
-            o = Lib::registrations()->create<U>(type_id);
-            o->srl_resolve(ctx);
+            auto uptr = Lib::registrations()->create<U>(type_id);
+            uptr->srl_resolve(ctx);
+            o = uptr.release();
         }
     };
 
@@ -604,7 +604,6 @@ namespace Srl { namespace Lib {
             Aux::ptr_insert<E>(ptr, node, name);
         }
 
-
         template<class Item, class ID = String>
         static void Paste(T& p, Item& item, const ID& id = Aux::Str_Empty)
         {
@@ -624,10 +623,9 @@ namespace Srl { namespace Lib {
         static typename std::enable_if<!is_polymorphic<C*>::value, void>::type
         Apply(C*& p, Item& item, const ID& id)
         { 
-            /* avoid possible leak on exception */
-            auto tmp = std::unique_ptr<C>(Ctor<C>::Create_New());
-            Switch<C>::Paste(*tmp.get(), item, id);
-            p = tmp.release();
+            auto uptr = Ctor<C>::Create_New();
+            Switch<C>::Paste(*uptr.get(), item, id);
+            p = uptr.release();
         }
     };
 
@@ -683,9 +681,9 @@ namespace Srl { namespace Lib {
         static typename std::enable_if<!is_polymorphic<C*>::value, void>::type
         Apply(C*& p, Node& node)
         { 
-            auto tmp = std::unique_ptr<C>(Ctor<C>::Create_New());
-            node.paste_field(Aux::Str_Shared_Value, *tmp.get());
-            p = tmp.release();
+            auto uptr = Ctor<C>::Create_New();
+            node.paste_field(Aux::Str_Shared_Value, *uptr.get());
+            p = uptr.release();
         }
     };
 

@@ -8,7 +8,7 @@ using namespace Tests;
 
 bool Tests::Verbose                = false;
 bool Tests::Run_Benchmarks         = false;
-size_t Tests::Benchmark_Objects    = 20000;
+size_t Tests::Benchmark_Objects    = 10000;
 size_t Tests::Benchmark_Iterations = 1;
 
 void Tests::print_source(const vector<uint8_t>& source)

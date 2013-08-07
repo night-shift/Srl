@@ -120,11 +120,7 @@ namespace Srl { namespace Lib {
     template<class K, class V, class H>
     void HTable<K, V, H>::foreach_entry(const std::function<void(size_t, V&)>& fnc)
     {
-        if(this->elements < 1) {
-            return;
-        }
-
-        for(auto i = 0U; i < this->cap; i++) {
+        for(auto i = 0U; i < this->table.size(); i++) {
             auto* entry = table[i];
             while(entry) {
                 fnc(entry->hash, entry->val);

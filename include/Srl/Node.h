@@ -82,8 +82,8 @@ namespace Srl {
         bool has_node  (const String& name);
         bool has_value (const String& name);
 
-        void forall_nodes  (const std::function<void(Node*)>& fnc, bool recursive = false) const;
-        void forall_values (const std::function<void(Value*)>& fnc, bool recursive = false) const;
+        void foreach_node  (const std::function<void(Node*)>& fnc, bool recursive = false) const;
+        void foreach_value (const std::function<void(Value*)>& fnc, bool recursive = false) const;
 
         void remove_node (Node* node);
         void remove_node (size_t index);

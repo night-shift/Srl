@@ -416,7 +416,7 @@ pair<bool, shared_ptr<void>*> Node::find_shared (size_t key, const function<shar
     return { inserted_new, sptr };
 }
 
-void Node::forall_nodes(const function<void(Node*)>& fnc, bool recursive) const
+void Node::foreach_node(const function<void(Node*)>& fnc, bool recursive) const
 {
     auto cpy = this->nodes;
     for(auto link : this->nodes) {
@@ -424,20 +424,20 @@ void Node::forall_nodes(const function<void(Node*)>& fnc, bool recursive) const
         fnc(&link->field);
 
         if(recursive) {
-            link->field.forall_nodes(fnc, recursive);
+            link->field.foreach_node(fnc, recursive);
         }
     }
 }
 
-void Node::forall_values(const function<void(Value*)>& fnc, bool recursive) const
+void Node::foreach_value(const function<void(Value*)>& fnc, bool recursive) const
 {
     for(auto link : this->values) {
         fnc(&link->field);
     }
 
     if(recursive) {
-        this->forall_nodes([&fnc](Node* node) {
-            node->forall_values(fnc);
+        this->foreach_node([&fnc](Node* node) {
+            node->foreach_value(fnc);
         }, true);
     }
 }
@@ -447,7 +447,7 @@ vector<Node*> Node::find_nodes(const String& name_, bool recursive) const
     vector<Node*> rslt;
     auto hash = hash_string(name_, this->tree->storage);
 
-    this->forall_nodes([&rslt, this, hash] (Node* node) {
+    this->foreach_node([&rslt, this, hash] (Node* node) {
         if(hash_string(*node->name_ptr, this->tree->storage) == hash) {
             rslt.push_back(node);
         }
@@ -461,7 +461,7 @@ vector<Value*> Node::find_values(const String& name_, bool recursive) const
     vector<Value*> rslt;
     auto hash = hash_string(name_, this->tree->storage);
 
-    this->forall_values([&rslt, this, hash] (Value* value) {
+    this->foreach_value([&rslt, this, hash] (Value* value) {
         if(hash_string(value->name(), this->tree->storage) == hash) {
             rslt.push_back(value);
         }
@@ -474,7 +474,7 @@ vector<Node*> Node::all_nodes(bool recursive) const
 {
     vector<Node*> rslt;
 
-    this->forall_nodes([&rslt] (Node* node) {
+    this->foreach_node([&rslt] (Node* node) {
         rslt.push_back(node);
     }, recursive);
 
@@ -485,7 +485,7 @@ vector<Value*> Node::all_values(bool recursive) const
 {
     vector<Value*> rslt;
 
-    this->forall_values([&rslt] (Value* value) {
+    this->foreach_value([&rslt] (Value* value) {
         rslt.push_back(value);
     }, recursive);
 

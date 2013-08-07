@@ -17,8 +17,9 @@ namespace Srl {
      * template in your project. */
     template<class T, class... Rest> struct Ctor {
 
-        static T* Create_New() { return new T(); }
-        static T  Create()     { return T(); }
+        static T                  Create()     { return T(); }
+                                                 /* TODO replace with std::make_unique */
+        static std::unique_ptr<T> Create_New() { return std::unique_ptr<T>(new T()); }
     };
 
     class Context;
@@ -91,19 +92,19 @@ namespace Lib {
         static const bool value = true;
     };
 
-    template<class T> struct is_shared_ptr {
-        static const bool value = false;
-    };
-
     template<class T> struct is_weak_ptr {
         static const bool value = false;
     };
 
-    template<class T> struct is_shared_ptr<std::shared_ptr<T>> {
+    template<class T> struct is_weak_ptr<std::weak_ptr<T>> {
         static const bool value = true;
     };
 
-    template<class T> struct is_weak_ptr<std::weak_ptr<T>> {
+    template<class T> struct is_shared_ptr {
+        static const bool value = false;
+    };
+
+    template<class T> struct is_shared_ptr<std::shared_ptr<T>> {
         static const bool value = true;
     };
 

@@ -16,6 +16,8 @@ namespace Srl {
 
         class Registrations {
 
+            typedef std::function<std::unique_ptr<void>(void)> Make;
+
         public:
             template<class T>
             void add(const String& id)
@@ -28,22 +30,24 @@ namespace Srl {
             }
 
             template<class T>
-            T* create(const String& id)
+            std::unique_ptr<T> create(const String& id)
             {
-                auto* fnc = this->find(id);
+                auto* make = this->find(id);
 
-                if(!fnc) {
+                if(!make) {
                     throw Exception("Class id " + id.unwrap(false) + " not registered.");
                 }
 
-                return static_cast<T*>((*fnc)());
+                auto uptr = (*make)();
+
+                return std::unique_ptr<T>(static_cast<T*>(uptr.release())); 
             }
 
         private:
-            HTable<String, std::function<void*(void)>> table { 32 };
+            HTable<String, Make> table { 16 };
 
-            bool insert (const String& id, const std::function<void*(void)>& fnc);
-            std::function<void*(void)>* find (const String& id);
+            bool  insert (const String& id, Make&& make);
+            Make* find   (const String& id);
             
         };
 

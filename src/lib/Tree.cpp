@@ -7,13 +7,13 @@ using namespace Lib;
 
 Tree::Tree(Tree&& g)
 {
-    *this = move(g);
+    *this = forward<Tree>(g);
 }
 
 Tree& Tree::operator= (Tree&& g)
 {
-    this->storage   = move(g.storage);
-    this->root_node = move(g.root_node);
+    this->storage = move(g.storage);
+    this->root_node = g.root_node;
 
     auto& nodes = this->storage.nodes();
 

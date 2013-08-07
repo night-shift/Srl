@@ -32,6 +32,8 @@ namespace Srl {
 
     template<class T> struct VecWrap {
 
+        static_assert(std::is_scalar<T>::value, " Cannot create VecWrap for non-scalar types.");
+
         VecWrap(std::vector<T>& vec_)
             : vec(&vec_), bitwrap(
                 (uint8_t*)vec->data(), vec->size() * sizeof(T),
