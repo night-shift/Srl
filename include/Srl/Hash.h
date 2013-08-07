@@ -11,46 +11,7 @@ namespace Srl { namespace Lib {
 
     namespace Aux {
 
-        template<size_t word_length> struct Arch;
-
-        template<> struct Arch<8> {
-            static const uint64_t Prime = 0x100000001B3;
-            static const uint64_t Base  = 0xCBF29CE484222325;
-        };
-
-        template<> struct Arch<4> {
-            static const uint32_t Prime = 0x01000193;
-            static const uint32_t Base  = 0x811C9DC5;
-        };
-
-        inline size_t fnv1a(const uint8_t* bytes, size_t nbytes)
-        {
-            const auto apply = [](uint8_t byte, size_t hash) {
-                return (hash ^ byte) * Arch<sizeof(size_t)>::Prime;
-            };
-
-            size_t h = Aux::Arch<sizeof(size_t)>::Base;
-
-            for(; nbytes >= 4; nbytes -= 4, bytes += 4) {
-                h = apply(bytes[0], h);
-                h = apply(bytes[1], h);
-                h = apply(bytes[2], h);
-                h = apply(bytes[3], h);
-            }
-
-            switch(nbytes % 4) {
-                case 3 : h = apply(bytes[2], h);
-                case 2 : h = apply(bytes[1], h);
-                case 1 : h = apply(bytes[0], h);
-            }
-
-            return h;
-        }
-
-        inline size_t hash_fnc(const uint8_t* bytes, size_t nbytes)
-        {
-            return fnv1a(bytes, nbytes);
-        }
+        inline size_t hash_fnc(const uint8_t* bytes, size_t nbytes);
     }
 
     template<class T> struct HashSrl {
@@ -113,6 +74,49 @@ namespace Srl { namespace Lib {
         clear();
     };
 
+    namespace Aux {
+
+        template<size_t word_length> struct Arch;
+
+        template<> struct Arch<8> {
+            static const uint64_t Prime = 0x100000001B3;
+            static const uint64_t Base  = 0xCBF29CE484222325;
+        };
+
+        template<> struct Arch<4> {
+            static const uint32_t Prime = 0x01000193;
+            static const uint32_t Base  = 0x811C9DC5;
+        };
+
+        inline size_t fnv1a(const uint8_t* bytes, size_t nbytes)
+        {
+            const auto apply = [](uint8_t byte, size_t hash) {
+                return (hash ^ byte) * Arch<sizeof(size_t)>::Prime;
+            };
+
+            size_t h = Aux::Arch<sizeof(size_t)>::Base;
+
+            for(; nbytes >= 4; nbytes -= 4, bytes += 4) {
+                h = apply(bytes[0], h);
+                h = apply(bytes[1], h);
+                h = apply(bytes[2], h);
+                h = apply(bytes[3], h);
+            }
+
+            switch(nbytes % 4) {
+                case 3 : h = apply(bytes[2], h);
+                case 2 : h = apply(bytes[1], h);
+                case 1 : h = apply(bytes[0], h);
+            }
+
+            return h;
+        }
+
+        inline size_t hash_fnc(const uint8_t* bytes, size_t nbytes)
+        {
+            return fnv1a(bytes, nbytes);
+        }
+    }
 } }
 
 #endif

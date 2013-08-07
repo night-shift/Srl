@@ -9,5 +9,6 @@
 #include <utility>
 #include <cassert>
 #include <stack>
+#include <list>
 
 #endif

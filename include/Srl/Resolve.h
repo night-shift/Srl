@@ -91,12 +91,19 @@ namespace Lib {
         static const bool value = true;
     };
 
-
     template<class T> struct is_shared_ptr {
         static const bool value = false;
     };
 
+    template<class T> struct is_weak_ptr {
+        static const bool value = false;
+    };
+
     template<class T> struct is_shared_ptr<std::shared_ptr<T>> {
+        static const bool value = true;
+    };
+
+    template<class T> struct is_weak_ptr<std::weak_ptr<T>> {
         static const bool value = true;
     };
 

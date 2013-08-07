@@ -5,7 +5,7 @@
 
 namespace Srl { namespace Lib {
 
-    inline std::deque<Node*>& Storage::nodes()
+    inline std::list<Node*>& Storage::nodes()
     {
         return this->stored_nodes;
     }

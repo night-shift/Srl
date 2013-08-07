@@ -67,11 +67,11 @@ namespace Srl {
         template<class T> T unwrap_field (const String& field_name);
         template<class T> T unwrap_field (size_t index);
 
-        Node& node (const String& name)const;
-        Node& node (size_t index) const;
+        Node& node (const String& name);
+        Node& node (size_t index);
 
-        Value& value (const String& name) const;
-        Value& value (size_t index) const;
+        Value& value (const String& name);
+        Value& value (size_t index);
 
         std::vector<Node*>  find_nodes  (const String& name, bool recursive = false) const;
         std::vector<Value*> find_values (const String& name, bool recursive = false) const;
@@ -79,8 +79,8 @@ namespace Srl {
         std::vector<Node*>  all_nodes  (bool recursive = false) const;
         std::vector<Value*> all_values (bool recursive = false) const;
 
-        bool has_node  (const String& name) const;
-        bool has_value (const String& name) const;
+        bool has_node  (const String& name);
+        bool has_value (const String& name);
 
         void forall_nodes  (const std::function<void(Node*)>& fnc, bool recursive = false) const;
         void forall_values (const std::function<void(Value*)>& fnc, bool recursive = false) const;
@@ -126,7 +126,7 @@ namespace Srl {
                          Type node_type, const String& name, const Args&... args);
 
         std::pair<bool, size_t> insert_shared (const void* obj);
-        std::pair<bool, void*>  find_shared   (size_t key, const std::function<void*(void)>& create);
+        std::pair<bool, std::shared_ptr<void>*>  find_shared (size_t key, const std::function<std::shared_ptr<void>(void)>& create);
 
         Node& insert_node  (const Node& node, const String& name);
         Node& insert_node  (Type type, const String& name);

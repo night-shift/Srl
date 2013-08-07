@@ -17,7 +17,7 @@ namespace {
     const Option Hash            = 1 << 0; /* compare by name hash */
     const Option Address         = 1 << 1; /* compare by address */
     const Option Index           = 1 << 2; /* access  by Index */
-    const Option Iterator        = 1 << 3; /* return the iterator, not the link */
+    const Option Remove          = 1 << 3; /* remove found link */
     const Option Throw           = 1 << 4; /* throw exception on not found or multiple findings */
     const Option Check_Duplicate = 1 << 5; /* check for multiple results */
 
@@ -30,10 +30,7 @@ namespace {
     using Cont = vector<Link<T>*>;
 
     template<class T>
-    using Itr = typename Cont<T>::const_iterator;
-
-    template<Option Opt, class T>
-    using Result = typename conditional<enabled(Opt, Iterator), Itr<T>, Link<T>*>::type;
+    using Itr = typename Cont<T>::iterator;
 
     template<Option Opt, class T> typename enable_if<enabled(Opt, Hash), bool>::type
     compare(Itr<T>& itr, size_t hash) { return (*itr)->hash == hash; }
@@ -41,44 +38,48 @@ namespace {
     template<Option Opt, class T> typename enable_if<enabled(Opt, Address), bool>::type
     compare(Itr<T>& itr, T* pointer) { return &(*itr)->field == pointer; }
 
-    template<Option Opt, class T> typename enable_if<enabled(Opt, Iterator), Itr<T>>::type
-    result(Itr<T> itr, bool) { return itr; }
-
-    template<Option Opt, class T> typename enable_if<!enabled(Opt, Iterator), Link<T>*>::type
-    result(Itr<T> itr, bool found) { return found ? *itr : nullptr; }
-
     template<Option Opt, class TKey, class T>
-    typename enable_if<enabled(Opt, Index), Result<Opt, T>>::type
-    find_link(TKey index, const Cont<T>& links)
+    typename enable_if<enabled(Opt, Index), Link<T>*>::type
+    find_link(TKey index, Cont<T>& links)
     {
         if(index < links.size()) {
-            return result<Opt, T>(links.begin() + index, true);
+            auto* rslt = links[index];
+            if(enabled(Opt, Remove)) {
+                auto itr  = links.begin() + index;
+                links.erase(itr);
+            }
+            return rslt;
 
         } else {
             if(enabled(Opt, Throw)) {
                 auto msg = "Cannot access " + tp_name<T>() + " at index " + to_string(index) + ". Index out of bounds.";
                 throw Exception(msg);
             }
-            return result<Opt, T>(links.end(), false);
+            return nullptr;
         }
     }
 
     template<Option Opt, class TKey, class T>
-    typename enable_if<!enabled(Opt, Index), Result<Opt, T>>::type
-    find_link(TKey key, const Cont<T>& links, const String& name = String())
+    typename enable_if<!enabled(Opt, Index), Link<T>*>::type
+    find_link(TKey key, Cont<T>& links, const String& name = String())
     {
         Itr<T> end  = links.end();
-        Itr<T> rslt = end;
+        Link<T>* rslt = nullptr;
 
         for(auto itr = links.begin(); itr != end; itr++) {
             if(compare<Opt, T>(itr, key)) {
 
-                if(enabled(Opt, Throw) && rslt != end) {
+                if(enabled(Opt, Throw) && rslt) {
                     auto msg = tp_name<T>() + " duplication: " + name.unwrap(false) + ".";
                     throw Exception(msg);
                 }
 
-                rslt = itr;
+                rslt = *itr;
+
+                if(enabled(Opt, Remove)) {
+                    links.erase(itr);
+                    break;
+                }
 
                 if(!enabled(Opt, Check_Duplicate)) {
                     break;
@@ -86,35 +87,12 @@ namespace {
             }
         }
 
-        bool found = rslt != end;
-
-        if(enabled(Opt, Throw) && !found) {
+        if(enabled(Opt, Throw) && !rslt) {
             auto msg = tp_name<T>() + " " + name.unwrap(false) + " not found.";
             throw Exception(msg);
         }
 
-        return result<Opt, T>(rslt, found);
-    }
-
-    template<class T>
-    void remove_link(Itr<T> itr, Cont<T>& links)
-    {
-        if(itr != links.end()) {
-            auto pos = links.begin();
-            advance(pos, distance<Itr<T>>(pos, itr));
-            links.erase(pos);
-        }
-    }
-
-    template<class T>
-    void remove_link(T& field, Cont<T>& links)
-    {
-        for(auto itr = links.begin(); itr != links.end(); itr++) {
-            if(&(*itr)->field == &field) {
-                links.erase(itr);
-                break;
-            }
-        }
+        return rslt;
     }
 
     size_t hash_string(const String& str, Storage& storage)
@@ -127,18 +105,11 @@ namespace {
     template<class T>
     T* find_link_remove(const String& name, Cont<T>& links, Storage& storage)
     {
-        T* rslt = nullptr;
-
         auto* link = links.size() > 0 
-            ? find_link<Hash>(hash_string(name, storage), links)
+            ? find_link<Hash | Remove>(hash_string(name, storage), links)
             : nullptr;
 
-        if(link != nullptr) {
-            rslt = &link->field;
-            remove_link(*rslt, links);
-        }
-
-        return rslt;
+        return link ? &link->field : nullptr;
     }
 
     bool compare(const String& a, const MemBlock& b)
@@ -171,7 +142,7 @@ Node& Node::insert_node(Type node_type, const String& name_)
     return this->insert_node(Node(this->tree, node_type), name_);
 }
 
-Value& Node::value(const String& name_) const
+Value& Node::value(const String& name_)
 {
     auto hash = hash_string(name_, this->tree->storage);
     auto* link = find_link<Throw | Hash>(hash, this->values, name_);
@@ -179,18 +150,18 @@ Value& Node::value(const String& name_) const
     return link->field;
 }
 
-Value& Node::value(size_t index) const
+Value& Node::value(size_t index)
 {
     auto* link = find_link<Throw | Index>(index, this->values);
     return link->field;
 }
 
-Node& Node::node(size_t index) const
+Node& Node::node(size_t index)
 {
     return find_link<Throw | Index>(index, this->nodes)->field;
 }
 
-Node& Node::node(const String& name_) const
+Node& Node::node(const String& name_)
 {
     auto hash = hash_string(name_, this->tree->storage);
     return find_link<Throw | Hash>(hash, this->nodes, name_)->field;
@@ -431,18 +402,18 @@ pair<bool, size_t> Node::insert_shared (const void* obj)
     return { exists, *key };
 }
 
-pair<bool, void*> Node::find_shared (size_t key, const function<void*(void)>& create)
+pair<bool, shared_ptr<void>*> Node::find_shared (size_t key, const function<shared_ptr<void>(void)>& create)
 {
     auto& table = this->tree->storage.shared_table_restore;
-    auto* obj = table.get(key);
+    auto* sptr = table.get(key);
     bool inserted_new = false;
 
-    if(!obj) {
-        obj = table.insert(key, create()).second;
+    if(!sptr) {
+        sptr = table.insert(key, create()).second;
         inserted_new = true;
     }
 
-    return { inserted_new, obj };
+    return { inserted_new, sptr };
 }
 
 void Node::forall_nodes(const function<void(Node*)>& fnc, bool recursive) const
@@ -524,48 +495,42 @@ vector<Value*> Node::all_values(bool recursive) const
 void Node::remove_node(const String& name_)
 {
     auto hash = hash_string(name_, this->tree->storage);
-    auto itr = find_link<Iterator | Hash>(hash, this->nodes, name_);
-    remove_link(itr, this->nodes);
+    find_link<Remove | Hash>(hash, this->nodes, name_);
 }
 
 void Node::remove_node(size_t index)
 {
-    auto itr = find_link<Iterator | Index>(index, this->nodes);
-    remove_link(itr, this->nodes);
+    find_link<Remove | Index>(index, this->nodes);
 }
 
 void Node::remove_node(Node* to_remove)
 {
-    auto itr = find_link<Iterator | Address>(to_remove, this->nodes);
-    remove_link(itr, this->nodes);
+    find_link<Remove | Address>(to_remove, this->nodes);
 }
 
 void Node::remove_value(const String& name_)
 {
     auto hash = hash_string(name_, this->tree->storage);
-    auto itr = find_link<Iterator | Hash>(hash, this->values, name_);
-    remove_link(itr, this->values);
+    find_link<Remove | Hash>(hash, this->values, name_);
 }
 
 void Node::remove_value(size_t index)
 {
-    auto itr = find_link<Iterator | Index>(index, this->values);
-    remove_link(itr, this->values);
+    find_link<Remove | Index>(index, this->values);
 }
 
 void Node::remove_value(Value* to_remove)
 {
-    auto itr = find_link<Iterator | Address>(to_remove, this->values);
-    remove_link(itr, this->values);
+    find_link<Remove | Address>(to_remove, this->values);
 }
 
-bool Node::has_node(const String& field_name) const
+bool Node::has_node(const String& field_name)
 {
     auto hash = hash_string(field_name, this->tree->storage);
     return find_link<Hash>(hash, this->nodes, field_name) != nullptr;
 }
 
-bool Node::has_value(const String& field_name) const
+bool Node::has_value(const String& field_name)
 {
     auto hash = hash_string(field_name, this->tree->storage);
     return find_link<Hash>(hash, this->values, field_name) != nullptr;

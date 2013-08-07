@@ -90,7 +90,8 @@ struct Lang {
     string name; int version; list<string> extensions;
 
     void srl_resolve (Srl::Context& ctx) {
-        ctx ("name", name) ("version", version) ("extensions", extensions);
+        // Srl is order-agnostic
+        ctx ("version", version) ("extensions", extensions) ("name", name);
     }
 };
 ```
@@ -107,31 +108,29 @@ Objects are instantiated through a factory ```struct Srl::Ctor<T>```. As default
 #### Handling polymorphic types
 ```cpp
 struct Base {
-    int field = 5;
     // declare a srl_type_id method
     virtual const Srl::TypeID& srl_type_id();
 
     virtual void srl_resolve (Srl::Context& ctx) {
-        ctx ("from_base", field);
+        ctx ("from_base", 5);
     }
 
     virtual ~Base { }
 };
 // register a type in your implementation.cpp to avoid duplicate registrations of the same type
-// this will force a registration on program initialization
+// this will force a registration on program initialization, no RTTI needed
 const auto base_id = Srl::register_type<Base>("Base");
 // return the ID
 const Srl::TypeID& Base::srl_type_id() { return base_id; }
 
 // same for derived types
 struct Derived : Base {
-    int field = 10;
 
     const Srl::TypeID& srl_type_id() override;
 
     void srl_resolve (Srl::Context& ctx) override {
         Base::srl_resolve(ctx);
-        ctx ("from_derived", field);
+        ctx ("from_derived", 10);
     }
 };
 
@@ -194,8 +193,27 @@ delete base;
 composite = tree.root().unwrap<Composite>();
 assert(composite.at(0).srl_type_id().name() == "Derived");
 ```
+#### Handling shared references
+Simply use ```std::shared_ptr / std::weak_ptr```:
+```cpp
+auto first  = make_shared<string>("shared string");
+auto second = first;
+Tree().root().insert("first", first, "second", second)
+             .to_source<PJson>(cout); // yields...
+```
+```json
+{
+    "first": {
+		"srl_shared_key": 0,
+		"srl_shared_value": "shared string"
+	},
+	"second": {
+		"srl_shared_key": 0
+	}
+}
+```
 #### Handling binary data
-Use ```Srl::BitWrap``` to serialize raw binary data...
+Use ```Srl::BitWrap / Srl::VecWrap``` to serialize raw binary data...
 ```cpp
 // ...in a srl_resolve method
 struct SomeStruct {
@@ -217,6 +235,9 @@ struct SomeStruct {
     );
     // pass the bit-wrap
     ctx ("data", wrap);
+
+    // or simply use the shortcut for serializing vectors as binary data
+    ctx ("datavec", VecWrap<uint8_t>(binary));
   }
 };
 

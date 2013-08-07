@@ -13,7 +13,6 @@ namespace Srl {
     namespace Lib {
 
     template<class T> struct Link {
-
         size_t hash;
         T      field;
 
@@ -22,10 +21,9 @@ namespace Srl {
     };
 
     template<> struct HashSrl<size_t> {
-
         size_t operator()(size_t s) const
         {
-            return Aux::hash_fnc((const uint8_t*)&s, sizeof(size_t));
+            return s;
         }
     };
 
@@ -58,7 +56,7 @@ namespace Srl {
 
         inline std::vector<uint8_t>&  str_conv_buffer();
         inline std::vector<uint8_t>&  type_conv_buffer();
-        inline std::deque<Node*>&     nodes();
+        inline std::list<Node*>&       nodes();
 
    private :
         Heap<Link<Value>>      value_heap;
@@ -66,10 +64,10 @@ namespace Srl {
         Heap<uint8_t>          data_heap;
         HTable<String, String> str_table;
 
-        HTable<const void*, size_t> shared_table_store { 16 };
-        HTable<size_t, void*>       shared_table_restore { 16 };
+        HTable<const void*, size_t>           shared_table_store { 16 };
+        HTable<size_t, std::shared_ptr<void>> shared_table_restore { 16 };
 
-        std::deque<Node*>     stored_nodes;
+        std::list<Node*>      stored_nodes;
         std::vector<uint8_t>  str_buffer;
         std::vector<uint8_t>  type_buffer;
 
@@ -77,8 +75,6 @@ namespace Srl {
         template<class T>
         Link<T>* create_link(const T& val, const String& name, Heap<Link<T>>& heap);
     };
-
-
 } }
 
 #endif

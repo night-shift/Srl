@@ -23,7 +23,7 @@ namespace Srl { namespace Lib {
         size_t   cap     = 0;
         Segment* crr_seg = nullptr;
 
-        std::deque<Segment> segments;
+        std::list<Segment> segments;
 
         Segment* alloc (size_t n_elems);
 
