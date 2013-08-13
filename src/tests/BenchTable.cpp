@@ -38,7 +38,10 @@ void measure(const function<void(void)>& fnc, const string& msg,
 {
     auto start = chrono::high_resolution_clock::now();
 
-    for(int i = 0; i < fac; i++) { fnc(); rep(); }
+    for(int i = 0; i < fac; i++) {
+        fnc();
+        rep();
+    }
 
     auto end = chrono::high_resolution_clock::now();
     auto elapsed = (chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0) / fac;
@@ -55,7 +58,7 @@ void run_bench(Tree& tree)
 
         measure([&](){ tree.root().paste_field("map", map); }, "\tpaste data   ms: ");
         Tree new_tree;
-        measure([&](){ new_tree = Tree::From_Type(map); }, "\tinsert data  ms: ");
+        measure([&](){ new_tree.load_object(map); }, "\tinsert data  ms: ");
 
         vector<uint8_t> source;
         measure([&](){ source = Store<PSrl>(map); }, "\tStore Srl    ms: ");
@@ -76,27 +79,31 @@ void run_bench(Tree& tree)
 }
 
 template<class T, class... Tail>
-void run_bench(Tree& tree, const T& parser, const string& name, const Tail&... tail)
+void run_bench(Tree& tree, T&& parser, const string& name, Tail&&... tail)
 {
     try {
         print_log("\nBenching parser " + name +  "...\n");
 
         vector<uint8_t> source;
+       
+
+        Tree reuse;
         measure([&](){ source = tree.to_source(parser); },   "\tparse out  ms: ");
-        measure([&](){ Tree::From_Source(source, parser); }, "\tparse in   ms: ");
+        measure([&](){ reuse.load_source(source, parser); }, "\tparse in   ms: ");
+        measure([&](){ reuse.load_source(source, parser); }, "\tparse in reuse ms: ");
 
         measure([&](){ ofstream fs("File"); tree.to_source(fs, parser); },        "\twrite file ms: ", []{ }, 1);
         
-        measure([&](){ ifstream fsi("File"); Tree::From_Source(fsi, parser); },    "\tread file  ms: ", []{ }, 1);
+        measure([&](){ ifstream fsi("File"); Tree().load_source(fsi, parser); },    "\tread file  ms: ", []{ }, 1);
 
         unlink("File");
 
         measure([&] {
             Lib::In src(source.data(), source.size());
-            auto p = parser;
             int depth = 0;
+            parser.clear();
             while(true) {
-                auto seg = p.read(src); 
+                auto seg = parser.read(src); 
                 if(TpTools::is_scope(seg.second.type())) {
                     depth++;
                     continue;
@@ -111,7 +118,7 @@ void run_bench(Tree& tree, const T& parser, const string& name, const Tail&... t
             }
         }, "\tParse in / no store ms: ");
 
-        print_log("\tdocument size bytes: " + to_string(source.size() / 1000.0f) + "\n");
+        print_log("\tdocument size kbytes: " + to_string(source.size() / 1000.0f) + "\n");
 
     } catch (Exception& ex) {
         print_log(string(ex.what()) + "\n");
@@ -143,7 +150,8 @@ void Tests::run_benches()
         PSrl(), "PSrl",
         PMsgPack(), "PMsgPack",
         PJson(), "PJson",
-        PJson(true), "PJson w/o space"
+        PJson(true), "PJson w/o space",
+        PXml(true), "PXml w/o space"
     );
 
 }

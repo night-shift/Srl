@@ -361,3 +361,9 @@ pair<MemBlock, Value> PMsgPack::read(In& source)
     error();
     return { MemBlock(), Type::Null };
 }
+
+void PMsgPack::clear()
+{
+    Aux::clear_stack(this->scope_stack);
+    this->scope = nullptr;
+}

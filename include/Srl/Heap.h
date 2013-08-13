@@ -5,6 +5,30 @@
 
 namespace Srl { namespace Lib {
 
+    namespace Aux { 
+
+        template<class T> struct SList {
+
+            struct Link {
+                Link* next = nullptr;
+                T     val;
+            };
+
+            SList() { }
+
+            Link* front = nullptr;
+            Link* back  = nullptr;
+
+            void  clear   ();
+            void  append  (Link* link);
+            void  prepend (Link* link);
+            void  remove  (Link* prev, Link* link);
+
+            template<class Predicate>
+            Link* find_rm (const Predicate& predicate);
+        };
+    }
+
     class Heap {
 
     friend class Out;
@@ -42,27 +66,6 @@ namespace Srl { namespace Lib {
             uint8_t* pointer()      { return data + size - left; }
         };
 
-        template<class T> struct SList {
-
-            struct Link {
-                Link* next = nullptr;
-                T     val;
-            };
-    
-            SList() { }
-
-            Link* front = nullptr;
-            Link* back  = nullptr;
-
-            void  clear   ();
-            void  append  (Link* link);
-            void  prepend (Link* link);
-            void  remove  (Link* prev, Link* link);
-
-            template<class Predicate>
-            Link* find_rm (const Predicate& predicate);
-        };
-
     private:
         static const size_t Max_Cap = 32768;
 
@@ -71,18 +74,18 @@ namespace Srl { namespace Lib {
 
         struct Chain {
 
-            SList<Segment> used_segs;
-            SList<Segment> free_segs;
+            Aux::SList<Segment> used_segs;
+            Aux::SList<Segment> free_segs;
 
-            SList<SList<Segment>::Link> used_links;
-            SList<SList<Segment>::Link> free_links;
+            Aux::SList<Aux::SList<Segment>::Link> used_links;
+            Aux::SList<Aux::SList<Segment>::Link> free_links;
+
+            Aux::SList<Segment>::Link* get_link();
 
         } chain;
 
         Segment* alloc         (size_t sz);
         Segment* find_free_seg (size_t sz);
-
-        SList<Segment>::Link* get_link();
 
         void destroy();
     };

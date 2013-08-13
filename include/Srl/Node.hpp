@@ -192,22 +192,21 @@ namespace Srl {
     }
 
     template<class TParser>
-    std::vector<uint8_t> Node::to_source(const TParser& parser)
+    std::vector<uint8_t> Node::to_source(TParser&& parser)
     {
-        TParser copy = parser;
         Lib::Out out;
-        this->env->tree->set_output(copy, out);
+        this->env->tree->set_output(parser, out);
         this->to_source();
 
         return out.extract();
     }
 
     template<class TParser>
-    void Node::to_source(std::ostream& out_stream, const TParser& parser)
+    void Node::to_source(std::ostream& out_stream, TParser&& parser)
     {
-        TParser copy = parser;
+
         Lib::Out out(out_stream);
-        this->env->tree->set_output(copy, out);
+        this->env->tree->set_output(parser, out);
         this->to_source();
 
         out.flush();

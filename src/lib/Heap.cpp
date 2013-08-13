@@ -6,10 +6,10 @@ using namespace Lib;
 
 namespace {
 
-    const size_t recycle_thld = 256;
+    const size_t recycle_thld = 128;
 
-    using SegLink   = Heap::SList<Heap::Segment>::Link;
-    using ChainLink = Heap::SList<SegLink>::Link;
+    using SegLink   = Aux::SList<Heap::Segment>::Link;
+    using ChainLink = Aux::SList<SegLink>::Link;
 
     void set_subsegment(Heap::Segment& seg, uint8_t* data, size_t sz)
     {
@@ -27,9 +27,10 @@ namespace {
         seg.sub_seg = false;
     }
 
-    void reset_segment(Heap::Segment& seg)
+    void reset_segment(SegLink& link)
     {
-        seg.left = seg.size;
+        link.val.left = link.val.size;
+        link.next = nullptr;
     }
 
     struct Any {
@@ -48,14 +49,14 @@ namespace {
 }
 
 template<class T>
-void Heap::SList<T>::clear()
+void Aux::SList<T>::clear()
 {
     this->front = nullptr;
     this->back  = nullptr;
 }
 
 template<class T>
-void Heap::SList<T>::append(SList<T>::Link* link)
+void Aux::SList<T>::append(SList<T>::Link* link)
 {
     if(!this->back) {
         this->front = link;
@@ -68,7 +69,7 @@ void Heap::SList<T>::append(SList<T>::Link* link)
 }
 
 template<class T>
-void Heap::SList<T>::remove(SList<T>::Link* prev, SList<T>::Link* link)
+void Aux::SList<T>::remove(SList<T>::Link* prev, SList<T>::Link* link)
 {
     this->front = link == front ? link->next : front;
     this->back  = link == back ? prev : back;
@@ -79,7 +80,7 @@ void Heap::SList<T>::remove(SList<T>::Link* prev, SList<T>::Link* link)
 }
 
 template<class T>
-void Heap::SList<T>::prepend(SList<T>::Link* link)
+void Aux::SList<T>::prepend(SList<T>::Link* link)
 {
     if(!this->front) {
         this->append(link);
@@ -90,8 +91,8 @@ void Heap::SList<T>::prepend(SList<T>::Link* link)
     }
 }
 
-template<class T> template<class Predicate> typename Heap::SList<T>::Link*
-Heap::SList<T>::find_rm(const Predicate& predicate)
+template<class T> template<class Predicate> typename Aux::SList<T>::Link*
+Aux::SList<T>::find_rm(const Predicate& predicate)
 {
     Link* link = this->front;
     Link* prev = nullptr;
@@ -115,7 +116,7 @@ void Heap::put_mem(uint8_t* mem, size_t sz)
         return;
     }
 
-    auto* link = get_link();
+    auto* link = this->chain.get_link();
     set_subsegment(link->val, mem, sz);
 
     this->chain.free_segs.prepend(link);
@@ -131,15 +132,15 @@ Heap::Segment* Heap::find_free_seg(size_t sz)
     return link ? &link->val : nullptr;
 }
 
-SegLink* Heap::get_link()
+SegLink* Heap::Chain::get_link()
 {
-    auto* link = this->chain.free_links.find_rm(Any());
+    auto* link = this->free_links.find_rm(Any());
 
     if(!link) {
         link = new ChainLink();
     }
 
-    this->chain.used_links.append(link);
+    this->used_links.append(link);
 
     return &link->val;
 }
@@ -165,7 +166,7 @@ Heap::Segment* Heap::alloc(size_t n)
 
     auto alloc_sz = this->cap > n ? this->cap : n;
 
-    auto* link = this->get_link();
+    auto* link = this->chain.get_link();
     seg = &link->val;
     set_segment(*seg, alloc_sz);
 
@@ -190,8 +191,8 @@ void Heap::clear()
             this->chain.free_links.append(link);
 
         } else {
-        prev = link;
-            reset_segment(link->val.val);
+            prev = link;
+            reset_segment(link->val);
             this->chain.free_segs.prepend(&link->val);
         }
 
@@ -208,7 +209,7 @@ Heap::~Heap()
 
 void Heap::destroy()
 {
-    const auto free = [](SList<SegLink>& lst) {
+    const auto free = [](Aux::SList<SegLink>& lst) {
         auto* link = lst.front; 
         while(link) {
             auto* next = link->next;

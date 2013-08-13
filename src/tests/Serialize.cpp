@@ -397,7 +397,7 @@ struct TestClassA {
 bool test_serialize() { return true; }
 
 template<class TParser, class... Tail>
-bool test_serialize(const TParser& parser, const string& parser_name, const Tail&... tail)
+bool test_serialize(TParser&& parser, const string& parser_name, Tail&&... tail)
 {
     in_text_format = parser.get_format() == Format::Text;
     bool success = true;
@@ -420,7 +420,8 @@ bool test_serialize(const TParser& parser, const string& parser_name, const Tail
         print_log("ok.\n");
 
         print_log("\tTree::From_Type..........");
-        Tree tree = Tree::From_Type(original);
+        Tree tree;
+        tree.load_object(original);
         print_log("ok.\n");
 
         print_log("\tTree::to_source..........");
@@ -428,7 +429,7 @@ bool test_serialize(const TParser& parser, const string& parser_name, const Tail
         print_log("ok.\n");
 
         print_log("\tTree::From_Source........");
-        tree = Tree::From_Source(source, parser);
+        tree.load_source(source, parser);
         print_log("ok.\n");
 
         print_log("\tTree::paste..............");
@@ -442,14 +443,14 @@ bool test_serialize(const TParser& parser, const string& parser_name, const Tail
 
         print_log("\tTree::to_stream..........");
         stringstream strm;
-        tree = Tree::From_Type(original);
+        tree.load_object(original);
         tree.to_source(strm, parser);
         print_log("ok.\n");
 
         strm.seekg(0);
 
         print_log("\tTree::from_stream........");
-        tree = Tree::From_Source(strm, parser);
+        tree.load_source(strm, parser);
         tree.root().paste(target);
         print_log("ok.\n");
 
@@ -458,7 +459,7 @@ bool test_serialize(const TParser& parser, const string& parser_name, const Tail
         print_log("ok.\n");
 
         print_log("\tSrl::Restore unordered...");
-        tree = Tree::From_Type(original);
+        tree.load_object(original);
         source = tree.to_source(parser);
         auto restored_unordred = Srl::Restore<TestClassA>(source, parser);
         print_log("ok.\n");

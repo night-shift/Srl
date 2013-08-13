@@ -7,7 +7,6 @@
 #include "Blocks.h"
 #include "Value.h"
 #include "String.h"
-#include "TpTools.hpp"
 
 namespace Srl {
 
@@ -17,13 +16,13 @@ namespace Srl {
         PJson(bool compact_ = false)
             : compact(compact_) {  }
 
-        Format get_format() const           { return Format::Text; }
+        Format get_format() const     { return Format::Text; }
         void   set_compact (bool val) { this->compact = val; }
 
         virtual void
         write(const Value& value, const Lib::MemBlock& name, Lib::Out& out) override;
-        virtual std::pair<Lib::MemBlock, Value>
-        read(Lib::In& source) override;
+        virtual std::pair<Lib::MemBlock, Value> read(Lib::In& source) override;
+        virtual void clear() override;
 
     private :
         bool             compact;

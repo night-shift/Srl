@@ -16,42 +16,42 @@ namespace Srl {
         PXml(bool compact_ = false)
             : compact(compact_) {  }
 
-        Format get_format() const     { return Format::Text; }
+        Format get_format() const  { return Format::Text; }
 
         void set_compact(bool val) { this->compact = val; }
-        void set_insert_attributes(bool val) { this->compact = val; }
 
         virtual void
         write(const Value& value, const Lib::MemBlock& name, Lib::Out& out) override;
         virtual std::pair<Lib::MemBlock, Value> read(Lib::In& source) override;
+        virtual void clear() override;
 
     private :
         bool compact,
              document_parsed = false;
 
-        size_t scope_depth  = 0,
-               tag_index    = 0;
+        size_t scope_depth = 0,
+               tag_index   = 0;
 
         struct XmlTag  {
             XmlTag(const Lib::MemBlock& name_, Type type_, size_t parent_tag_,
                    const Lib::MemBlock& data_ )
-                : parent_tag(parent_tag_), type(type_), name(name_), data(data_) { }
+                : parent_tag(parent_tag_), name(name_), data(data_), type(type_) { }
 
-            size_t nchild_tags      = 0;
-            size_t child_names      = 0;
-            bool   names_consistent = true;
-
+            size_t child_names = 0;
+            size_t nchild_tags = 0;
             size_t parent_tag;
-            Type   type;
 
             Lib::MemBlock name;
             Lib::MemBlock data;
+
+            Type   type;
+            bool   names_consistent = true;
 
             std::string name_string();
         };
 
         Lib::Heap            heap;
-        std::vector<XmlTag*> tags;
+        std::deque<XmlTag*>  tags;
         std::vector<uint8_t> escape_buffer;
 
         XmlTag& create_tag (const Lib::MemBlock& name, Type type, size_t parent_tag,
@@ -65,7 +65,7 @@ namespace Srl {
         bool scope_is_container (XmlTag& scope);
         void read_attributes    (Lib::MemBlock& name, Lib::In& source, bool& out_closed);
 
-        XmlTag& current_tag();
+        XmlTag& scope_tag();
     };
 }
 

@@ -8,31 +8,28 @@
 namespace Srl {
 
     template<class Object, class TParser>
-    Object Restore(const std::vector<uint8_t>& source, const TParser& parser = TParser());
+    Object Restore(const std::vector<uint8_t>& source, TParser&& parser = TParser());
 
     template<class Object, class TParser>
-    Object Restore(std::istream& stream, const TParser& parser = TParser());
+    Object Restore(std::istream& stream, TParser&& parser = TParser());
 
     template<class Object, class TParser>
-    Object Restore(const uint8_t* source, size_t size, const TParser& parser = TParser());
+    Object Restore(const uint8_t* source, size_t size, TParser&& parser = TParser());
 
     template<class TParser, class Object>
-    void Restore(Object& object, const std::vector<uint8_t>& source, const TParser& parser = TParser());
+    void Restore(Object& object, const std::vector<uint8_t>& source, TParser&& parser = TParser());
 
     template<class TParser, class Object>
-    void Restore(Object& object, const uint8_t* source, size_t size, const TParser& parser = TParser());
+    void Restore(Object& object, const uint8_t* source, size_t size, TParser&& parser = TParser());
 
     template<class TParser, class Object>
-    void Restore(Object& object, std::istream& stream, const TParser& parser = TParser());
+    void Restore(Object& object, std::istream& stream, TParser&& parser = TParser());
 
     template<class TParser, class Object>
-    void Store(std::ostream& stream, const Object& object, const TParser& parser = TParser(), const std::string& name = "");
+    void Store(std::ostream& stream, const Object& object, TParser&& parser = TParser());
 
     template<class TParser, class Object>
-    std::vector<uint8_t> Store(const Object& object, const TParser& parser = TParser(), const std::string& name = "");
+    std::vector<uint8_t> Store(const Object& object, TParser&& parser = TParser());
 
-    template<class TParser, class Object>
-    void Store(const Object& object, Lib::Out& out, const TParser& parser, const std::string& name);
 }
-
 #endif

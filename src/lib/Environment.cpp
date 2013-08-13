@@ -26,6 +26,10 @@ namespace {
     {
         return Aux::hash_fnc(str.data(), str.size());
     }
+
+    const String empty_str("");
+    const size_t empty_hash = hash_fnc(empty_str);
+
 }
 
 String Environment::conv_string(const String& str)
@@ -44,9 +48,6 @@ size_t Environment::hash_string(const String& str)
 
 pair<const String*, size_t> Environment::store_string(const String& str)
 {
-    static const String empty_str  = String(MemBlock(), Environment::Str_Encoding);
-    static const size_t empty_hash = hash_fnc(empty_str);
-
     size_t hash;
     const String* str_ptr;
 
@@ -125,3 +126,10 @@ Link<Value>* Environment::store_value(Node& parent, const Value& value, const St
     return link;
 }
 
+void Environment::clear()
+{
+    this->heap.clear();
+    this->str_table.clear();
+    this->shared_table_store.clear();
+    this->shared_table_restore.clear();
+}

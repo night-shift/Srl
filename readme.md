@@ -47,8 +47,9 @@ string json = "{ "
     "\"name\"    : \"cpp\","
     "\"version\" : 11"
 "}";
-// create Srl::Tree from a source
-Tree tree = Tree::From_Source<PJson>(json.c_str(), json.size());
+// load a document
+Tree tree;
+tree.load_source<PJson>(json.c_str(), json.size());
 // the root node
 Node& root = tree.root();
 // access values
@@ -183,7 +184,8 @@ Srl::Store<PJson>(cout, composite);
 ```
 ```cpp
 /// access a polymorphic type 
-auto tree = Tree::From_Type(composite);
+Tree tree;
+tree.load_object(composite);
 auto& bases = tree.root().node("bases");
 auto derived = bases.node(0).unwrap<unique_ptr<Base>>();
 // or

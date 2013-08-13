@@ -36,32 +36,31 @@ namespace Srl {
     } }
 
     template<class TParser, class Object>
-    std::vector<uint8_t> Store(const Object& object, const TParser& parser, const std::string& name)
+    std::vector<uint8_t> Store(const Object& object, TParser&& parser)
     {
         Lib::Out out;
-        Store<TParser, Object>(object, out, parser, name);
+        Store<Object>(object, out, parser);
         return out.extract();
     }
 
     template<class TParser, class Object>
-    void Store(std::ostream& out_stream, const Object& object, const TParser& parser, const std::string& name)
+    void Store(std::ostream& out_stream, const Object& object, TParser&& parser)
     {
         Lib::Out out(out_stream);
-        Store<TParser, Object>(object, out, parser, name);
+        Store<Object>(object, out, parser);
         out.flush();
     }
 
-    template<class TParser, class Object>
-    void Store(const Object& object, Lib::Out& out, const TParser& parser, const std::string& name)
+    template<class Object>
+    void Store(const Object& object, Lib::Out& out, Parser& parser)
     {
-        TParser copy = parser;
-        Tree tree(name);
-        tree.write(Lib::Aux::TypeSwitch<Object>::type, copy, out,
+        Tree tree;
+        tree.write(Lib::Aux::TypeSwitch<Object>::type, parser, out,
                    Lib::Aux::TypeSwitch<Object>::Insert(object, tree));
     }
 
     template<class Object, class TParser>
-    Object Restore(std::istream& stream, const TParser& parser)
+    Object Restore(std::istream& stream, TParser&& parser)
     {
         auto object = Ctor<Object>::Create();
         Restore<Object, TParser>(object, stream, parser);
@@ -70,47 +69,46 @@ namespace Srl {
     }
 
     template<class Object, class TParser>
-    Object Restore(const std::vector<uint8_t>& vec, const TParser& parser)
+    Object Restore(const std::vector<uint8_t>& vec, TParser&& parser)
     {
-        return Restore<Object, TParser>(vec.data(), vec.size(), parser);
+        return Restore<Object>(vec.data(), vec.size(), parser);
     }
 
     template<class Object, class TParser>
-    Object Restore(const uint8_t* data, size_t size, const TParser& parser)
+    Object Restore(const uint8_t* data, size_t size, TParser&& parser)
     {
         auto object = Ctor<Object>::Create();
         Lib::In in(data, size);
-        Restore<Object, TParser>(object, in, parser);
+        Restore<Object>(object, in, parser);
 
         return std::move(object);
     }
 
     template<class TParser, class Object>
-    void Restore(Object& object, const std::vector<uint8_t>& vec, const TParser& parser)
+    void Restore(Object& object, const std::vector<uint8_t>& vec, TParser&& parser)
     {
         Restore(object, vec.data(), vec.size(), parser);
     }
 
     template<class TParser, class Object>
-    void Restore(Object& object, const uint8_t* data, size_t size, const TParser& parser)
+    void Restore(Object& object, const uint8_t* data, size_t size, TParser&& parser)
     {
         Lib::In in(data, size);
         Restore(object, in, parser);
     }
 
     template<class TParser, class Object>
-    void Restore(Object& object, std::istream& stream, const TParser& parser)
+    void Restore(Object& object, std::istream& stream, TParser&& parser)
     {
         Lib::In in(stream);
         Restore(object, in, parser);
     }
 
-    template<class Object, class TParser>
-    void Restore(Object& object, Lib::In& in, const TParser& parser)
+    template<class Object>
+    void Restore(Object& object, Lib::In& in, Parser& parser)
     {
-        TParser copy = parser;
         Tree tree;
-        tree.read_source(copy, in, Lib::Aux::TypeSwitch<Object>::Paste(tree, object));
+        tree.read_source(parser, in, Lib::Aux::TypeSwitch<Object>::Paste(tree, object));
     }
 }
 

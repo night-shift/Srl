@@ -3,6 +3,7 @@
 
 #include "Blocks.h"
 #include "Heap.h"
+#include "Common.h"
 
 #include <type_traits>
 
@@ -78,6 +79,12 @@ namespace Srl { namespace Lib { namespace Aux {
         memcpy(mem, block.ptr, block.size);
 
         return { mem, block.size };
+    }
+
+    template<class T>
+    void clear_stack(std::stack<T>& st)
+    {
+        while(st.size() > 0) st.pop();
     }
 
 } } }

@@ -15,40 +15,41 @@ namespace Srl {
     friend class Node;
 
     public:
+        Tree(const String& name = "");
+
         Tree& operator= (Tree&& g);
         Tree(Tree&& g);
 
-        Tree(const String& name = "")
-            : env(new Lib::Environment(*this)),
-              root_node(&env->create_node(Type::Object, name)->field) { }
 
         template<class T>
-        static Tree From_Type(const T& type, const std::string name = "");
+        void load_object(const T& type);
 
         template<class TParser>
-        static Tree From_Source (const std::vector<uint8_t>& source, const TParser& parser = TParser());
+        void load_source (const std::vector<uint8_t>& source, TParser&& parser = TParser());
 
         template<class TParser>
-        static Tree From_Source (const char* source, size_t source_size, const TParser& parser = TParser());
+        void load_source (const char* source, size_t source_size, TParser&& parser = TParser());
 
         template<class TParser>
-        static Tree From_Source (const uint8_t* source, size_t source_size, const TParser& parser = TParser());
+        void load_source (const uint8_t* source, size_t source_size, TParser&& parser = TParser());
 
         template<class TParser>
-        static Tree From_Source (std::istream& stream, const TParser& parser = TParser());
+        void load_source (std::istream& stream, TParser&& parser = TParser());
 
         template<class TParser>
-        std::vector<uint8_t> to_source(const TParser& parser = TParser());
+        std::vector<uint8_t> to_source(TParser&& parser = TParser());
 
         template<class TParser>
-        void to_source(std::ostream& stream, const TParser& parser = TParser());
+        void to_source(std::ostream& stream, TParser&& parser = TParser());
 
         Node& root();
+
+        void clear();
 
     private:
         std::unique_ptr<Lib::Environment> env;
 
-        Node*     root_node;
+        Node* root_node;
 
         void write (const Value& value, const String& name);
         void write (Type type, Parser& parser, Lib::Out& out, const std::function<void()>& store_switch);
@@ -62,13 +63,13 @@ namespace Srl {
         void read_source (Parser& parser, Lib::In& source, const std::function<void()>& restore_switch);
 
         template<class TParser>
-        static Tree From_Source (Lib::In& source, const TParser& parser);
+        void load_source (Lib::In& source, TParser& parser);
 
-        template<class TParser, class Object>
-        friend void Store(const Object& object, Lib::Out& out, const TParser& parser, const std::string& name);
+        template<class Object>
+        friend void Store(const Object& object, Lib::Out& out, Parser& parser);
 
-        template<class Object, class TParser>
-        friend void Restore(Object& object, Lib::In& source, const TParser& parser);
+        template<class Object>
+        friend void Restore(Object& object, Lib::In& source, Parser& parser);
     };
 }
 

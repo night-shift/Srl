@@ -324,3 +324,9 @@ void PJson::throw_exception(State& state, const String& info)
     throw Exception("Unable to parse JSON document. " + info.unwrap<char>(false) + " " + msg);
 }
 
+void PJson::clear()
+{
+    Aux::clear_stack(this->scope_stack);
+    this->scope_type = Type::Null;
+    this->scope_closed = true;
+}

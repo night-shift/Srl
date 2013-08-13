@@ -10,52 +10,49 @@
 namespace Srl {
 
     template<class TParser>
-    std::vector<uint8_t> Tree::to_source(const TParser& parser)
+    std::vector<uint8_t> Tree::to_source(TParser&& parser)
     {
         return this->root_node->to_source(parser);
     }
 
     template<class TParser>
-    void Tree::to_source(std::ostream& out_stream, const TParser& parser)
+    void Tree::to_source(std::ostream& out_stream, TParser&& parser)
     {
         this->root_node->to_source(out_stream, parser);
     }
 
     template<class TParser>
-    Tree Tree::From_Source (std::istream& stream, const TParser& parser)
+    void Tree::load_source(std::istream& stream, TParser&& parser)
     {
         Lib::In source(stream);
-        return Tree::From_Source<TParser>(source, parser);
+        this->load_source<TParser>(source, parser);
     }
 
     template<class TParser>
-    Tree Tree::From_Source(const std::vector<uint8_t>& source, const TParser& parser)
+    void Tree::load_source(const std::vector<uint8_t>& source, TParser&& parser)
     {
         Lib::In src(&source[0], source.size());
-        return Tree::From_Source(src, parser);
+        this->load_source(src, parser);
     }
 
     template<class TParser>
-    Tree Tree::From_Source(const uint8_t* source, size_t source_size, const TParser& parser)
+    void Tree::load_source(const uint8_t* source, size_t source_size, TParser&& parser)
     {
         Lib::In src(source, source_size);
-        return Tree::From_Source(src, parser);
+        this->load_source(src, parser);
     }
 
     template<class TParser>
-    Tree Tree::From_Source (const char* source, size_t source_size, const TParser& parser)
+    void Tree::load_source (const char* source, size_t source_size, TParser&& parser)
     {
-        return Tree::From_Source((const uint8_t*)source, source_size, parser);
+        this->load_source((const uint8_t*)source, source_size, parser);
     }
 
     template<class TParser>
-    Tree Tree::From_Source(Lib::In& source, const TParser& parser)
+    void Tree::load_source(Lib::In& source, TParser& parser)
     {
-        TParser copy = parser;
-        Tree tree;
-        tree.read_source(copy, source);
-
-        return std::move(tree);
+        this->clear();
+        this->read_source(parser, source);
     }
 
     namespace Lib { namespace Aux {
@@ -71,12 +68,10 @@ namespace Srl {
     } }
 
     template<class T>
-    Tree Tree::From_Type(const T& type, const std::string name)
+    void Tree::load_object(const T& type)
     {
-        Tree tree(name);
-        Lib::Aux::InsertSwitch<T>::Insert(type, tree);
-
-        return std::move(tree);
+        this->clear();
+        Lib::Aux::InsertSwitch<T>::Insert(type, *this);
     }
 }
 

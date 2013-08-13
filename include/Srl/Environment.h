@@ -45,15 +45,6 @@ namespace Lib {
 
         Environment(Tree& tree_) : tree(&tree_) { }
 
-        Link<Node>*  create_node (Type type, const String& name);
-        Link<Node>*  store_node  (Node& parent, const Node& node,  const String& name);
-        Link<Value>* store_value (Node& parent, const Value& value, const String& name);
-
-        size_t       hash_string  (const String& str);
-        String       conv_string  (const String& str);
-
-        std::pair<const String*, size_t> store_string (const String& str);
-
         Tree*                  tree;
         Heap                   heap;
         HTable<String, String> str_table;
@@ -71,6 +62,17 @@ namespace Lib {
         
         template<class T>
         Link<T>* create_link(Lib::Items<T>& lst, const T& val, const String& name);
+        Link<Node>*  create_node (Type type, const String& name);
+        Link<Node>*  store_node  (Node& parent, const Node& node,  const String& name);
+        Link<Value>* store_value (Node& parent, const Value& value, const String& name);
+
+        size_t       hash_string  (const String& str);
+        String       conv_string  (const String& str);
+
+        std::pair<const String*, size_t> store_string (const String& str);
+
+        void clear();
+
     };
 } }
 

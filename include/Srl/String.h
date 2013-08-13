@@ -9,11 +9,11 @@
 
 namespace Srl {
 
-    namespace Lib { class Environment; }
+    namespace Lib { struct Environment; }
 
     class String {
 
-        friend class Lib::Environment;
+        friend struct Lib::Environment;
 
     public:
         template<class TString>

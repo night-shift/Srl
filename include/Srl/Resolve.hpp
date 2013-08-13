@@ -9,7 +9,7 @@
 #include "String.h"
 #include "BitWrap.h"
 #include "Tools.h"
-#include "TpTools.hpp"
+#include "TpTools.h"
 #include "Registration.h"
 
 namespace Srl { namespace Lib {
@@ -480,7 +480,7 @@ namespace Srl { namespace Lib {
         };
     };
 
-    /* Arrays are treated like containers */
+    /* arrays */
     template<class T>
     struct Switch<T, typename std::enable_if<std::is_array<T>::value && !is_char_array<T>::value>::type> {
         static const Type type = Type::Array;

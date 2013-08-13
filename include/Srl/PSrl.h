@@ -27,10 +27,10 @@ namespace Srl {
         virtual void
         write(const Value& value, const Lib::MemBlock& name, Lib::Out& out) override;
         virtual std::pair<Lib::MemBlock, Value> read(Lib::In& source) override;
+        virtual void clear() override;
 
     private :
-        Type   scope     = Type::Null;
-        size_t n_strings = 0;
+        Type scope = Type::Null;
 
         std::vector<Lib::MemBlock>         indexed_strings;
         Lib::Heap                          string_buffer;

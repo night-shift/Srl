@@ -6,7 +6,7 @@
 #include "Value.h"
 #include "In.h"
 #include "Resolve.h"
-#include "TpTools.hpp"
+#include "TpTools.h"
 #include "Heap.h"
 #include "Environment.h"
 
@@ -94,10 +94,10 @@ namespace Srl {
         inline const  String& name() const;
 
         template<class TParser>
-        std::vector<uint8_t> to_source(const TParser& parser = TParser());
+        std::vector<uint8_t> to_source(TParser&& parser = TParser());
 
         template<class TParser>
-        void to_source(std::ostream& stream, const TParser& parser = TParser());
+        void to_source(std::ostream& stream, TParser&& parser = TParser());
 
     private:
         inline Node(Tree* tree_, Type type_ = Type::Object, bool parsed_ = true);

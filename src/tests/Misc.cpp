@@ -92,12 +92,12 @@ bool test_string_escaping()
         tree.root().insert("str", str);
 
         print_log("\tString escaping xml...");
-        tree = Tree::From_Source<PXml>(tree.to_source<PXml>());
+        tree.load_source<PXml>(tree.to_source<PXml>());
         TEST(str == tree.root().unwrap_field<string>("str"));
         print_log("ok.\n");
 
         print_log("\tString escaping json...");
-        tree = Tree::From_Source<PJson>(tree.to_source<PJson>());
+        tree.load_source<PJson>(tree.to_source<PJson>());
 
         TEST(str == tree.root().unwrap_field<string>("str"));
         print_log("ok.\n");
@@ -138,7 +138,7 @@ bool test_document_building()
         );
 
         auto source = tree.to_source<PJson>();
-        tree = Tree::From_Source<PJson>(tree.to_source<PJson>());
+        tree.load_source<PJson>(tree.to_source<PJson>());
         auto& node = tree.root();
 
         auto& value = node.value("int");
@@ -196,7 +196,8 @@ bool test_xml_attributes()
 
         string xml = "<node attribute1 = \"   12  \" attribute2=\"value\" attribute3  =  \"  -10\"/>";
 
-        Tree tree = Tree::From_Source<PXml>((const uint8_t*)xml.c_str(), xml.size());
+        Tree tree;
+        tree.load_source<PXml>((const uint8_t*)xml.c_str(), xml.size());
 
         double attribute1 = 0;
         string attribute2 = "";
@@ -357,7 +358,8 @@ bool test_shared_references()
             Shared shared { s0, s1 };
 
             auto bytes = Srl::Store<PJson>(shared);
-            auto tree = Tree::From_Source<PJson>(bytes);
+            Tree tree;
+            tree.load_source<PJson>(bytes);
 
             res0 = tree.root().node("base0").unwrap<shared_ptr<Base>>();
             res1 = tree.root().node("base1").unwrap<shared_ptr<Base>>();

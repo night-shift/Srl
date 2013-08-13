@@ -55,8 +55,8 @@ int main(int argc, char** args)
 
     } else {
         bool success = Tests::test_parser();
-        //success &= Tests::test_malicious_input();
-        //success &= Tests::test_misc();
+        success &= Tests::test_malicious_input();
+        success &= Tests::test_misc();
 
         cout<<endl;
         if(success) {

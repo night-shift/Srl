@@ -125,8 +125,10 @@ void PSrl::write_head(Flag flag, const MemBlock& str, Out& out)
 
     flag |= FNamed;
 
+    auto nstrings = this->hashed_strings.num_entries();
+
     bool exists; size_t* index;
-    tie(exists, index) = this->hashed_strings.insert(str, this->n_strings);
+    tie(exists, index) = this->hashed_strings.insert(str, nstrings);
 
     if(exists) {
         out.write_byte(flag | FIndexed);
@@ -136,8 +138,6 @@ void PSrl::write_head(Flag flag, const MemBlock& str, Out& out)
         out.write_byte(flag);
         encode_integer(str.size, out);
         out.write(str);
-
-        this->n_strings++;
     }
 }
 /* the above in reverse */
@@ -300,4 +300,14 @@ void PSrl::pop_scope()
     this->scope = this->scope_stack.size() > 0
         ? this->scope_stack.top()
         : Type::Null;
+}
+
+void PSrl::clear()
+{
+    this->indexed_strings.clear();
+    this->string_buffer.clear();
+    this->hashed_strings.clear();
+    this->scope = Type::Null;
+
+    Aux::clear_stack(this->scope_stack);
 }

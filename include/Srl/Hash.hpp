@@ -124,7 +124,7 @@ namespace Srl { namespace Lib {
         this->destroy<V>();
         this->heap.clear();
         this->elements = 0;
-        this->table = alloc_table();
+        this->limit    = 0;
     }
 
     template<class K, class V, class H>

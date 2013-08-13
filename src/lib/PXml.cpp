@@ -114,7 +114,7 @@ string PXml::XmlTag::name_string()
         : string((const char*)this->name.ptr, this->name.size);
 }
 
-PXml::XmlTag& PXml::current_tag()
+PXml::XmlTag& PXml::scope_tag()
 {
     return *this->tags[this->tag_index];
 }
@@ -192,13 +192,13 @@ void PXml::parse_document(Lib::In& source)
         MemBlock content = this->read_content(source);
 
         if(content.size > 0) {
-            if(this->current_tag().nchild_tags > 0) {
+            if(this->scope_tag().nchild_tags > 0) {
                 /* tag has attributes and inner value */
                 this->process_tag_open(MemBlock(), content);
                 this->process_tag_close();
 
             } else {
-                this->current_tag().data = content;
+                this->scope_tag().data = content;
             }
        }
     }
@@ -244,7 +244,7 @@ void PXml::process_tag_close(const MemBlock& block)
         error();
     }
 
-    auto& closing = this->current_tag();
+    auto& closing = this->scope_tag();
     this->process_scope(closing, block);
 
     /* root tag closed -> document is parsed */
@@ -316,8 +316,8 @@ void PXml::read_attributes(MemBlock& tag, In& source, bool& out_closed)
         source.move(1, error);
         auto value = read_escape('\"', source, this->escape_buffer);
 
-        this->current_tag().data = trim_save(value, true);
-        this->process_tag_close(this->current_tag().name);
+        this->scope_tag().data = trim_save(value, true);
+        this->process_tag_close(this->scope_tag().name);
 
         source.move(1, error);
 
@@ -342,4 +342,13 @@ PXml::XmlTag& PXml::create_tag(const MemBlock& name, Type type, size_t parent_ta
     this->tags.push_back(tag);
 
     return *tag;
+}
+
+void PXml::clear()
+{
+    this->scope_depth = 0;
+    this->tag_index = 0;
+    this->document_parsed = false;
+    this->heap.clear();
+    this->tags.clear();
 }

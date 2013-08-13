@@ -2,8 +2,7 @@
 #define SRL_PMSGPACK
 
 #include "Parser.h"
-
-#include <stack>
+#include "Out.h"
 
 namespace Srl {
 
@@ -17,6 +16,7 @@ namespace Srl {
         virtual void
         write (const Value& value, const Lib::MemBlock& name, Lib::Out& out) override;
         virtual std::pair<Lib::MemBlock, Value> read (Lib::In& source) override;
+        virtual void clear() override;
 
     private:
         struct Scope {

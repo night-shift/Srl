@@ -28,7 +28,8 @@ bool malicious_input()
 
     bool success = false;
     TestStruct m;
-    auto tree = Tree::From_Type(m);
+    Tree tree;
+    tree.load_object(m);
     auto& node = tree.root();
 
     try {
@@ -135,7 +136,7 @@ bool malicious_input()
 }
 
 template<class TParser, class... Tail>
-bool malicious_input(const TParser& parser, const string& parser_name, const Tail&... tail)
+bool malicious_input(TParser&& parser, const string& parser_name, Tail&&... tail)
 {
     print_log("\nTest malicious input " + parser_name + "\n");
 
@@ -151,7 +152,7 @@ bool malicious_input(const TParser& parser, const string& parser_name, const Tai
 
     try {
         if(Verbose) cout<<"\tParsing...";
-        Tree::From_Source(data, parser);
+        Tree().load_source(data, parser);
         print_log("failed.\n");
 
     } catch(Exception& ex) {

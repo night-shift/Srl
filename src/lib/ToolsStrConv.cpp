@@ -372,8 +372,11 @@ size_t Tools::conv_charset(Encoding target_encoding, const String& str_wrap,
         }
 
         if(errno == EINVAL) {
-            /* incomplete byte-sequence encountered, not exception-worthy */
-            break;
+            iconv_close(desc);
+            if(throw_error) {
+                throw Exception("Unable to convert charset. Incomplete byte sequence.");
+            }
+            return 0;
         }
 
         if(errno == EILSEQ) {

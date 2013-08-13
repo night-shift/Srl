@@ -5,6 +5,12 @@ using namespace std;
 using namespace Srl;
 using namespace Lib;
 
+Tree::Tree(const String& name)
+{
+    this->env = unique_ptr<Environment>(new Environment(*this));
+    this->root_node = &env->create_node(Type::Object, name)->field;
+}
+
 Tree::Tree(Tree&& g)
 {
     *this = forward<Tree>(g);
@@ -26,11 +32,14 @@ void Tree::write(const Value& value, const String& field_name)
 
 void Tree::write(Type type, Parser& parser, Lib::Out& out, const function<void()>& store_switch)
 {
+    parser.clear();
+
     this->env->parser = &parser;
     this->env->out = &out;
     this->env->parsing = true;
 
-    this->write(Value(type), this->root_node->name());
+    auto& name = this->root_node->name();
+    this->write(Value(type), name);
 
     store_switch();
 
@@ -39,12 +48,15 @@ void Tree::write(Type type, Parser& parser, Lib::Out& out, const function<void()
 
 void Tree::set_output (Parser& parser, Lib::Out& out)
 {
+    parser.clear();
     this->env->parser = &parser;
     this->env->out = &out;
 }
 
 void Tree::read_source(Parser& parser, In& source)
 {
+    parser.clear();
+
     MemBlock name; Value val;
     tie(name, val) = parser.read(source);
 
@@ -60,6 +72,8 @@ void Tree::read_source(Parser& parser, In& source)
 
 void Tree::read_source(Parser& parser, In& source, const function<void()>& restore_switch)
 {
+    parser.clear();
+
     this->env->in = &source;
     this->env->parser = &parser;
     this->env->parsing = true;
@@ -132,7 +146,6 @@ Value Tree::conv_type(const Value& value)
     }
 
     return Value( { buffer.data(), data_size }, value.type());
-
 }
 
 Node& Tree::root()
@@ -140,3 +153,8 @@ Node& Tree::root()
     return *this->root_node;
 }
 
+void Tree::clear()
+{
+    this->env->clear();
+    this->root_node = &this->env->create_node(Type::Object, "")->field;
+}

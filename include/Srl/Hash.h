@@ -26,7 +26,7 @@ namespace Srl { namespace Lib {
     class HTable {
 
     public:
-        HTable(size_t buckets = 128, double load_factor_ = 1.0) 
+        HTable(size_t buckets = 64, double load_factor_ = 1.0) 
             : load_factor(fmax(load_factor_, 0.1)), cap(Aux::round_pow2(buckets)) { }
 
         ~HTable() { destroy<Val>(); }
@@ -64,7 +64,7 @@ namespace Srl { namespace Lib {
         size_t limit    = 0; 
         size_t elements = 0;
 
-        Entry** table;
+        Entry** table   = nullptr;
         HashFnc hash_fnc;
         Heap    heap;
 
