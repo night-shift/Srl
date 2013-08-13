@@ -411,8 +411,8 @@ namespace Srl { namespace Lib {
             size_t count = 0;
 
             if(node.parsed) {
-                for(auto itm : node.items<E>()) {
-                    ElemSwitch<T, E>::Insert(new_cont, itm->field, count++);
+                for(auto& itm : node.items<E>()) {
+                    ElemSwitch<T, E>::Insert(new_cont, itm.field, count++);
                 }
 
             } else {
@@ -506,8 +506,8 @@ namespace Srl { namespace Lib {
             size_t count = 0;
 
             if(node.parsed) {
-                for(auto itm : node.items<E>()) {
-                    Switch<E>::Paste(ar[count], itm->field, count);
+                for(auto& itm : node.items<E>()) {
+                    Switch<E>::Paste(ar[count], itm.field, count);
                     count++;
                 }
 

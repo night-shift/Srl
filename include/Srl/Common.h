@@ -10,5 +10,6 @@
 #include <cassert>
 #include <stack>
 #include <list>
+#include <functional>
 
 #endif

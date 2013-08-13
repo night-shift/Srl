@@ -7,8 +7,8 @@
 #include "In.h"
 #include "Resolve.h"
 #include "TpTools.hpp"
-
-#include <functional>
+#include "Heap.h"
+#include "Environment.h"
 
 namespace Srl {
 
@@ -16,17 +16,12 @@ namespace Srl {
     class String;
     struct Parser;
 
-    namespace Lib {
-        template<class T> struct Link;
-        class Storage;
-    }
-
     class Node {
 
         friend class Tree;
         template<class T, class U>
         friend struct Lib::Switch;
-        friend class Lib::Storage;
+        friend struct Lib::Environment;
 
     public :
         Node(Tree& tree_) : Node(&tree_, Type::Object) { }
@@ -73,17 +68,17 @@ namespace Srl {
         Value& value (const String& name);
         Value& value (size_t index);
 
-        std::vector<Node*>  find_nodes  (const String& name, bool recursive = false) const;
-        std::vector<Value*> find_values (const String& name, bool recursive = false) const;
+        std::list<Node*>  find_nodes  (const String& name, bool recursive = false);
+        std::list<Value*> find_values (const String& name, bool recursive = false);
 
-        std::vector<Node*>  all_nodes  (bool recursive = false) const;
-        std::vector<Value*> all_values (bool recursive = false) const;
+        std::list<Node*>  all_nodes  (bool recursive = false);
+        std::list<Value*> all_values (bool recursive = false);
 
         bool has_node  (const String& name);
         bool has_value (const String& name);
 
-        void foreach_node  (const std::function<void(Node*)>& fnc, bool recursive = false) const;
-        void foreach_value (const std::function<void(Value*)>& fnc, bool recursive = false) const;
+        void foreach_node  (const std::function<void(Node&)>& fnc, bool recursive = false);
+        void foreach_value (const std::function<void(Value&)>& fnc, bool recursive = false);
 
         void remove_node (Node* node);
         void remove_node (size_t index);
@@ -93,10 +88,10 @@ namespace Srl {
         void remove_value (size_t index);
         void remove_value (const String& name);
 
-        inline size_t num_nodes()   const;
-        inline size_t num_values()  const;
-        inline Type   type()        const;
-        inline const String& name() const;
+        inline size_t num_nodes()    const;
+        inline size_t num_values()   const;
+        inline Type   type()         const;
+        inline const  String& name() const;
 
         template<class TParser>
         std::vector<uint8_t> to_source(const TParser& parser = TParser());
@@ -105,21 +100,16 @@ namespace Srl {
         void to_source(std::ostream& stream, const TParser& parser = TParser());
 
     private:
-        template<class T>
-        using Items = std::vector<Lib::Link<T>*>;
+        inline Node(Tree* tree_, Type type_ = Type::Object, bool parsed_ = true);
 
-        Node(Tree* tree_, Type type_ = Type::Object, bool parsed_ = true)
-            : tree(tree_), scope_type(type_), parsed(parsed_) { }
+        Lib::Environment* env;
 
-        Node() : Node(nullptr) { }
-
-        Tree*         tree;
-        const String* name_ptr;
+        const String* name_ptr = nullptr;
         Type          scope_type;
         bool          parsed;
 
-        Items<Node>  nodes;
-        Items<Value> values;
+        Lib::Items<Node>  nodes;
+        Lib::Items<Value> values;
 
         template<class... Args>
         void open_scope (void (*Insert)(Node& node, const Args&... args),
@@ -152,11 +142,11 @@ namespace Srl {
         consume_item();
 
         template<class T>
-        typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), Items<Value>&>::type
+        typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), Lib::Items<Value>&>::type
         items();
 
         template<class T>
-        typename std::enable_if<TpTools::is_scope(Lib::Switch<T>::type), Items<Node>&>::type
+        typename std::enable_if<TpTools::is_scope(Lib::Switch<T>::type), Lib::Items<Node>&>::type
         items();
     };
 }

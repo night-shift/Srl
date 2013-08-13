@@ -1,10 +1,12 @@
 #ifndef SRL_TREE_H
 #define SRL_TREE_H
 
-#include "Storage.h"
+#include "Environment.h"
 #include "Node.h"
 #include "Out.h"
 #include "Util.h"
+
+#include <memory>
 
 namespace Srl {
 
@@ -17,7 +19,8 @@ namespace Srl {
         Tree(Tree&& g);
 
         Tree(const String& name = "")
-            : root_node(&storage.create_node(*this, Type::Object, name)->field) { }
+            : env(new Lib::Environment(*this)),
+              root_node(&env->create_node(Type::Object, name)->field) { }
 
         template<class T>
         static Tree From_Type(const T& type, const std::string name = "");
@@ -43,13 +46,9 @@ namespace Srl {
         Node& root();
 
     private:
-        Lib::Storage storage;
-        Node*        root_node;
+        std::unique_ptr<Lib::Environment> env;
 
-        Parser*   temp_parser = nullptr;
-        Lib::Out* temp_stream = nullptr;
-        Lib::In*  temp_in     = nullptr;
-        bool      just_parse  = false;
+        Node*     root_node;
 
         void write (const Value& value, const String& name);
         void write (Type type, Parser& parser, Lib::Out& out, const std::function<void()>& store_switch);

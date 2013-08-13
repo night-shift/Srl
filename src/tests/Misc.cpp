@@ -43,11 +43,11 @@ bool test_node_api()
         TEST(values_w_name.size() == 1)
 
         size_t counted_nodes = 0;
-        root.foreach_node([&counted_nodes](...) { counted_nodes++; }, recursive);
+        root.foreach_node([&counted_nodes](Node&) { counted_nodes++; }, recursive);
         TEST(counted_nodes == n_nodes)
 
         size_t counted_values = 0;
-        root.foreach_value([&counted_values](...) { counted_values++; }, recursive);
+        root.foreach_value([&counted_values](Value&) { counted_values++; }, recursive);
         TEST(counted_values == n_values)
 
         auto before = root.num_nodes();
@@ -58,10 +58,10 @@ bool test_node_api()
         root.remove_value("field0");
         TEST(root.num_values() == (before - 1))
 
-        root.foreach_node([](Node* node) {
-            auto values = node->all_values();
-            for(auto v : values) {
-                node->remove_value(v->name());
+        root.foreach_node([](Node& node) {
+            auto values = node.all_values();
+            for(auto* v : values) {
+                node.remove_value(v->name());
             }
         }, recursive);
 
@@ -155,12 +155,9 @@ bool test_document_building()
         auto nodes = node.find_nodes("nested_node", true);
         TEST(nodes.size() == 2)
 
-        auto vec = nodes[0]->unwrap_field<vector<int>>("vector");
+        auto vec = nodes.front()->unwrap_field<vector<int>>("vector");
         vector<int> vec_n { 5, 7, 8 };
         TEST(vec == vec_n)
-
-        some_int = nodes[1]->unwrap_field<int>("int");
-        TEST(some_int == 10)
 
         auto lst = node.node("nested_node").unwrap_field<list<list<string>>>("list");
         list<list<string>> lst_n { list<string> { "a", "b", "c" }, list<string> { "d", "e", "f" } };

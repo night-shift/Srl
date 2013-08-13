@@ -21,7 +21,7 @@ namespace Srl { namespace Lib {
     {
         if(this->limit == 0) {
             /* initial allocation */
-            this->table.resize(cap);
+            this->table = this->alloc_table();
             this->limit = cap * load_factor;
 
             return;
@@ -31,7 +31,7 @@ namespace Srl { namespace Lib {
         this->cap *= 2;
         this->limit = cap * load_factor;
 
-        std::vector<Entry*> ntable { this->cap };
+        Entry** ntable = this->alloc_table();
 
         for(auto i = 0U; i < old_dim; i++) {
             auto* entry = table[i];
@@ -56,7 +56,8 @@ namespace Srl { namespace Lib {
             }
         }
 
-        this->table = std::move(ntable);
+        this->heap.put_mem((uint8_t*)this->table, old_dim * sizeof(Entry*));
+        this->table = ntable;
     }
 
     template<class K, class V, class H>
@@ -112,15 +113,36 @@ namespace Srl { namespace Lib {
         this->elements++;
 
         auto& slot = node ? node->next : table[bucket];
-        slot = this->heap.create(hash, val);
+        slot = this->heap.template create<Entry>(hash, val);
 
         return { false, &slot->val };
     }
 
     template<class K, class V, class H>
+    void HTable<K, V, H>::clear()
+    {
+        this->destroy<V>();
+        this->heap.clear();
+        this->elements = 0;
+        this->table = alloc_table();
+    }
+
+    template<class K, class V, class H>
+    typename HTable<K, V, H>::Entry**  HTable<K, V, H>::alloc_table()
+    {
+        Entry** tbl = this->heap.template get_mem<Entry*>(this->cap);
+        memset(tbl, 0, this->cap * sizeof(Entry*));
+        return tbl;
+    }
+
+    template<class K, class V, class H>
     void HTable<K, V, H>::foreach_entry(const std::function<void(size_t, V&)>& fnc)
     {
-        for(auto i = 0U; i < this->table.size(); i++) {
+        if(this->elements < 1) {
+            return;
+        }
+
+        for(auto i = 0U; i < this->cap; i++) {
             auto* entry = table[i];
             while(entry) {
                 fnc(entry->hash, entry->val);
@@ -131,7 +153,7 @@ namespace Srl { namespace Lib {
 
     template<class K, class V, class H> template<class T>
     typename std::enable_if<!std::is_trivially_destructible<T>::value, void>::type
-    HTable<K, V, H>::clear()
+    HTable<K, V, H>::destroy()
     {
         foreach_entry([](size_t, V& val) { val.~V(); });
     }

@@ -6,6 +6,10 @@
 
 namespace Srl {
 
+    inline Node::Node(Tree* tree, Type type_, bool parsed_)
+        : env(tree->env.get()), scope_type(type_), parsed(parsed_),
+          nodes(env->heap), values(env->heap) { }
+
     template<class T>
     Node& Node::insert(const String& field_name, const T& val)
     {
@@ -146,12 +150,12 @@ namespace Srl {
     void Node::open_scope(void (*Insert)(Node& node, const Args&... args),
                           Type node_type, const String& scope_name, const Args&... args)
     {
-        if(this->tree->just_parse) {
-            this->tree->write(Value(node_type), scope_name);
+        if(this->env->parsing) {
+            this->env->tree->write(Value(node_type), scope_name);
 
             Insert(*this, args...);
 
-            this->tree->write(Value(Type::Scope_End), scope_name);
+            this->env->tree->write(Value(Type::Scope_End), scope_name);
 
         } else {
            auto& new_node = this->insert_node(node_type, scope_name);
@@ -174,14 +178,14 @@ namespace Srl {
     }
 
     template<class T>
-    typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), Node::Items<Value>&>::type
+    typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), Lib::Items<Value>&>::type
     Node::items()
     {
         return this->values;
     }
 
     template<class T>
-    typename std::enable_if<TpTools::is_scope(Lib::Switch<T>::type), Node::Items<Node>&>::type
+    typename std::enable_if<TpTools::is_scope(Lib::Switch<T>::type), Lib::Items<Node>&>::type
     Node::items()
     {
         return this->nodes;
@@ -192,7 +196,7 @@ namespace Srl {
     {
         TParser copy = parser;
         Lib::Out out;
-        this->tree->set_output(copy, out);
+        this->env->tree->set_output(copy, out);
         this->to_source();
 
         return out.extract();
@@ -203,7 +207,7 @@ namespace Srl {
     {
         TParser copy = parser;
         Lib::Out out(out_stream);
-        this->tree->set_output(copy, out);
+        this->env->tree->set_output(copy, out);
         this->to_source();
 
         out.flush();

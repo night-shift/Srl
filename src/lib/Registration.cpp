@@ -5,11 +5,13 @@ using namespace std;
 using namespace Srl;
 using namespace Lib;
 
+
 Registrations* Lib::registrations()
 {
-    static Registrations rslt;
-    return &rslt;
+    static Registrations regs;
+    return &regs;
 }
+
 bool Registrations::insert(const String& id, Registrations::Make&& make)
 {
     bool exists; void* v;

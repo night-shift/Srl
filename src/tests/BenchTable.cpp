@@ -123,7 +123,6 @@ void run_bench(Tree& tree, const T& parser, const string& name, const Tail&... t
 void Tests::run_benches()
 {
     Verbose = true;
-
     print_log("\nGenerating data with " + to_string(Benchmark_Objects) + " objects...");
 
     map<string, BStruct> data;

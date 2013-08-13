@@ -5,13 +5,17 @@
 #include "Heap.h"
 
 #include <math.h>
-#include <functional>
 
 namespace Srl { namespace Lib {
 
     namespace Aux {
 
         inline size_t hash_fnc(const uint8_t* bytes, size_t nbytes);
+
+        inline size_t round_pow2(size_t sz)
+        {
+            return pow(2, ceil(log2(sz)));
+        }
     }
 
     template<class T> struct HashSrl {
@@ -22,12 +26,10 @@ namespace Srl { namespace Lib {
     class HTable {
 
     public:
-        HTable(size_t buckets = 128, double load_factor_ = 1.0)
-            : load_factor(load_factor_ < 0.1 ? 0.1 : load_factor_),
-              /* ensure n buckets is power of 2 */
-              cap(pow(2, ceil(log2(buckets)))) { }
+        HTable(size_t buckets = 128, double load_factor_ = 1.0) 
+            : load_factor(fmax(load_factor_, 0.1)), cap(Aux::round_pow2(buckets)) { }
 
-        ~HTable() { clear<Val>(); }
+        ~HTable() { destroy<Val>(); }
 
         HTable(const HTable& m) = default;
 
@@ -43,6 +45,8 @@ namespace Srl { namespace Lib {
         void foreach_entry(const std::function<void(size_t, Val&)>& fnc);
 
         size_t num_entries() const { return this->elements; }
+
+        void clear();
 
     private: 
         struct Entry {
@@ -60,26 +64,28 @@ namespace Srl { namespace Lib {
         size_t limit    = 0; 
         size_t elements = 0;
 
-        std::vector<Entry*> table;
+        Entry** table;
         HashFnc hash_fnc;
-        Heap<Entry> heap;
+        Heap    heap;
 
         void   redistribute();
         size_t get_bucket(size_t hash);
 
+        Entry** alloc_table();
+
         template<class T>
         typename std::enable_if<std::is_trivially_destructible<T>::value, void>::type
-        clear() { }
+        destroy() { }
 
         template<class T>
         typename std::enable_if<!std::is_trivially_destructible<T>::value, void>::type
-        clear();
+        destroy();
     };
 
     template<class K, class V, class H>
     HTable<K, V, H>& HTable<K, V, H>::operator= (HTable<K, V, H>&& m)
     {
-        this->clear<V>();
+        this->destroy<V>();
 
         this->limit    = m.limit;
         this->elements = m.elements;
@@ -91,7 +97,7 @@ namespace Srl { namespace Lib {
         this->load_factor = m.load_factor;
 
         this->heap  = std::move(m.heap);
-        this->table = std::move(m.table);
+        this->table = m.table;
 
         return *this;
     }

@@ -43,15 +43,18 @@ namespace Srl { namespace Lib {
                 return this->stored_local ? this->local_data : extern_data;
             }
 
-            void move_to_local()
+            bool try_store_local()
             {
-                assert(this->can_store_local() && !this->stored_local);
+                if(!can_store_local()) {
+                    return false;
+                }
 
                 auto* tmp = this->extern_data;
                 for(auto i = 0U; i < this->size; i++) {
                     this->local_data[i] = tmp[i];
                 }
-                this->stored_local = true;
+
+                return this->stored_local = true;
             }
 
             bool can_store_local() { return this->size <= 8; }

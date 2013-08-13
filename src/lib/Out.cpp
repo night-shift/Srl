@@ -39,10 +39,13 @@ vector<uint8_t> Out::extract()
     vector<uint8_t> vec(this->sz_total);
 
     auto pos = 0U;
-    for(auto& s : this->buffer.segments) {
-        auto fill = s.size - s.left;
-        memcpy(&vec[pos], s.data, fill);
+    auto* seg = this->buffer.chain.used_segs.front;
+
+    while(seg) {
+        auto fill = seg->val.size - seg->val.left;
+        memcpy(&vec[pos], seg->val.data, fill);
         pos += fill;
+        seg = seg->next;
     }
 
     this->buffer.clear();

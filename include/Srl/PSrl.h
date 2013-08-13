@@ -33,7 +33,7 @@ namespace Srl {
         size_t n_strings = 0;
 
         std::vector<Lib::MemBlock>         indexed_strings;
-        Lib::Heap<uint8_t>                 string_buffer;
+        Lib::Heap                          string_buffer;
         std::stack<Type>                   scope_stack;
         Lib::HTable<Lib::MemBlock, size_t> hashed_strings;
 

@@ -14,7 +14,7 @@ namespace Srl {
             static const Type type = Type::Object;
 
             static std::function<void()> Insert(const T& o, Tree& tree) {
-                return [&o, &tree] { tree.root().insert(o); };
+                return [&o, &tree] { tree.root().insert("value", o); };
             }
             static std::function<void()> Paste(Tree& tree, T& o) {
                 return [&o, &tree] { tree.root().paste_field(0, o); };

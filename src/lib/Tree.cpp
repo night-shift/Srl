@@ -12,30 +12,23 @@ Tree::Tree(Tree&& g)
 
 Tree& Tree::operator= (Tree&& g)
 {
-    this->storage = move(g.storage);
+    this->env       = move(g.env);
     this->root_node = g.root_node;
-
-    auto& nodes = this->storage.nodes();
-
-    for(auto& n : nodes) {
-        n->tree = this;
-    }
+    this->env->tree = this;
 
     return *this;
 }
 
 void Tree::write(const Value& value, const String& field_name)
 {
-    assert(this->temp_parser != nullptr && "Parser not set.");
-
-    this->write_conv(value, field_name, *this->temp_parser);
+    this->write_conv(value, field_name, *this->env->parser);
 }
 
 void Tree::write(Type type, Parser& parser, Lib::Out& out, const function<void()>& store_switch)
 {
-    this->temp_parser = &parser;
-    this->temp_stream = &out;
-    this->just_parse = true;
+    this->env->parser = &parser;
+    this->env->out = &out;
+    this->env->parsing = true;
 
     this->write(Value(type), this->root_node->name());
 
@@ -46,8 +39,8 @@ void Tree::write(Type type, Parser& parser, Lib::Out& out, const function<void()
 
 void Tree::set_output (Parser& parser, Lib::Out& out)
 {
-    this->temp_parser = &parser;
-    this->temp_stream = &out;
+    this->env->parser = &parser;
+    this->env->out = &out;
 }
 
 void Tree::read_source(Parser& parser, In& source)
@@ -59,7 +52,7 @@ void Tree::read_source(Parser& parser, In& source)
         throw Exception("Unable to parse source. Data malformed.");
     }
 
-    auto* link = this->storage.create_node(*this, val.type(), String(name, Encoding::UTF8));
+    auto* link = this->env->create_node(val.type(), name);
     this->root_node = &link->field;
 
     this->root_node->read_source(source, parser);
@@ -67,9 +60,9 @@ void Tree::read_source(Parser& parser, In& source)
 
 void Tree::read_source(Parser& parser, In& source, const function<void()>& restore_switch)
 {
-    this->temp_in = &source;
-    this->temp_parser = &parser;
-    this->just_parse = true;
+    this->env->in = &source;
+    this->env->parser = &parser;
+    this->env->parsing = true;
 
     MemBlock name; Value val;
     tie(name, val) = parser.read(source);
@@ -78,7 +71,8 @@ void Tree::read_source(Parser& parser, In& source, const function<void()>& resto
         throw Exception("Unable to parse source. Data malformed.");
     }
 
-    auto* link = this->storage.store_node(Node(this, val.type(), false), *this, String(name));
+    auto* link = this->env->create_node(val.type(), name);
+    link->field.parsed = false;
     this->root_node = &link->field;
 
     restore_switch();
@@ -92,7 +86,7 @@ void Tree::write_conv(const Value& value, const String& val_name, Parser& parser
         name_conv = MemBlock(val_name.data(), val_name.size());
 
     } else {
-        auto& buffer = this->storage.str_conv_buffer();
+        auto& buffer = this->env->str_buffer;
         auto size = Tools::conv_charset(Encoding::UTF8, val_name, buffer, true);
         name_conv = MemBlock(buffer.data(), size);
     }
@@ -109,17 +103,17 @@ void Tree::write_conv(const Value& value, const String& val_name, Parser& parser
         (type != Type::String && parser.get_format() == Format::Binary);
 
     if(no_conversion_needed) {
-        parser.write(value, name_conv, *this->temp_stream);
+        parser.write(value, name_conv, *this->env->out);
 
     } else {
-        parser.write(this->conv_type(value), name_conv, *this->temp_stream);
+        parser.write(this->conv_type(value), name_conv, *this->env->out);
     }
 }
 
 Value Tree::conv_type(const Value& value)
 {
     size_t data_size = 0;
-    auto& buffer = this->storage.type_conv_buffer();
+    auto& buffer = this->env->type_buffer;
 
     if(value.type() == Type::String) {
 

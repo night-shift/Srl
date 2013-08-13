@@ -32,7 +32,11 @@ namespace Srl { namespace Lib {
     {
         auto* mem = this->alloc(nbytes);
 
-        memcpy(mem, bytes, nbytes);
+        if(nbytes == 1) {
+            *mem = *bytes;
+        } else {
+            memcpy(mem, bytes, nbytes);
+        }
     }
 
     inline void Out::write(Out::Ticket& ticket, const uint8_t* bytes, size_t offset, size_t nbytes)

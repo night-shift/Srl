@@ -156,7 +156,7 @@ void PXml::parse_document(Lib::In& source)
         }
 
         auto tag = source.read_block_until(error, '=', '>');
-        tag = source.is_streaming() ? Aux::copy(this->data_buffer, tag) : tag;
+        tag = source.is_streaming() ? Aux::copy(this->heap, tag) : tag;
 
         if(tag.size < 1) {
             error();
@@ -215,13 +215,13 @@ Lib::MemBlock PXml::read_content(Lib::In& source)
         source.move(9, error);
         auto block = source.read_block_until(error, ar(']', ']', '>'));
 
-        return source.is_streaming() ? Aux::copy(this->data_buffer, block) : block;
+        return source.is_streaming() ? Aux::copy(this->heap, block) : block;
 
     } else {
         auto content = read_escape('<', source, this->escape_buffer);
         Tools::trim_space(content);
 
-        return Aux::copy(this->data_buffer, content);
+        return Aux::copy(this->heap, content);
     }
 }
 
@@ -308,7 +308,7 @@ void PXml::read_attributes(MemBlock& tag, In& source, bool& out_closed)
 
     const auto trim_save = [this, &source](MemBlock& block, bool save) {
         Tools::trim_space(block);
-        return save ? Aux::copy(this->data_buffer, block) : block;
+        return save ? Aux::copy(this->heap, block) : block;
     };
 
     while(true) {
@@ -338,7 +338,7 @@ void PXml::read_attributes(MemBlock& tag, In& source, bool& out_closed)
 
 PXml::XmlTag& PXml::create_tag(const MemBlock& name, Type type, size_t parent_tag, const MemBlock& data)
 {
-    auto* tag = this->tag_buffer.create(name, type, parent_tag, data);
+    auto* tag = this->heap.create<XmlTag>(name, type, parent_tag, data);
     this->tags.push_back(tag);
 
     return *tag;

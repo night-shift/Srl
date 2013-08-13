@@ -6,8 +6,6 @@
 #include "Exception.h"
 #include "Resolve.h"
 
-#include <functional>
-
 namespace Srl {
 
     struct TypeID { virtual const char* name() const = 0; };

@@ -27,25 +27,26 @@ namespace {
     }
 
     template<class T>
-    using Cont = vector<Link<T>*>;
+    using Cont = Lib::Items<T>;
 
     template<class T>
     using Itr = typename Cont<T>::iterator;
 
     template<Option Opt, class T> typename enable_if<enabled(Opt, Hash), bool>::type
-    compare(Itr<T>& itr, size_t hash) { return (*itr)->hash == hash; }
+    compare(Itr<T>& itr, size_t hash) { return itr->hash == hash; }
 
     template<Option Opt, class T> typename enable_if<enabled(Opt, Address), bool>::type
-    compare(Itr<T>& itr, T* pointer) { return &(*itr)->field == pointer; }
+    compare(Itr<T>& itr, T* pointer) { return &itr->field == pointer; }
 
     template<Option Opt, class TKey, class T>
     typename enable_if<enabled(Opt, Index), Link<T>*>::type
     find_link(TKey index, Cont<T>& links)
     {
         if(index < links.size()) {
-            auto* rslt = links[index];
+            auto itr = links.begin();
+            advance(itr, index);
+            auto* rslt = &*itr;
             if(enabled(Opt, Remove)) {
-                auto itr  = links.begin() + index;
                 links.erase(itr);
             }
             return rslt;
@@ -63,7 +64,7 @@ namespace {
     typename enable_if<!enabled(Opt, Index), Link<T>*>::type
     find_link(TKey key, Cont<T>& links, const String& name = String())
     {
-        Itr<T> end  = links.end();
+        Itr<T> end    = links.end();
         Link<T>* rslt = nullptr;
 
         for(auto itr = links.begin(); itr != end; itr++) {
@@ -74,7 +75,7 @@ namespace {
                     throw Exception(msg);
                 }
 
-                rslt = *itr;
+                rslt = &*itr;
 
                 if(enabled(Opt, Remove)) {
                     links.erase(itr);
@@ -95,18 +96,18 @@ namespace {
         return rslt;
     }
 
-    size_t hash_string(const String& str, Storage& storage)
+    size_t hash_string(const String& str, Environment& env)
     {
-        return str.encoding() == Storage::Name_Encoding 
+        return str.encoding() == Environment::Str_Encoding 
             ? Aux::hash_fnc(str.data(), str.size())
-            : storage.hash_string(str);
+            : env.hash_string(str);
     }
 
     template<class T>
-    T* find_link_remove(const String& name, Cont<T>& links, Storage& storage)
+    T* find_link_remove(const String& name, Cont<T>& links, Environment& env)
     {
         auto* link = links.size() > 0 
-            ? find_link<Hash | Remove>(hash_string(name, storage), links)
+            ? find_link<Hash | Remove>(hash_string(name, env), links)
             : nullptr;
 
         return link ? &link->field : nullptr;
@@ -120,31 +121,27 @@ namespace {
 
 void Node::insert_value(const Value& new_value, const String& name_)
 {
-    if(this->tree->just_parse) {
-        this->tree->write(new_value, name_);
+    if(this->env->parsing) {
+        this->env->tree->write(new_value, name_);
 
     } else {
-        auto* link = this->tree->storage.store_value(new_value, name_);
-        this->values.push_back(link);
+        this->env->store_value(*this, new_value, name_);
     }
 }
 
 Node& Node::insert_node(const Node& new_node, const String& name_)
 {
-    auto* link = this->tree->storage.store_node(new_node, *this->tree, name_);
-    this->nodes.push_back(link);
-
-    return link->field;
+    return this->env->store_node(*this, new_node, name_)->field;
 }
 
 Node& Node::insert_node(Type node_type, const String& name_)
 {
-    return this->insert_node(Node(this->tree, node_type), name_);
+    return this->insert_node(Node(this->env->tree, node_type), name_);
 }
 
 Value& Node::value(const String& name_)
 {
-    auto hash = hash_string(name_, this->tree->storage);
+    auto hash  = hash_string(name_, *this->env);
     auto* link = find_link<Throw | Hash>(hash, this->values, name_);
 
     return link->field;
@@ -163,7 +160,7 @@ Node& Node::node(size_t index)
 
 Node& Node::node(const String& name_)
 {
-    auto hash = hash_string(name_, this->tree->storage);
+    auto hash = hash_string(name_, *this->env);
     return find_link<Throw | Hash>(hash, this->nodes, name_)->field;
 }
 
@@ -183,13 +180,11 @@ void Node::read_source(In& source, Parser& parser)
 
         if(!TpTools::is_scope(val.type())) {
             /* new value */
-            auto* link = this->tree->storage.store_value(val, field_name);
-            this->values.push_back(link);
+            this->env->store_value(*this, val, field_name);
 
         } else {
             /* new node */
-            auto* link = this->tree->storage.create_node(*this->tree, val.type(), field_name);
-            this->nodes.push_back(link);
+            auto* link = this->env->store_node(*this, Node(this->env->tree, val.type()), field_name);
 
             link->field.read_source(source, parser);
         }
@@ -198,18 +193,18 @@ void Node::read_source(In& source, Parser& parser)
 
 Node Node::consume_node(const String& id)
 {
-    auto* stored = find_link_remove(id, this->nodes, this->tree->storage);
+    auto* stored = find_link_remove(id, this->nodes, *this->env);
 
     if(stored) {
         return *stored;
     }
 
-    auto id_conv = this->tree->storage.conv_string(id);
+    auto id_conv = this->env->conv_string(id);
 
     while(!this->parsed) {
 
         MemBlock seg_name; Value val;
-        tie(seg_name, val) = this->tree->temp_parser->read(*this->tree->temp_in);
+        tie(seg_name, val) = this->env->parser->read(*this->env->in);
 
         auto tp = val.type();
 
@@ -220,17 +215,14 @@ Node Node::consume_node(const String& id)
 
         if(TpTools::is_scope(tp)) {
             if(compare(id_conv, seg_name)) {
-                return Node(this->tree, tp, false);
+                return Node(this->env->tree, tp, false);
             }
 
-            auto* link = this->tree->storage.create_node(*this->tree, tp, seg_name);
-            this->nodes.push_back(link);
-
-            link->field.read_source(*this->tree->temp_in, *this->tree->temp_parser);
+            auto* link = this->env->store_node(*this, Node(this->env->tree, tp), seg_name);
+            link->field.read_source(*this->env->in, *this->env->parser);
 
         } else {
-            auto* link = this->tree->storage.store_value(val, seg_name);
-            this->values.push_back(link);
+            this->env->store_value(*this, val, seg_name);
         }
     }
 
@@ -239,18 +231,18 @@ Node Node::consume_node(const String& id)
 
 Value Node::consume_value(const String& id)
 {
-    auto* stored = find_link_remove(id, this->values, this->tree->storage);
+    auto* stored = find_link_remove(id, this->values, *this->env);
 
     if(stored) {
         return *stored;
     }
 
-    auto name_conv = this->tree->storage.conv_string(id);
+    auto name_conv = this->env->conv_string(id);
 
     while(!this->parsed) {
 
         MemBlock seg_name; Value val;
-        tie(seg_name, val) = this->tree->temp_parser->read(*this->tree->temp_in);
+        tie(seg_name, val) = this->env->parser->read(*this->env->in);
 
         auto tp = val.type();
 
@@ -264,13 +256,11 @@ Value Node::consume_value(const String& id)
                 return val;
             }
 
-            auto* link = this->tree->storage.store_value(val, seg_name);
-            this->values.push_back(link);
+            this->env->store_value(*this, val, seg_name);
 
         } else {
-            auto* link = this->tree->storage.create_node(*this->tree, tp, seg_name);
-            this->nodes.push_back(link);
-            link->field.read_source(*this->tree->temp_in, *this->tree->temp_parser);
+            auto* link = this->env->store_node(*this, Node(this->env->tree, tp), seg_name);
+            link->field.read_source(*this->env->in, *this->env->parser);
         }
     }
 
@@ -281,15 +271,16 @@ Value Node::consume_value(const String& id)
 Node Node::consume_node(bool throw_exception)
 {
     if(this->nodes.size() > 0) {
-        auto& field = this->nodes[0]->field;
-        this->nodes.erase(this->nodes.begin());
+        auto itr = this->nodes.begin();
+        auto& field = itr->field;
+        this->nodes.erase(itr);
 
         return move(field);
     }
 
     while(!this->parsed) {
         MemBlock seg_name; Value val;
-        tie(seg_name, val) = this->tree->temp_parser->read(*this->tree->temp_in);
+        tie(seg_name, val) = this->env->parser->read(*this->env->in);
 
         auto tp = val.type();
 
@@ -299,11 +290,10 @@ Node Node::consume_node(bool throw_exception)
         }
 
         if(TpTools::is_scope(tp)) {
-            return Node(this->tree, tp, false);
+            return Node(this->env->tree, tp, false);
 
         } else {
-            auto* link = this->tree->storage.store_value(val, seg_name);
-            this->values.push_back(link);
+            this->env->store_value(*this, val, seg_name);
         }
     }
 
@@ -311,22 +301,22 @@ Node Node::consume_node(bool throw_exception)
         throw Exception("Cannot access Node. Index out of bounds");
     }
 
-    return Node(*this->tree);
+    return Node(*this->env->tree);
 }
 
 Value Node::consume_value(bool throw_exception)
 {
     if(this->values.size() > 0) {
-
-        auto& field = this->values[0]->field;
-        this->values.erase(this->values.begin());
+        auto itr = this->values.begin();
+        auto& field = itr->field;
+        this->values.erase(itr);
 
         return field;
     }
 
     while(!this->parsed) {
         MemBlock seg_name; Value val;
-        tie(seg_name, val) = this->tree->temp_parser->read(*this->tree->temp_in);
+        tie(seg_name, val) = this->env->parser->read(*this->env->in);
 
         auto tp = val.type();
 
@@ -339,9 +329,8 @@ Value Node::consume_value(bool throw_exception)
             return val;
 
         } else {
-            auto* link = this->tree->storage.create_node(*this->tree, tp, seg_name);
-            this->nodes.push_back(link);
-            link->field.read_source(*this->tree->temp_in, *this->tree->temp_parser);
+            auto* link = this->env->store_node(*this, Node(this->env->tree, tp), seg_name);
+            link->field.read_source(*this->env->in, *this->env->parser);
         }
     }
 
@@ -355,26 +344,26 @@ Value Node::consume_value(bool throw_exception)
 void Node::to_source()
 {
     Value scope_start = Value(this->scope_type);
-    this->tree->write(scope_start, *this->name_ptr);
+    this->env->tree->write(scope_start, *this->name_ptr);
 
-    for(auto v : this->values) {
-        this->tree->write(v->field, v->field.name());
+    for(auto& v : this->values) {
+        this->env->tree->write(v.field, v.field.name());
     }
 
-    for(auto n : this->nodes) {
-        n->field.to_source();
+    for(auto& n : this->nodes) {
+        n.field.to_source();
     }
 
     Value scope_end = Value(Type::Scope_End);
-    this->tree->write(scope_end, *this->name_ptr);
+    this->env->tree->write(scope_end, *this->name_ptr);
 }
 
 void Node::consume_scope()
 {
     int depth = 0;
 
-    auto& parser = *this->tree->temp_parser;
-    auto& source = *this->tree->temp_in;
+    auto& parser = *this->env->parser;
+    auto& source = *this->env->in;
 
     while(!this->parsed) {
         auto tp = parser.read(source).second.type();
@@ -395,7 +384,7 @@ void Node::consume_scope()
 pair<bool, size_t> Node::insert_shared (const void* obj)
 {
     bool exists; size_t* key;
-    auto& table = this->tree->storage.shared_table_store;
+    auto& table = this->env->shared_table_store;
 
     tie(exists, key) = table.insert(obj, table.num_entries());
 
@@ -404,7 +393,7 @@ pair<bool, size_t> Node::insert_shared (const void* obj)
 
 pair<bool, shared_ptr<void>*> Node::find_shared (size_t key, const function<shared_ptr<void>(void)>& create)
 {
-    auto& table = this->tree->storage.shared_table_restore;
+    auto& table = this->env->shared_table_restore;
     auto* sptr = table.get(key);
     bool inserted_new = false;
 
@@ -416,77 +405,76 @@ pair<bool, shared_ptr<void>*> Node::find_shared (size_t key, const function<shar
     return { inserted_new, sptr };
 }
 
-void Node::foreach_node(const function<void(Node*)>& fnc, bool recursive) const
+void Node::foreach_node(const function<void(Node&)>& fnc, bool recursive)
 {
-    auto cpy = this->nodes;
-    for(auto link : this->nodes) {
+    for(auto& link : this->nodes) {
 
-        fnc(&link->field);
+        fnc(link.field);
 
         if(recursive) {
-            link->field.foreach_node(fnc, recursive);
+            link.field.foreach_node(fnc, recursive);
         }
     }
 }
 
-void Node::foreach_value(const function<void(Value*)>& fnc, bool recursive) const
+void Node::foreach_value(const function<void(Value&)>& fnc, bool recursive)
 {
-    for(auto link : this->values) {
-        fnc(&link->field);
+    for(auto& link : this->values) {
+        fnc(link.field);
     }
 
     if(recursive) {
-        this->foreach_node([&fnc](Node* node) {
-            node->foreach_value(fnc);
+        this->foreach_node([&fnc](Node& node) {
+            node.foreach_value(fnc);
         }, true);
     }
 }
 
-vector<Node*> Node::find_nodes(const String& name_, bool recursive) const
+list<Node*> Node::find_nodes(const String& name_, bool recursive)
 {
-    vector<Node*> rslt;
-    auto hash = hash_string(name_, this->tree->storage);
+    list<Node*> rslt;
+    auto hash = hash_string(name_, *this->env);
 
-    this->foreach_node([&rslt, this, hash] (Node* node) {
-        if(hash_string(*node->name_ptr, this->tree->storage) == hash) {
-            rslt.push_back(node);
+    this->foreach_node([&rslt, this, hash] (Node& node) {
+        if(hash_string(*node.name_ptr, *this->env) == hash) {
+            rslt.push_back(&node);
         }
     }, recursive);
 
     return move(rslt);
 }
 
-vector<Value*> Node::find_values(const String& name_, bool recursive) const
+list<Value*> Node::find_values(const String& name_, bool recursive)
 {
-    vector<Value*> rslt;
-    auto hash = hash_string(name_, this->tree->storage);
+    list<Value*> rslt;
+    auto hash = hash_string(name_, *this->env);
 
-    this->foreach_value([&rslt, this, hash] (Value* value) {
-        if(hash_string(value->name(), this->tree->storage) == hash) {
-            rslt.push_back(value);
+    this->foreach_value([&rslt, this, hash] (Value& value) {
+        if(hash_string(value.name(), *this->env) == hash) {
+            rslt.push_back(&value);
         }
     }, recursive);
 
     return move(rslt);
 }
 
-vector<Node*> Node::all_nodes(bool recursive) const
+list<Node*> Node::all_nodes(bool recursive)
 {
-    vector<Node*> rslt;
+    list<Node*> rslt;
 
-    this->foreach_node([&rslt] (Node* node) {
-        rslt.push_back(node);
+    this->foreach_node([&rslt] (Node& node) {
+        rslt.push_back(&node);
     }, recursive);
 
     return move(rslt);
 }
 
-vector<Value*> Node::all_values(bool recursive) const
+list<Value*> Node::all_values(bool recursive)
 {
-    vector<Value*> rslt;
+    list<Value*> rslt;
 
-    this->foreach_value([&rslt] (Value* value) {
-        rslt.push_back(value);
+    this->foreach_value([&rslt] (Value& value) {
+        rslt.push_back(&value);
     }, recursive);
 
     return move(rslt);
@@ -494,7 +482,7 @@ vector<Value*> Node::all_values(bool recursive) const
 
 void Node::remove_node(const String& name_)
 {
-    auto hash = hash_string(name_, this->tree->storage);
+    auto hash = hash_string(name_, *this->env);
     find_link<Remove | Hash>(hash, this->nodes, name_);
 }
 
@@ -510,7 +498,7 @@ void Node::remove_node(Node* to_remove)
 
 void Node::remove_value(const String& name_)
 {
-    auto hash = hash_string(name_, this->tree->storage);
+    auto hash = hash_string(name_, *this->env);
     find_link<Remove | Hash>(hash, this->values, name_);
 }
 
@@ -526,12 +514,12 @@ void Node::remove_value(Value* to_remove)
 
 bool Node::has_node(const String& field_name)
 {
-    auto hash = hash_string(field_name, this->tree->storage);
+    auto hash = hash_string(field_name, *this->env);
     return find_link<Hash>(hash, this->nodes, field_name) != nullptr;
 }
 
 bool Node::has_value(const String& field_name)
 {
-    auto hash = hash_string(field_name, this->tree->storage);
+    auto hash = hash_string(field_name, *this->env);
     return find_link<Hash>(hash, this->values, field_name) != nullptr;
 }

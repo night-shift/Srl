@@ -70,7 +70,7 @@ namespace Srl { namespace Lib { namespace Aux {
         return { vec.data(), block.size };
     }
 
-    inline MemBlock copy (Heap<uint8_t>& heap, const MemBlock& block)
+    inline MemBlock copy (Heap& heap, const MemBlock& block)
     {
         if(block.size < 1) return block;
 

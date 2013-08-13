@@ -8,11 +8,11 @@
 namespace Srl {
 
     class String;
-    namespace Lib { class Storage; }
+    namespace Lib { class Environment; }
 
     class Value {
 
-        friend class Lib::Storage;
+        friend class Lib::Environment;
 
     public:
         template<class T> Value (const T& val);

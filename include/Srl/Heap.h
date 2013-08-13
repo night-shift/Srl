@@ -5,112 +5,138 @@
 
 namespace Srl { namespace Lib {
 
-    template<class T>
     class Heap {
 
-    struct Segment;
     friend class Out;
 
     public:
-        
-        Heap() = default;
+        Heap() { }
         Heap(const Heap&) = default;
 
         Heap(Heap&& m) { *this = std::forward<Heap>(m); };
         Heap& operator= (Heap&& m);
 
+        ~Heap();
+
+        template<class T = uint8_t>
         T* get_mem (size_t n_elems);
-        template<class... Args>
+
+        template<class T, class... Args>
         T* create (const Args&... args);
-        void clear ();
 
-    private:
-        static const size_t Max_Cap_Size  = 262144 / sizeof(T);
+        void put_mem(uint8_t* mem, size_t sz);
 
-        size_t   cap     = 0;
-        Segment* crr_seg = nullptr;
-
-        std::list<Segment> segments;
-
-        Segment* alloc (size_t n_elems);
+        void clear();
 
         struct Segment {
 
-            Segment (size_t size_);
+            Segment () { }
             ~Segment();
-            Segment (Segment&& s)      { *this = std::forward<Segment>(s); }
-            Segment (const Segment& s) { *this = s; }
 
-            Segment& operator= (Segment&&);
-            Segment& operator= (const Segment&);
+            uint32_t left    = 0;
+            uint32_t size    = 0;
+            uint8_t* data    = nullptr;
+            bool     sub_seg = false;
 
-            uint32_t left = 0;
-            uint32_t size;
-            T*       data = nullptr;
+            void     dec (size_t n) { this->left -= n; } 
+            uint8_t* pointer()      { return data + size - left; }
         };
 
+        template<class T> struct SList {
+
+            struct Link {
+                Link* next = nullptr;
+                T     val;
+            };
+    
+            SList() { }
+
+            Link* front = nullptr;
+            Link* back  = nullptr;
+
+            void  clear   ();
+            void  append  (Link* link);
+            void  prepend (Link* link);
+            void  remove  (Link* prev, Link* link);
+
+            template<class Predicate>
+            Link* find_rm (const Predicate& predicate);
+        };
+
+    private:
+        static const size_t Max_Cap = 32768;
+
+        size_t   cap     = 256;
+        Segment* crr_seg = nullptr;
+
+        struct Chain {
+
+            SList<Segment> used_segs;
+            SList<Segment> free_segs;
+
+            SList<SList<Segment>::Link> used_links;
+            SList<SList<Segment>::Link> free_links;
+
+        } chain;
+
+        Segment* alloc         (size_t sz);
+        Segment* find_free_seg (size_t sz);
+
+        SList<Segment>::Link* get_link();
+
+        void destroy();
     };
 
     template<class T>
-    Heap<T>& Heap<T>::operator= (Heap<T>&& m)
-    {
-        this->clear();
-        this->cap = m.cap;
-        this->crr_seg = m.crr_seg;
-        this->segments = std::move(m.segments);
-        m.clear();
+    struct HeapAllocator {
 
-        return *this;
-    }
+        typedef T*                pointer;
+        typedef const T*          const_pointer;
+        typedef T                 value_type;
+        typedef value_type&       reference;
+        typedef const value_type& const_reference;
 
-    template<class T>
-    Heap<T>::Segment::~Segment()
-    {
-        if(this->data != nullptr) {
-            operator delete(this->data);
-            this->data = nullptr;
-        }
-    }
+        HeapAllocator(Heap& heap_) : heap(&heap_) { }
 
-    template<class T>
-    Heap<T>::Segment::Segment(size_t size_)
-    {
-        this->data = static_cast<T*>(operator new(sizeof(T) * size_));
-        this->size = size_;
-        this->left = size_;
-    }
+        HeapAllocator(const HeapAllocator& a) : heap(a.heap) { }
 
-    template<class T>
-    typename Heap<T>::Segment& Heap<T>::Segment::operator=(const Segment& s)
-    {
-        if(this->data != nullptr) {
-            operator delete(this->data);
-        }
-        if(s.data != nullptr) {
-            this->data = static_cast<T*>(operator new(sizeof(T) * s.size));
-            memcpy(this->data, s.data, s.size * sizeof(T));
-        }
-        this->left = s.left;
-        this->size = s.size;
+        template<class U>
+        HeapAllocator(const HeapAllocator<U>& a) : heap(a.heap) { }
 
-        return *this;
-    }
+        Heap* heap;
 
-    template<class T>
-    typename Heap<T>::Segment& Heap<T>::Segment::operator=(Segment&& s)
-    {
-        if(this->data != nullptr) {
-            operator delete(this->data);
+        pointer allocate(size_t n)
+        {
+            return this->heap->template get_mem<T>(n);
         }
 
-        this->data = s.data;
-        this->size = s.size;
-        this->left = s.left;
+        void deallocate(pointer mem, size_t n)
+        {
+            this->heap->template put_mem((uint8_t*)mem, n * sizeof(T));
+        }
 
-        s.data = nullptr;
+        void destroy(T* t)
+        {
+            t->~T();
+        }
 
-        return *this;
-    }
+        template<class... Args>
+        void construct(T* mem, const Args&... args)
+        {
+            new (mem) T { args... };
+        } 
+
+        void construct(T* mem, const T& t)
+        {
+            new (mem) T { t };
+        } 
+
+        template<typename U>
+        struct rebind {
+            typedef HeapAllocator<U> other;
+        };
+    };
+
 } }
 
 #endif
