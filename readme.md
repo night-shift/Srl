@@ -28,15 +28,16 @@ public :
 int main() {
     YourClass original;
     // serialize with Tree::store
-    vector<uint8_t> bytes = Srl::Tree().store<Srl::PJson>(original);
+    Srl::Tree;
+    vector<uint8_t> bytes = tree.store<Srl::PJson>(original);
     //                                     |-> choose a parser
     // deserialize with Tree::restore
-    YourClass restored = Srl::Tree().restore<YourClass, Srl::PJson>(bytes);
+    YourClass restored = tree.restore<YourClass, Srl::PJson>(bytes);
     // or use streams
     ofstream fso("file");
-    Srl::Tree().store<Srl::PMsgPack>(original, fso);
+    tree.store<Srl::PMsgPack>(original, fso);
     ifstream fsi("file");
-    Srl::Tree().restore<Srl::PMsgPack>(restored, fsi);
+    tree.restore<Srl::PMsgPack>(restored, fsi);
     // Thats it.
     return 0;
 }
@@ -102,7 +103,7 @@ What Context basically does is, depending on ```Srl::Mode```, calling insert or 
 Mode is either ```::Insert``` or ```::Paste```, you can query the current mode with ```ctx.mode()```.
 Taking the vector of bytes from above, you can call:
 ```cpp
-auto lang = tree.restore<Lang, PJson>(bytes);
+auto lang = Tree().restore<Lang, PJson>(bytes);
 ```
 #### Handling non-default constructors
 Objects are instantiated through a factory ```struct Srl::Ctor<T>```. As default parameterless constructors are required. You can declare
