@@ -42,8 +42,8 @@ namespace Srl {
     private:
         Value(const Lib::PackedBlock& data_) : block(data_) { }
 
+        const String*    name_ptr = nullptr;
         Lib::PackedBlock block;
-        const String*    name_ptr;
     };
 }
 

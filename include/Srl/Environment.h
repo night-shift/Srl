@@ -6,6 +6,8 @@
 #include "String.h"
 #include "Hash.h"
 #include "Parser.h"
+#include "In.h"
+#include "Out.h"
 
 namespace Srl {
 
@@ -56,18 +58,25 @@ namespace Lib {
         std::vector<uint8_t>  type_buffer;
 
         Parser*   parser  = nullptr;
-        Lib::Out* out     = nullptr;
-        Lib::In*  in      = nullptr;
         bool      parsing = false;
+        Lib::In   in;
+        Lib::Out  out;
         
         template<class T>
-        Link<T>* create_link(Lib::Items<T>& lst, const T& val, const String& name);
+        Link<T>*     create_link(Lib::Items<T>& lst, const T& val, const String& name);
         Link<Node>*  create_node (Type type, const String& name);
         Link<Node>*  store_node  (Node& parent, const Node& node,  const String& name);
         Link<Value>* store_value (Node& parent, const Value& value, const String& name);
 
         size_t       hash_string  (const String& str);
         String       conv_string  (const String& str);
+
+        void write      (const Value& value, const String& name);
+        void write_conv (const Value& value, const String& name);
+        Value conv_type (const Value& value);
+
+        void set_output (Parser& parser, Lib::Out::Source src);
+        void set_input  (Parser& parser, Lib::In::Source src);
 
         std::pair<const String*, size_t> store_string (const String& str);
 

@@ -46,7 +46,6 @@ namespace Srl {
 
             bool  insert (const String& id, Make&& make);
             Make* find   (const String& id);
-            
         };
 
         Registrations* registrations();

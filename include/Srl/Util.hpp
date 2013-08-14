@@ -38,25 +38,17 @@ namespace Srl {
     template<class TParser, class Object>
     std::vector<uint8_t> Store(const Object& object, TParser&& parser)
     {
-        Lib::Out out;
-        Store<Object>(object, out, parser);
-        return out.extract();
-    }
-
-    template<class TParser, class Object>
-    void Store(std::ostream& out_stream, const Object& object, TParser&& parser)
-    {
-        Lib::Out out(out_stream);
-        Store<Object>(object, out, parser);
-        out.flush();
+        std::vector<uint8_t> vec;
+        Store<Object>(object, vec, parser);
+        return std::move(vec);
     }
 
     template<class Object>
-    void Store(const Object& object, Lib::Out& out, Parser& parser)
+    void Store(const Object& object, Lib::Out::Source source, Parser& parser)
     {
         Tree tree;
-        tree.write(Lib::Aux::TypeSwitch<Object>::type, parser, out,
-                   Lib::Aux::TypeSwitch<Object>::Insert(object, tree));
+        tree.to_source(Lib::Aux::TypeSwitch<Object>::type, parser, source,
+                       Lib::Aux::TypeSwitch<Object>::Insert(object, tree));
     }
 
     template<class Object, class TParser>
@@ -78,7 +70,7 @@ namespace Srl {
     Object Restore(const uint8_t* data, size_t size, TParser&& parser)
     {
         auto object = Ctor<Object>::Create();
-        Lib::In in(data, size);
+        Lib::In::Source in(data, size);
         Restore<Object>(object, in, parser);
 
         return std::move(object);
@@ -93,19 +85,19 @@ namespace Srl {
     template<class TParser, class Object>
     void Restore(Object& object, const uint8_t* data, size_t size, TParser&& parser)
     {
-        Lib::In in(data, size);
-        Restore(object, in, parser);
+        Lib::In::Source src(data, size);
+        Restore(object, src, parser);
     }
 
     template<class TParser, class Object>
     void Restore(Object& object, std::istream& stream, TParser&& parser)
     {
-        Lib::In in(stream);
+        Lib::In::Source in(stream);
         Restore(object, in, parser);
     }
 
     template<class Object>
-    void Restore(Object& object, Lib::In& in, Parser& parser)
+    void Restore(Object& object, Lib::In::Source in, Parser& parser)
     {
         Tree tree;
         tree.read_source(parser, in, Lib::Aux::TypeSwitch<Object>::Paste(tree, object));

@@ -1,7 +1,7 @@
 #ifndef SRL_ENUMS_H
 #define SRL_ENUMS_H
 
-#include <cstdint>
+#include "Common.h"
 
 namespace Srl {
 

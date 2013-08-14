@@ -30,6 +30,7 @@ struct BStruct {
     {
         ctx ("struct", strct) ("vec", str_vec) ("fp_vec", VecWrap<double>(fp_vec));
     }
+
 };
 
 void measure(const function<void(void)>& fnc, const string& msg,
@@ -99,7 +100,8 @@ void run_bench(Tree& tree, T&& parser, const string& name, Tail&&... tail)
         unlink("File");
 
         measure([&] {
-            Lib::In src(source.data(), source.size());
+            Lib::In src;
+            src.set(source);
             int depth = 0;
             parser.clear();
             while(true) {

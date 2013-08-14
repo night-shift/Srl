@@ -11,11 +11,17 @@ namespace Srl { namespace Lib {
     class Out {
 
     public:
-        Out ()
-            : streaming(false), stream(nullptr) { }
+        struct Source {
+            Source(std::vector<uint8_t>& vec) : buffer(&vec), is_stream(false) { }
+            Source(std::ostream& strm) : stream(&strm), is_stream(true) { }
+            union {
+                std::ostream* stream;
+                std::vector<uint8_t>* buffer;
+            };
+            bool is_stream;
+        };
 
-        Out (std::ostream& stream_)
-            : streaming(true), stream(&stream_) { }
+        Out() { }
 
         class Ticket;
 
@@ -32,7 +38,7 @@ namespace Srl { namespace Lib {
         void            flush();
         inline Ticket   reserve (size_t nbytes);
 
-        std::vector<uint8_t> extract();
+        void set(Source source);
 
         class Ticket {
 
@@ -52,22 +58,25 @@ namespace Srl { namespace Lib {
     private:
         static const size_t Stream_Buffer_Size  = 1024;
 
-        Heap   buffer;
+        Heap   heap;
 
-        size_t sz_total     = 0;
-        size_t left         = 0;
-        size_t cap          = 0;
-        size_t segs_flushed = 0;
-
-        uint8_t* crr_mem   = nullptr;
-        uint8_t* mem_start = nullptr;
+        struct State {
+            size_t sz_total     = 0;
+            size_t left         = 0;
+            size_t cap          = 0;
+            size_t segs_flushed = 0;
+            uint8_t* crr_mem   = nullptr;
+            uint8_t* mem_start = nullptr;
+        } state;
 
         bool streaming;
-        std::ostream* stream;
+        std::ostream* stream = nullptr;
+        std::vector<uint8_t>* buffer = nullptr;
 
         void inc_cap          (size_t nbytes);
         inline uint8_t* alloc (size_t nbytes);
         void write_to_stream  ();
+        void write_to_buffer  ();
 
         template<class Token, class Sub, class... Tokens>
         void substitute_token(uint8_t src, const Token& token, const Sub& sub, const Tokens&... tail);

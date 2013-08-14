@@ -26,10 +26,6 @@ namespace {
     {
         return Aux::hash_fnc(str.data(), str.size());
     }
-
-    const String empty_str("");
-    const size_t empty_hash = hash_fnc(empty_str);
-
 }
 
 String Environment::conv_string(const String& str)
@@ -48,6 +44,9 @@ size_t Environment::hash_string(const String& str)
 
 pair<const String*, size_t> Environment::store_string(const String& str)
 {
+    static const String empty_str("");
+    static const size_t empty_hash = hash_fnc(empty_str);
+
     size_t hash;
     const String* str_ptr;
 
@@ -124,6 +123,81 @@ Link<Value>* Environment::store_value(Node& parent, const Value& value, const St
     }
 
     return link;
+}
+
+void Environment::write(const Value& value, const String& field_name)
+{
+    this->write_conv(value, field_name);
+}
+
+void Environment::set_input(Parser& parser_, In::Source source)
+{
+    parser_.clear();
+    this->parser = &parser_;
+    this->in.set(source);
+}
+
+void Environment::set_output(Parser& parser_, Lib::Out::Source source)
+{
+    parser_.clear();
+    this->parser = &parser_;
+    this->out.set(source);
+}
+
+void Environment::write_conv(const Value& value, const String& val_name)
+{
+    MemBlock name_conv;
+
+    if(val_name.encoding() == Encoding::UTF8) {
+        name_conv = MemBlock(val_name.data(), val_name.size());
+
+    } else {
+        auto& buffer = this->str_buffer;
+        auto size = Tools::conv_charset(Encoding::UTF8, val_name, buffer, true);
+        name_conv = MemBlock(buffer.data(), size);
+    }
+
+    auto type = value.type();
+
+    bool no_conversion_needed =
+        /* scope types don't need conversion */
+        TpTools::is_scope(type) || type == Type::Scope_End ||
+        /* strings must be UTF8 in text formats */
+        (type == Type::String && parser->get_format() != Format::Text &&
+         value.encoding() == Encoding::UTF8) ||
+        /* binary types must be converted to string in text formats */
+        (type != Type::String && parser->get_format() == Format::Binary);
+
+    if(no_conversion_needed) {
+        parser->write(value, name_conv, this->out);
+
+    } else {
+        parser->write(this->conv_type(value), name_conv, this->out);
+    }
+}
+
+Value Environment::conv_type(const Value& value)
+{
+    size_t data_size = 0;
+    auto& buffer = this->type_buffer;
+
+    if(value.type() == Type::String) {
+
+        String wrap(value.data(), value.size(), value.encoding());
+        data_size = Tools::conv_charset(Encoding::UTF8, wrap, buffer, true);
+
+    } else if(TpTools::is_scalar(value.type())) {
+
+        data_size = Tools::type_to_str(value, buffer);
+
+    } else {
+
+        assert(value.type() == Type::Binary && "Value type invalid.");
+
+        data_size = Tools::bytes_to_base64(value.data(), value.size(), buffer);
+    }
+
+    return Value( { buffer.data(), data_size }, value.type());
 }
 
 void Environment::clear()

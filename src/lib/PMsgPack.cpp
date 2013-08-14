@@ -246,7 +246,7 @@ namespace {
 
         if(0x0D << 4 & prefix) {
            type = prefix <= 0xDD ? Type::Array : Type::Object;
-           size = prefix & 0x01 ? in.read_move<uint32_t>(error) : in.read_move<uint16_t>(error);
+           size = prefix & 1 ? in.read_move<uint32_t>(error) : in.read_move<uint16_t>(error);
 
         } else {
             assert(1 << 7 & prefix);

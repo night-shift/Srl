@@ -5,9 +5,21 @@ using namespace std;
 using namespace Srl;
 using namespace Lib;
 
-In::In(istream& stream_) : streaming(true), stream(&stream_)
+void In::set(Source source)
 {
-    this->try_fetch_data(0);
+    this->streaming = source.is_stream;
+    this->anchor = nullptr;
+    this->eof_reached = false;
+
+    if(source.is_stream) {
+        this->stream = source.stream;
+        this->start = this->end = this->pos = nullptr;
+        this->try_fetch_data(0, 1);
+
+    } else {
+        this->start = this->pos = source.block.ptr;
+        this->end   = this->start + source.block.size + 1;
+    }
 }
 
 void In::fetch_data(size_t nbytes, const Error& error)
@@ -17,7 +29,7 @@ void In::fetch_data(size_t nbytes, const Error& error)
     }
 }
 
-bool In::try_fetch_data(size_t nbytes)
+bool In::try_fetch_data(size_t nbytes, size_t read_len)
 {
     /*           (   <--------->   ) -> this needs to be preserved
      * [.........*.............*...] -> buffer
@@ -40,8 +52,7 @@ bool In::try_fetch_data(size_t nbytes)
 
     auto left = this->end - this->pos;
 
-    auto read_len = (nbytes < Stream_Buffer_Size ? Stream_Buffer_Size : nbytes) - left;
-
+    read_len = (nbytes < read_len ? read_len : nbytes) - left;
 
     auto preserve_pos = this->anchor != nullptr
         ? this->anchor - start
@@ -77,8 +88,6 @@ bool In::try_fetch_data(size_t nbytes)
     this->end   = buf.data() + bytes_read + preserve_sz;
 
     if(bytes_read + left < nbytes) {
-
-        assert(this->stream->eof());
         this->eof_reached = true;
 
         return false;

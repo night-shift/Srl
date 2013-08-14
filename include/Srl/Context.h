@@ -30,7 +30,8 @@ namespace Srl {
         size_t values_index = 0;
 
         template<class T> void insert (const T& o, const String& name); 
-        template<class T> void paste  (T& o, const String& name); 
+        template<class T> void paste  (T& o, const String& name);
+
     };
 }
 

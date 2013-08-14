@@ -26,9 +26,6 @@ namespace Srl {
     void Restore(Object& object, std::istream& stream, TParser&& parser = TParser());
 
     template<class TParser, class Object>
-    void Store(std::ostream& stream, const Object& object, TParser&& parser = TParser());
-
-    template<class TParser, class Object>
     std::vector<uint8_t> Store(const Object& object, TParser&& parser = TParser());
 
 }

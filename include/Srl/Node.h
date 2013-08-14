@@ -9,10 +9,10 @@
 #include "TpTools.h"
 #include "Heap.h"
 #include "Environment.h"
+#include "Tree.h"
 
 namespace Srl {
 
-    class Tree;
     class String;
     struct Parser;
 
@@ -97,19 +97,21 @@ namespace Srl {
         std::vector<uint8_t> to_source(TParser&& parser = TParser());
 
         template<class TParser>
-        void to_source(std::ostream& stream, TParser&& parser = TParser());
+        void to_source(Lib::Out::Source source, TParser&& parser = TParser());
 
     private:
-        inline Node(Tree* tree_, Type type_ = Type::Object, bool parsed_ = true);
+        Node(Tree* tree, Type type_ = Type::Object, bool parsed_ = true)
+            : env(tree->env.get()), nodes(env->heap), values(env->heap),
+              scope_type(type_), parsed(parsed_) { }
 
         Lib::Environment* env;
-
-        const String* name_ptr = nullptr;
-        Type          scope_type;
-        bool          parsed;
-
         Lib::Items<Node>  nodes;
         Lib::Items<Value> values;
+
+        const String* name_ptr = nullptr;
+
+        Type          scope_type;
+        bool          parsed;
 
         template<class... Args>
         void open_scope (void (*Insert)(Node& node, const Args&... args),
@@ -123,7 +125,7 @@ namespace Srl {
         void  insert_value (const Value& value, const String& name);
 
         void  to_source   ();
-        void  read_source (Lib::In& source, Parser& parser);
+        void  read_source ();
 
         void  consume_scope ();
         Node  consume_node  (bool throw_exception);
@@ -131,7 +133,6 @@ namespace Srl {
 
         Node  consume_node  (const String& name);
         Value consume_value (const String& name);
-
 
         template<class T>
         typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), Value>::type

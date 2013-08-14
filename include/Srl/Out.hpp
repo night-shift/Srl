@@ -8,24 +8,24 @@ namespace Srl { namespace Lib {
 
     inline uint8_t* Out::alloc(size_t nbytes)
     {
-        this->sz_total += nbytes;
+        this->state.sz_total += nbytes;
 
         if(!this->streaming) {
-            return this->buffer.get_mem(nbytes);
+            return this->heap.get_mem(nbytes);
         }
 
-        if(this->left < nbytes) {
+        if(this->state.left < nbytes) {
             this->write_to_stream();
         }
 
-        if(this->cap < nbytes) {
+        if(this->state.cap < nbytes) {
             this->inc_cap(nbytes);
         }
 
-        this->left -= nbytes;
-        this->crr_mem += nbytes;
+        this->state.left -= nbytes;
+        this->state.crr_mem += nbytes;
 
-        return this->crr_mem - nbytes;
+        return this->state.crr_mem - nbytes;
     }
 
     inline void Out::write(const uint8_t* bytes, size_t nbytes)
@@ -43,7 +43,7 @@ namespace Srl { namespace Lib {
     {
         assert(ticket.size >= offset + nbytes);
 
-        if(!this->streaming || ticket.seg_id == this->segs_flushed) {
+        if(!this->streaming || ticket.seg_id == this->state.segs_flushed) {
             memcpy(ticket.mem + offset, bytes, nbytes);
 
         } else {
@@ -58,11 +58,11 @@ namespace Srl { namespace Lib {
 
     inline Out::Ticket Out::reserve(size_t nbytes)
     {
-        auto pos = this->sz_total;
+        auto pos = this->state.sz_total;
         auto* reserved = this->alloc(nbytes);
         memset(reserved, 0, nbytes);
 
-        return { reserved, nbytes, pos, this->segs_flushed };
+        return { reserved, nbytes, pos, this->state.segs_flushed };
     }
 
     inline void Out::write_byte(uint8_t byte)

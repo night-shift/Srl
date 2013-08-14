@@ -270,7 +270,8 @@ Srl supports 4 serialization formats. Json, Xml, MessagePack, and
 Select a format by...
 ```cpp
 // ...passing the corresponding type as a template parameter
-auto tree = Tree::From_Source<Srl::PSrl>(source);
+Tree tree;
+tree.load_source<Srl::PSrl>(source);
 // ...by passing an instance
 Srl::PXml xml;
 xml.set_compact(true);

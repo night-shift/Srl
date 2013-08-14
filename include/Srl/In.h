@@ -13,6 +13,23 @@ namespace Srl { namespace Lib {
     class In {
 
     public :
+        struct Source {
+
+            Source(const std::vector<uint8_t>& data) : Source(data.data(), data.size()) { }
+
+            Source(const uint8_t* data, size_t size)
+                : block({ data, size }), is_stream(false)  { }
+
+            Source(std::istream& stream_)
+                : stream(&stream_), is_stream(true) { }
+
+            union {
+                std::istream* stream;
+                MemBlock      block;
+            };
+            bool is_stream;
+        };
+
         typedef std::function<void()>  Error;
         typedef std::function<size_t(In&, std::vector<uint8_t>&, size_t idx)> Substitute;
 
@@ -22,10 +39,9 @@ namespace Srl { namespace Lib {
             bool* note;
         };
 
-        In(const uint8_t* data, size_t data_size)
-            :  start(data), end(data + data_size + 1), pos(data)  { }
-
-        In(std::istream& stream_);
+        In() { }
+        
+        void                  set(Source source); 
 
         inline bool           is_streaming() const;
         inline const uint8_t* pointer()      const;
@@ -65,8 +81,6 @@ namespace Srl { namespace Lib {
         bool is_at_token() { return false; }
 
     private :
-        static const size_t Stream_Buffer_Size = 1024;
-
         const uint8_t* start = nullptr;
         const uint8_t* end   = nullptr;
         const uint8_t* pos   = nullptr;
@@ -97,7 +111,7 @@ namespace Srl { namespace Lib {
         template<bool Not, class... Tokens>
         size_t move_until (const Error& error, const Tokens&... tokens);
 
-        bool try_fetch_data(size_t nbytes);
+        bool try_fetch_data(size_t nbytes, size_t read_len = 1024);
         void fetch_data(size_t nbytes, const Error& error);
     };
 

@@ -122,7 +122,7 @@ namespace {
 void Node::insert_value(const Value& new_value, const String& name_)
 {
     if(this->env->parsing) {
-        this->env->tree->write(new_value, name_);
+        this->env->write(new_value, name_);
 
     } else {
         this->env->store_value(*this, new_value, name_);
@@ -164,8 +164,11 @@ Node& Node::node(const String& name_)
     return find_link<Throw | Hash>(hash, this->nodes, name_)->field;
 }
 
-void Node::read_source(In& source, Parser& parser)
+void Node::read_source()
 {
+    auto& parser = *this->env->parser;
+    auto& source = this->env->in;
+
     while(true) {
 
         MemBlock seg_name; Value val;
@@ -186,7 +189,7 @@ void Node::read_source(In& source, Parser& parser)
             /* new node */
             auto* link = this->env->store_node(*this, Node(this->env->tree, val.type()), field_name);
 
-            link->field.read_source(source, parser);
+            link->field.read_source();
         }
     }
 }
@@ -204,7 +207,7 @@ Node Node::consume_node(const String& id)
     while(!this->parsed) {
 
         MemBlock seg_name; Value val;
-        tie(seg_name, val) = this->env->parser->read(*this->env->in);
+        tie(seg_name, val) = this->env->parser->read(this->env->in);
 
         auto tp = val.type();
 
@@ -219,7 +222,7 @@ Node Node::consume_node(const String& id)
             }
 
             auto* link = this->env->store_node(*this, Node(this->env->tree, tp), seg_name);
-            link->field.read_source(*this->env->in, *this->env->parser);
+            link->field.read_source();
 
         } else {
             this->env->store_value(*this, val, seg_name);
@@ -242,7 +245,7 @@ Value Node::consume_value(const String& id)
     while(!this->parsed) {
 
         MemBlock seg_name; Value val;
-        tie(seg_name, val) = this->env->parser->read(*this->env->in);
+        tie(seg_name, val) = this->env->parser->read(this->env->in);
 
         auto tp = val.type();
 
@@ -260,7 +263,7 @@ Value Node::consume_value(const String& id)
 
         } else {
             auto* link = this->env->store_node(*this, Node(this->env->tree, tp), seg_name);
-            link->field.read_source(*this->env->in, *this->env->parser);
+            link->field.read_source();
         }
     }
 
@@ -280,7 +283,7 @@ Node Node::consume_node(bool throw_exception)
 
     while(!this->parsed) {
         MemBlock seg_name; Value val;
-        tie(seg_name, val) = this->env->parser->read(*this->env->in);
+        tie(seg_name, val) = this->env->parser->read(this->env->in);
 
         auto tp = val.type();
 
@@ -316,7 +319,7 @@ Value Node::consume_value(bool throw_exception)
 
     while(!this->parsed) {
         MemBlock seg_name; Value val;
-        tie(seg_name, val) = this->env->parser->read(*this->env->in);
+        tie(seg_name, val) = this->env->parser->read(this->env->in);
 
         auto tp = val.type();
 
@@ -330,7 +333,7 @@ Value Node::consume_value(bool throw_exception)
 
         } else {
             auto* link = this->env->store_node(*this, Node(this->env->tree, tp), seg_name);
-            link->field.read_source(*this->env->in, *this->env->parser);
+            link->field.read_source();
         }
     }
 
@@ -344,10 +347,10 @@ Value Node::consume_value(bool throw_exception)
 void Node::to_source()
 {
     Value scope_start = Value(this->scope_type);
-    this->env->tree->write(scope_start, *this->name_ptr);
+    this->env->write(scope_start, *this->name_ptr);
 
     for(auto& v : this->values) {
-        this->env->tree->write(v.field, v.field.name());
+        this->env->write(v.field, v.field.name());
     }
 
     for(auto& n : this->nodes) {
@@ -355,7 +358,7 @@ void Node::to_source()
     }
 
     Value scope_end = Value(Type::Scope_End);
-    this->env->tree->write(scope_end, *this->name_ptr);
+    this->env->write(scope_end, *this->name_ptr);
 }
 
 void Node::consume_scope()
@@ -363,7 +366,7 @@ void Node::consume_scope()
     int depth = 0;
 
     auto& parser = *this->env->parser;
-    auto& source = *this->env->in;
+    auto& source = this->env->in;
 
     while(!this->parsed) {
         auto tp = parser.read(source).second.type();

@@ -123,8 +123,8 @@ namespace Srl { namespace Lib {
     {
         this->destroy<V>();
         this->heap.clear();
-        this->elements = 0;
         this->limit    = 0;
+        this->elements = 0;
     }
 
     template<class K, class V, class H>

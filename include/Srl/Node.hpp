@@ -6,10 +6,6 @@
 
 namespace Srl {
 
-    inline Node::Node(Tree* tree, Type type_, bool parsed_)
-        : env(tree->env.get()), scope_type(type_), parsed(parsed_),
-          nodes(env->heap), values(env->heap) { }
-
     template<class T>
     Node& Node::insert(const String& field_name, const T& val)
     {
@@ -151,11 +147,11 @@ namespace Srl {
                           Type node_type, const String& scope_name, const Args&... args)
     {
         if(this->env->parsing) {
-            this->env->tree->write(Value(node_type), scope_name);
+            this->env->write(Value(node_type), scope_name);
 
             Insert(*this, args...);
 
-            this->env->tree->write(Value(Type::Scope_End), scope_name);
+            this->env->write(Value(Type::Scope_End), scope_name);
 
         } else {
            auto& new_node = this->insert_node(node_type, scope_name);
@@ -194,22 +190,17 @@ namespace Srl {
     template<class TParser>
     std::vector<uint8_t> Node::to_source(TParser&& parser)
     {
-        Lib::Out out;
-        this->env->tree->set_output(parser, out);
-        this->to_source();
-
-        return out.extract();
+        std::vector<uint8_t> vec;
+        this->to_source(vec, parser);
+        return std::move(vec);
     }
 
     template<class TParser>
-    void Node::to_source(std::ostream& out_stream, TParser&& parser)
+    void Node::to_source(Lib::Out::Source source, TParser&& parser)
     {
-
-        Lib::Out out(out_stream);
-        this->env->tree->set_output(parser, out);
+        this->env->set_output(parser, source);
         this->to_source();
-
-        out.flush();
+        this->env->out.flush();
     }
 
     inline size_t Node::num_nodes() const

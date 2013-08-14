@@ -5,9 +5,16 @@
 #include "Context.h"
 #include "String.h"
 #include "Tools.h"
+#include "Node.h"
 #include "Out.h"
 
 namespace Srl {
+
+    template<class TParser>
+    void Tree::to_source(Lib::Out::Source source, TParser&& parser)
+    {
+        this->root_node->to_source(source, parser);
+    }
 
     template<class TParser>
     std::vector<uint8_t> Tree::to_source(TParser&& parser)
@@ -16,43 +23,21 @@ namespace Srl {
     }
 
     template<class TParser>
-    void Tree::to_source(std::ostream& out_stream, TParser&& parser)
+    void Tree::load_source(Lib::In::Source source, TParser&& parser)
     {
-        this->root_node->to_source(out_stream, parser);
-    }
-
-    template<class TParser>
-    void Tree::load_source(std::istream& stream, TParser&& parser)
-    {
-        Lib::In source(stream);
-        this->load_source<TParser>(source, parser);
-    }
-
-    template<class TParser>
-    void Tree::load_source(const std::vector<uint8_t>& source, TParser&& parser)
-    {
-        Lib::In src(&source[0], source.size());
-        this->load_source(src, parser);
-    }
-
-    template<class TParser>
-    void Tree::load_source(const uint8_t* source, size_t source_size, TParser&& parser)
-    {
-        Lib::In src(source, source_size);
-        this->load_source(src, parser);
-    }
-
-    template<class TParser>
-    void Tree::load_source (const char* source, size_t source_size, TParser&& parser)
-    {
-        this->load_source((const uint8_t*)source, source_size, parser);
-    }
-
-    template<class TParser>
-    void Tree::load_source(Lib::In& source, TParser& parser)
-    {
-        this->clear();
         this->read_source(parser, source);
+    }
+
+    template<class TParser>
+    void Tree::load_source(const char* data, size_t data_len,  TParser&& parser)
+    {
+        return load_source(Lib::In::Source((const uint8_t*)data, data_len), parser);
+    }
+
+    template<class TParser>
+    void Tree::load_source(const uint8_t* data, size_t data_len,  TParser&& parser)
+    {
+        return load_source(Lib::In::Source(data, data_len), parser);
     }
 
     namespace Lib { namespace Aux {

@@ -11,7 +11,7 @@ namespace {
         throw Exception("Unable to parse JSON document. Index out of bounds.");
     };
 
-    const In::Substitute unescape_uc_literal = [](In& src, vector<uint8_t>& buf, size_t idx) -> size_t {
+    const In::Substitute uc_literal = [](In& src, vector<uint8_t>& buf, size_t idx) -> size_t {
         uint8_t hex_buffer[2];
         /* skip "\u" and read 4 hex digits */
         auto block = src.read_block(2 + 4, error);
@@ -38,7 +38,7 @@ namespace {
     {
         auto len = in.read_substitue(error, '\"', buffer,
             '\"', ar('\"'), '\'', ar('\''), '\\', ar('\\'), '/', ar('/'), '\n', ar('n'),
-            '\t', ar('t'), '\r',  ar('r'), '\b',  ar('b'), '\f', ar('f'), unescape_uc_literal, ar('u')
+            '\t', ar('t'), '\r',  ar('r'), '\b',  ar('b'), '\f', ar('f'), uc_literal, ar('u')
         );
 
         return { buffer.data(), len };
