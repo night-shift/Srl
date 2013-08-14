@@ -28,7 +28,7 @@ public :
 int main() {
     YourClass original;
     // serialize with Tree::store
-    Srl::Tree;
+    Srl::Tree tree;
     vector<uint8_t> bytes = tree.store<Srl::PJson>(original);
     //                                     |-> choose a parser
     // deserialize with Tree::restore
@@ -165,7 +165,7 @@ public:
 
 // running...
 Composite composite { new Derived(), new Base() };
-Srl::Tree.store<PJson>(composite, cout);
+Tree().store<PJson>(composite, cout);
 // ...will print:
 ```
 ```json
