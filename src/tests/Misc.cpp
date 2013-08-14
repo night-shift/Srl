@@ -313,7 +313,7 @@ bool test_polymorphic_classes()
     try {
 
         TestClass cl(new DerivedB(12), new DerivedA(6));
-        cl = Srl::Restore<TestClass, PJson>(Srl::Store<PJson>(cl));
+        cl = Tree().restore<TestClass, PJson>(Tree().store<PJson>(cl));
 
         TEST(strcmp(cl.one->srl_type_id().name(), "DerivedB") == 0);
         TEST(strcmp(cl.two->srl_type_id().name(), "DerivedA") == 0);
@@ -357,7 +357,7 @@ bool test_shared_references()
 
             Shared shared { s0, s1 };
 
-            auto bytes = Srl::Store<PJson>(shared, PJson());
+            auto bytes = Tree().store<PJson>(shared);
             Tree tree;
             tree.load_source(bytes, PJson());
 

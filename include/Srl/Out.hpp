@@ -32,10 +32,10 @@ namespace Srl { namespace Lib {
     {
         auto* mem = this->alloc(nbytes);
 
-        if(nbytes == 1) {
-            *mem = *bytes;
-        } else {
+        if(nbytes != 1) {
             memcpy(mem, bytes, nbytes);
+        } else {
+            *mem = *bytes;
         }
     }
 

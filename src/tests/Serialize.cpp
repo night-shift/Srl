@@ -408,11 +408,11 @@ bool test_serialize(TParser&& parser, const string& parser_name, Tail&&... tail)
         original.shuffle();
 
         print_log("\tSrl::Store...............");
-        auto source = Srl::Store(original, parser);
+        auto source = Tree().store(original, parser);
         print_log("ok.\n");
 
         print_log("\tSrl::Restore.............");
-        auto restored = Srl::Restore<TestClassA>(source, parser);
+        auto restored = Tree().restore<TestClassA>(source, parser);
         print_log("ok.\n");
 
         print_log("\tData comparison..........");
@@ -461,7 +461,7 @@ bool test_serialize(TParser&& parser, const string& parser_name, Tail&&... tail)
         print_log("\tSrl::Restore unordered...");
         tree.load_object(original);
         source = tree.to_source(parser);
-        auto restored_unordred = Srl::Restore<TestClassA>(source, parser);
+        auto restored_unordred = Tree().restore<TestClassA>(source, parser);
         print_log("ok.\n");
 
         print_log("\tData comparison..........");
@@ -479,7 +479,7 @@ bool test_serialize(TParser&& parser, const string& parser_name, Tail&&... tail)
 bool Tests::test_parser()
 {
     bool success = test_serialize (
-       // PSrl(),  "Srl",  PMsgPack(), "MsgPack", 
+        PSrl(),  "Srl",  PMsgPack(), "MsgPack", 
         PJson(), "Json", PXml(),  "Xml",
         PJson(true), "Json w/o space", PXml(true), "Xml w/o space"
     );

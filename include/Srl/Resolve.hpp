@@ -21,8 +21,9 @@ namespace Srl { namespace Lib {
                      Str_Type_ID("srl_type_id"), Str_Shared_key("srl_shared_key"),
                      Str_Shared_Value("srl_shared_value"), Str_Empty;
 
-        template<class ID>
-        void throw_error(const std::string& msg, const ID& field_id);
+        inline void throw_error(const std::string& msg, size_t field_id);
+
+        inline void throw_error(const std::string& msg, const String& field_id);
 
         template<class ID>
         void check_type(Type expected, Type got, const ID& field_id);
@@ -790,15 +791,13 @@ namespace Srl { namespace Lib {
             }
         }
 
-        template<class ID>
-        void throw_error(const std::string& msg, const ID& field_id)
+        inline void throw_error(const std::string& msg, size_t field_id)
         {
             auto message = "Unable to set field at pos : "  + std::to_string(field_id) + ". " + msg;
             throw Exception(message);
         }
 
-        template<>
-        inline void throw_error<String>(const std::string& msg, const String& field_id)
+        inline void throw_error(const std::string& msg, const String& field_id)
         {
             auto message = "Unable to set field" +
                 (field_id.size() > 0 ? " " + field_id.unwrap(false) : "") + ". " + msg;

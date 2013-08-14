@@ -13,7 +13,7 @@ namespace {
 
     typedef uint8_t Flag;
 
-    const Flag FNum     = 1;
+    const Flag FNum     = 1; /* multiplexer */
 
     const Flag FNamed   = 1 << 1;
     const Flag FIndexed = 1 << 2; /* !set -> new */
@@ -39,34 +39,34 @@ namespace {
     {
         auto tp = val.type();
 
-        if(tp == Type::Null) {
-            return FNull;
-        }
-
-        if(TpTools::is_scope(tp)) {
-            return tp == Type::Array ? FArray : FObject;
-        }
-
-        if(tp == Type::String || tp == Type::Binary) {
-            return tp == Type::String ? FString : FBinary;
+        if(TpTools::is_num(tp) && TpTools::is_integral(tp)) {
+            return FNum | (TpTools::is_signed(tp) && val.pblock().i64 < 0 ? FSigned : 0);
         }
 
         if(TpTools::is_fp(tp)) {
             return FNum | (tp == Type::FP32 ? FFP32 : FFP64);
         }
 
+        if(tp == Type::String || tp == Type::Binary) {
+            return tp == Type::String ? FString : FBinary;
+        }
+
+        if(TpTools::is_scope(tp)) {
+            return tp == Type::Array ? FArray : FObject;
+        }
+
         if(tp == Type::Bool) {
             return FNum | (val.pblock().i64 ? FTrue : FFalse);
         }
 
-        if(TpTools::is_integral(tp)) {
-            return FNum | (TpTools::is_signed(tp) && val.pblock().i64 < 0 ? FSigned : 0);
+        if(tp == Type::Null) {
+            return FNull;
         }
 
         return 0;
     }
 
-    const uint64_t mask_msb       = 128U; /* 0...1000 0000 msb in a block, tells us more blocks are comming */
+    const uint64_t mask_msb       = 128U; /* 0...1000 0000 msb in a block, tells us more blocks are coming */
     const uint64_t mask_reset_msb = 127U; /* 0...0111 1111 */
 
     /* variable length quantity encoding */
@@ -88,7 +88,6 @@ namespace {
 
     uint64_t decode_integer(In& source)
     {
-
         uint8_t  block       = *source.pointer();
         uint64_t out_integer = mask_reset_msb & block;
 
@@ -96,13 +95,14 @@ namespace {
         /* first block w/o msb set is the last 8-bit block of the integer to decode */
         while(mask_msb & block) {
             /* no support for integers > 64 bit */
-            if(shift > 9 * 7) {
-                error();
-            }
             source.move(1, error);
             block = *source.pointer();
             out_integer |= (mask_reset_msb & block) << shift;
             shift += 7;
+        }
+
+        if(shift > 10 * 7) {
+            error();
         }
 
         source.move(1, error);

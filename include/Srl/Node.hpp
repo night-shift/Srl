@@ -70,78 +70,42 @@ namespace Srl {
         Lib::Switch<T>::Paste(o, *this);
     }
 
-    template<class T>
-    T Node::unwrap_field(const String& field_name)
+    template<class T, class ID>
+    T Node::unwrap_field(const ID& field)
     {
         auto r = Ctor<T>::Create();
-        this->paste_field(field_name, r);
+        this->paste_field(field, r);
 
         return std::move(r);
     }
 
-    template<class T>
-    T Node::unwrap_field(size_t index)
-    {
-        auto r = Ctor<T>::Create();
-        this->paste_field(index, r);
-
-        return std::move(r);
-    }
-  
-    template<class T>
+    template<class T, class ID>
     typename std::enable_if<TpTools::is_scope(Lib::Switch<T>::type), void>::type
-    Node::paste_field (const String& field_name, T& o)
+    Node::paste_field (const ID& field, T& o)
     {
         if(this->parsed) {
-            Lib::Switch<T>::Paste(o, this->node(field_name), field_name);
+            Lib::Switch<T>::Paste(o, this->node(field), field);
 
         } else {
-            auto itm = this->consume_node(field_name);
-            Lib::Switch<T>::Paste(o, itm, field_name);
+            auto itm = this->consume_node(true, field);
+            Lib::Switch<T>::Paste(o, itm, field);
             itm.consume_scope();
         }
     }
 
-    template<class T>
-    typename std::enable_if<TpTools::is_scope(Lib::Switch<T>::type), void>::type
-    Node::paste_field (size_t index, T& o)
-    {
-        if(this->parsed) {
-            Lib::Switch<T>::Paste(o, this->node(index), index);
-
-        } else {
-            auto itm = this->consume_node(true);
-            Lib::Switch<T>::Paste(o, itm, index);
-            itm.consume_scope();
-        }
-    }
-
-    template<class T>
+    template<class T, class ID>
     typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), void>::type
-    Node::paste_field (const String& field_name, T& o)
+    Node::paste_field (const ID& field, T& o)
     {
         if(this->parsed) {
-            Lib::Switch<T>::Paste(o, this->value(field_name), field_name);
+            Lib::Switch<T>::Paste(o, this->value(field), field);
 
         } else {
-            auto itm = this->consume_value(field_name);
-            Lib::Switch<T>::Paste(o, itm, field_name);
+            auto itm = this->consume_value(true, field);
+            Lib::Switch<T>::Paste(o, itm, field);
         }
     }
 
-    template<class T>
-    typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), void>::type
-    Node::paste_field (size_t index, T& o)
-    {
-        if(this->parsed) {
-            Lib::Switch<T>::Paste(o, this->value(index), index);
-
-        } else {
-            auto itm = this->consume_value(true);
-            Lib::Switch<T>::Paste(o, itm, index);
-        }
-    }
- 
     template<class... Args>
     void Node::open_scope(void (*Insert)(Node& node, const Args&... args),
                           Type node_type, const String& scope_name, const Args&... args)
@@ -163,14 +127,14 @@ namespace Srl {
     typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), Value>::type
     Node::consume_item()
     {
-        return this->consume_value(false);
+        return this->consume_value(false, 0);
     }
 
     template<class T>
     typename std::enable_if<TpTools::is_scope(Lib::Switch<T>::type), Node>::type
     Node::consume_item()
     {
-        return this->consume_node(false);
+        return this->consume_node(false, 0);
     }
 
     template<class T>

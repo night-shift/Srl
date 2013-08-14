@@ -3,7 +3,6 @@
 
 #include "Environment.h"
 #include "Out.h"
-#include "Util.h"
 
 #include <memory>
 
@@ -23,6 +22,8 @@ namespace Srl {
 
         Node& root();
 
+        void clear();
+
         template<class T>
         void load_object(const T& type);
 
@@ -36,12 +37,29 @@ namespace Srl {
         void load_source (const char* data, size_t data_len,TParser&& parser = TParser());
 
         template<class TParser>
-        std::vector<uint8_t> to_source(TParser&& parser);
+        std::vector<uint8_t> to_source (TParser&& parser = TParser());
 
         template<class TParser>
-        void to_source(Lib::Out::Source source, TParser&& parser);
+        void to_source (Lib::Out::Source source, TParser&& parser = TParser());
 
-        void clear();
+        template<class TParser, class Object>
+        void store (const Object& object, Lib::Out::Source out, TParser&& parser = TParser());
+
+        template<class TParser, class Object>
+        std::vector<uint8_t> store (const Object& object, TParser&& parser = TParser());
+
+        template<class TParser, class Object>
+        void restore(Object& object, Lib::In::Source source, TParser&& parser = TParser());
+
+        template<class Object, class TParser>
+        Object restore(Lib::In::Source source, TParser&& parser = TParser());
+
+        template<class TParser, class Object>
+        void restore(Object& object, const uint8_t* data, size_t len, TParser&& parser = TParser());
+
+        template<class Object, class TParser>
+        Object restore(const uint8_t* data, size_t len, TParser&& parser = TParser());
+
 
     private:
         std::unique_ptr<Lib::Environment> env;
@@ -50,12 +68,8 @@ namespace Srl {
 
         void to_source(Type type, Parser& parser, Lib::Out::Source out, const std::function<void()>& store_switch);
 
-        void write_conv  (const Value& value, const String& name, Parser& parser);
         void read_source (Parser& parser, Lib::In::Source source);
         void read_source (Parser& parser, Lib::In::Source source, const std::function<void()>& restore_switch);
-
-        template<class Object>
-        friend void Store(const Object& object, Lib::Out::Source out, Parser& parser);
 
         template<class Object>
         friend void Restore(Object& object, Lib::In::Source source, Parser& parser);

@@ -10,6 +10,39 @@
 
 namespace Srl {
 
+    namespace Lib { namespace Aux {
+
+        template<class T, class = void> struct TypeSwitch {
+            static const Type type = Type::Object;
+
+            static void Insert(const T& o, Tree& tree) { tree.root().insert(o); };
+
+            static std::function<void()> Store(const T& o, Tree& tree) {
+                return [&o, &tree] { tree.root().insert("value", o); };
+            }
+            static std::function<void()> Restore(Tree& tree, T& o) {
+                return [&o, &tree] { tree.root().paste_field(0, o); };
+            }
+        };
+
+        template<class T> struct
+        TypeSwitch<T, typename std::enable_if<TpTools::is_scope(Switch<T>::type)>::type> {
+            static const Type type = Switch<T>::type;
+
+            static void Insert(const T& o, Tree& tree) {
+                Switch<T>::Insert(tree.root(), o);
+            }
+
+            static std::function<void()> Store(const T& o, Tree& tree) {
+                return [&o, &tree] { Switch<T>::Insert(tree.root(), o); };
+            }
+            static std::function<void()> Restore(Tree& tree, T& o) {
+                return [&o, &tree] { tree.root().paste(o); };
+            }
+        };
+
+    } }
+
     template<class TParser>
     void Tree::to_source(Lib::Out::Source source, TParser&& parser)
     {
@@ -40,23 +73,54 @@ namespace Srl {
         return load_source(Lib::In::Source(data, data_len), parser);
     }
 
-    namespace Lib { namespace Aux {
-        template<class T, class = void> struct InsertSwitch {
-            static void Insert(const T& o, Tree& tree) { tree.root().insert(o); };
-        };
-        template<class T> struct
-        InsertSwitch<T, typename std::enable_if<TpTools::is_scope(Switch<T>::type)>::type> {
-            static void Insert(const T& o, Tree& tree) {
-                Switch<T>::Insert(tree.root(), o);
-            }
-        };
-    } }
+    template<class TParser, class T>
+    void Tree::store (const T& object, Lib::Out::Source out, TParser&& parser)
+    {
+        this->to_source(
+            Lib::Aux::TypeSwitch<T>::type, parser, out, Lib::Aux::TypeSwitch<T>::Store(object, *this)
+        );
+    }
+
+    template<class TParser, class Object>
+    std::vector<uint8_t> Tree::store (const Object& object, TParser&& parser)
+    {
+        std::vector<uint8_t> vec;
+        store(object, vec, parser);
+        return std::move(vec);
+    }
+
+    template<class TParser, class Object>
+    void Tree::restore(Object& object, Lib::In::Source source, TParser&& parser)
+    {
+        this->read_source(parser, source, Lib::Aux::TypeSwitch<Object>::Restore(*this, object));
+    }
+
+    template<class Object, class TParser>
+    Object Tree::restore(Lib::In::Source source, TParser&& parser)
+    {
+        auto object = Ctor<Object>::Create();
+        this->restore(object, source, parser);
+
+        return std::move(object);
+    }
+
+    template<class TParser, class Object>
+    void Tree::restore(Object& object, const uint8_t* data, size_t len, TParser&& parser)
+    {
+        this->restore(object, Lib::In::Source(data, len), parser);
+    }
+
+    template<class Object, class TParser>
+    Object Tree::restore(const uint8_t* data, size_t len, TParser&& parser)
+    {
+        return this->restore<Object>(Lib::In::Source(data, len), parser);
+    }
 
     template<class T>
     void Tree::load_object(const T& type)
     {
         this->clear();
-        Lib::Aux::InsertSwitch<T>::Insert(type, *this);
+        Lib::Aux::TypeSwitch<T>::Insert(type, *this);
     }
 }
 

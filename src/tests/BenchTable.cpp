@@ -16,6 +16,7 @@ struct BStruct {
     BasicStruct strct;
     vector<string> str_vec;
     vector<double> fp_vec;
+    vector<uint64_t> int_vec;
     BStruct() { }
 
     BStruct(string str)
@@ -23,12 +24,13 @@ struct BStruct {
         for(int i = 0; i < 10; i++) {
             this->str_vec.push_back(str);
             this->fp_vec.push_back(i * 35.688f);
+            this->int_vec.push_back(0xF099294CE1 << i);
         }
     }
 
     void srl_resolve(Context& ctx)
     {
-        ctx ("struct", strct) ("vec", str_vec) ("fp_vec", VecWrap<double>(fp_vec));
+        ctx ("struct", strct) ("vec", str_vec) ("fp_vec", VecWrap<double>(fp_vec)) ("int_vec", int_vec);
     }
 
 };
@@ -62,17 +64,17 @@ void run_bench(Tree& tree)
         measure([&](){ new_tree.load_object(map); }, "\tinsert data  ms: ");
 
         vector<uint8_t> source;
-        measure([&](){ source = Store<PSrl>(map); }, "\tStore Srl    ms: ");
+        measure([&](){ source = Tree().store<PSrl>(map); }, "\tStore Srl    ms: ");
 
-        measure([&](){ Restore<PSrl>(map, source); }, "\tRestore Srl  ms: ");
+        measure([&](){ Tree().restore<PSrl>(map, source); }, "\tRestore Srl  ms: ");
 
-        measure([&](){ source = Store(map, PJson(true)); }, "\tStore Json   ms: ");
+        measure([&](){ source = Tree().store(map, PJson(true)); }, "\tStore Json   ms: ");
 
-        measure([&](){ Restore<PJson>(map, source); }, "\tRestore Json ms: ");
+        measure([&](){ Tree().restore<PJson>(map, source); }, "\tRestore Json ms: ");
 
-        measure([&](){ source = Store<PMsgPack>(map); }, "\tStore MsgP    ms: ");
+        measure([&](){ source = Tree().store<PMsgPack>(map); }, "\tStore MsgP    ms: ");
 
-        measure([&](){ Restore<PMsgPack>(map, source); }, "\tRestore MsgP  ms: ");
+        measure([&](){ Tree().restore<PMsgPack>(map, source); }, "\tRestore MsgP  ms: ");
 
     } catch(Exception& ex) {
         print_log(string(ex.what()) + "\n");
@@ -89,13 +91,12 @@ void run_bench(Tree& tree, T&& parser, const string& name, Tail&&... tail)
        
 
         Tree reuse;
-        measure([&](){ source = tree.to_source(parser); },   "\tparse out  ms: ");
+        measure([&](){ tree.to_source(source, parser); },   "\tparse out  ms: ");
         measure([&](){ reuse.load_source(source, parser); }, "\tparse in   ms: ");
-        measure([&](){ reuse.load_source(source, parser); }, "\tparse in reuse ms: ");
 
         measure([&](){ ofstream fs("File"); tree.to_source(fs, parser); },        "\twrite file ms: ", []{ }, 1);
         
-        measure([&](){ ifstream fsi("File"); Tree().load_source(fsi, parser); },    "\tread file  ms: ", []{ }, 1);
+        measure([&](){ ifstream fsi("File"); reuse.load_source(fsi, parser); },    "\tread file  ms: ", []{ }, 1);
 
         unlink("File");
 
@@ -146,6 +147,8 @@ void Tests::run_benches()
     tree.root().insert("map", data);
 
     print_log("Running with " + to_string(Benchmark_Iterations) + " iterations...\n");
+
+    tree.to_source(PMsgPack());
 
     run_bench(
         tree,

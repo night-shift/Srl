@@ -2,7 +2,6 @@
 #define SRL_HASH_HPP
 
 #include "Hash.h"
-#include "Aux.h"
 
 namespace Srl { namespace Lib {
 

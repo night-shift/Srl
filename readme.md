@@ -27,16 +27,16 @@ public :
 
 int main() {
     YourClass original;
-    // serialize with Srl::Store
-    vector<uint8_t> bytes = Srl::Store<Srl::PJson>(original);
+    // serialize with Tree::store
+    vector<uint8_t> bytes = Srl::Tree().store<Srl::PJson>(original);
     //                                     |-> choose a parser
-    // deserialize with Srl::Restore
-    YourClass restored = Srl::Restore<YourClass, Srl::PJson>(bytes);
+    // deserialize with Tree::restore
+    YourClass restored = Srl::Tree().restore<YourClass, Srl::PJson>(bytes);
     // or use streams
     ofstream fso("file");
-    Srl::Store<Srl::PMsgPack>(fso, original);
+    Srl::Tree().store<Srl::PMsgPack>(original, fso);
     ifstream fsi("file");
-    Srl::Restore<Srl::PMsgPack>(restored, fsi);
+    Srl::Tree().restore<Srl::PMsgPack>(restored, fsi);
     // Thats it.
     return 0;
 }
@@ -102,7 +102,7 @@ What Context basically does is, depending on ```Srl::Mode```, calling insert or 
 Mode is either ```::Insert``` or ```::Paste```, you can query the current mode with ```ctx.mode()```.
 Taking the vector of bytes from above, you can call:
 ```cpp
-auto lang = Srl::Restore<Lang, PJson>(bytes);
+auto lang = tree.restore<Lang, PJson>(bytes);
 ```
 #### Handling non-default constructors
 Objects are instantiated through a factory ```struct Srl::Ctor<T>```. As default parameterless constructors are required. You can declare
@@ -164,8 +164,8 @@ public:
 
 // running...
 Composite composite { new Derived(), new Base() };
-Srl::Store<PJson>(cout, composite);
-// ...will print...
+Srl::Tree.store<PJson>(composite, cout);
+// ...will print:
 ```
 ```json
 {
@@ -200,7 +200,7 @@ assert(composite.at(0).srl_type_id().name() == "Derived");
 #### Handling shared references
 Simply use ```std::shared_ptr / std::weak_ptr```:
 ```cpp
-auto first  = make_shared<string>("shared string");
+auto first  = make_shared<Lang>("objc", 2, list<string> { ".h", ".m", ".mm" });
 auto second = first;
 Tree().root().insert("first", first, "second", second)
              .to_source<PJson>(cout); // yields...
@@ -209,7 +209,11 @@ Tree().root().insert("first", first, "second", second)
 {
     "first": {
 		"srl_shared_key": 0,
-		"srl_shared_value": "shared string"
+        "srl_shared_value": {
+            "name": "objc",
+            "version": 2,
+            "extensions": [ ".h", ".m", ".mm" ]
+        }
 	},
 	"second": {
 		"srl_shared_key": 0
@@ -217,9 +221,9 @@ Tree().root().insert("first", first, "second", second)
 }
 ```
 #### Handling binary data
-Use ```Srl::BitWrap / Srl::VecWrap``` to serialize raw binary data...
+Use ```Srl::BitWrap / Srl::VecWrap``` to serialize raw binary data:
 ```cpp
-// ...in a srl_resolve method
+// in a srl_resolve method
 struct SomeStruct {
 
   vector<uint8_t> binary;
@@ -255,8 +259,8 @@ tree.root().insert("data", wrap);
 wrap = BitWrap( [](size_t sz) { assert(sz == 4); return binary; } );
 tree.root().value("data").paste(wrap);
 ```
-For text-based serialization formats binary data will be converted to a base64 string. So calling
-```tree.to_source<PJson>(cout)``` on the ```Srl::Tree``` from above will yield...
+For text-based serialization formats binary data will be converted to a base64 string. Calling
+```tree.to_source<PJson>(cout)``` on the ```Srl::Tree``` from above will yield:
 ```json
 {
     "data": "AgQGCA=="
@@ -272,7 +276,7 @@ Select a format by...
 // ...passing the corresponding type as a template parameter
 Tree tree;
 tree.load_source<Srl::PSrl>(source);
-// ...by passing an instance
+// ...passing an instance
 Srl::PXml xml;
 xml.set_compact(true);
 auto bytes = tree.to_source(xml);

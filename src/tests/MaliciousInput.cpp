@@ -142,7 +142,7 @@ bool malicious_input(TParser&& parser, const string& parser_name, Tail&&... tail
 
     bool success = false;
     TestStruct m;
-    auto data = Store(m, parser);
+    auto data = Tree().store(m, parser);
 
     assert(data.size() > 100);
     /* wild guess */

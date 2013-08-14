@@ -3,6 +3,7 @@
 
 #include "Common.h"
 #include "Heap.h"
+#include "Aux.h"
 
 #include <math.h>
 
@@ -102,49 +103,90 @@ namespace Srl { namespace Lib {
         return *this;
     }
 
-    namespace Aux {
+namespace Aux {
 
-        template<size_t word_length> struct Arch;
+    template<size_t word_length> struct Arch;
 
-        template<> struct Arch<8> {
-            static const uint64_t Prime = 0x100000001B3;
-            static const uint64_t Base  = 0xCBF29CE484222325;
-        };
+    template<> struct Arch<8> {
 
-        template<> struct Arch<4> {
-            static const uint32_t Prime = 0x01000193;
-            static const uint32_t Base  = 0x811C9DC5;
-        };
+        static const uint64_t Mul  = 0xC6A4A7935BD1E995;
+        static const uint64_t Base = 0xCBF29CE484222325;
+        static const uint64_t Shr  = 47;
 
-        inline size_t fnv1a(const uint8_t* bytes, size_t nbytes)
+        static size_t hash_rem (const uint8_t* bytes, size_t nbytes, uint64_t hash)
         {
-            const auto apply = [](uint8_t byte, size_t hash) {
-                return (hash ^ byte) * Arch<sizeof(size_t)>::Prime;
+            switch(nbytes % 8) {
+                case 7 : hash ^= (uint64_t)bytes[6] << 48;
+                case 6 : hash ^= (uint64_t)bytes[5] << 40;
+                case 5 : hash ^= (uint64_t)bytes[4] << 32;
+                case 4 : hash ^= (uint64_t)bytes[3] << 24;
+                case 3 : hash ^= (uint64_t)bytes[2] << 16;
+                case 2 : hash ^= (uint64_t)bytes[1] << 8;
+                case 1 : hash ^= (uint64_t)bytes[0];
+                         hash *= Mul;
             };
 
-            size_t h = Aux::Arch<sizeof(size_t)>::Base;
+            hash ^= hash >> Shr;
+            hash *= Mul;
+            hash ^= hash >> Shr;
 
-            for(; nbytes >= 4; nbytes -= 4, bytes += 4) {
-                h = apply(bytes[0], h);
-                h = apply(bytes[1], h);
-                h = apply(bytes[2], h);
-                h = apply(bytes[3], h);
-            }
-
-            switch(nbytes % 4) {
-                case 3 : h = apply(bytes[2], h);
-                case 2 : h = apply(bytes[1], h);
-                case 1 : h = apply(bytes[0], h);
-            }
-
-            return h;
+            return hash;
         }
+    };
 
-        inline size_t hash_fnc(const uint8_t* bytes, size_t nbytes)
+    template<> struct Arch<4> {
+        
+        static const uint32_t Mul  = 0x5BD1E995;
+        static const uint32_t Base = 0x811C9DC5;
+        static const uint32_t Shr  = 24;
+
+        static size_t hash_rem (const uint8_t* bytes, size_t nbytes, uint32_t hash)
         {
-            return fnv1a(bytes, nbytes);
+            switch(nbytes % 4) {
+                case 3 : hash ^= (uint32_t)bytes[2] << 16;
+                case 2 : hash ^= (uint32_t)bytes[1] << 8;
+                case 1 : hash ^= (uint32_t)bytes[0];
+                         hash *= Mul;
+            };
+
+            hash ^= hash >> 13;
+            hash *= Mul;
+            hash ^= hash >> 15;
+
+            return hash;
         }
+    };
+
+    inline size_t murmur_hash2(const uint8_t * bytes, size_t nbytes)
+    {
+        const auto wordlen = sizeof(size_t);
+
+        const auto mul  = Aux::Arch<wordlen>::Mul;
+        const auto shr  = Aux::Arch<wordlen>::Shr;
+        const auto base = Aux::Arch<wordlen>::Base;
+
+        size_t hash = base ^ (nbytes * mul);
+
+        for(; nbytes >= wordlen; nbytes -= wordlen, bytes += wordlen) {
+
+            auto b = read<size_t>(bytes);
+
+            b *= mul; 
+            b ^= b >> shr; 
+            b *= mul; 
+
+            hash ^= b;
+            hash *= mul; 
+        }
+
+        return Aux::Arch<wordlen>::hash_rem(bytes, nbytes, hash);
+    }     
+
+    inline size_t hash_fnc(const uint8_t* bytes, size_t nbytes)
+    {
+        return murmur_hash2(bytes, nbytes);
     }
-} }
+    
+} } }
 
 #endif

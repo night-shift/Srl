@@ -13,9 +13,6 @@
 
 namespace Srl {
 
-    class String;
-    struct Parser;
-
     class Node {
 
         friend class Tree;
@@ -41,26 +38,19 @@ namespace Srl {
         inline Node& insert();
 
         template<class T> T unwrap ();
+
         template<class T> void paste (T& o);
 
-        template<class T>
+        template<class T, class ID>
+        T unwrap_field (const ID& field);
+
+        template<class T, class ID>
         typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), void>::type
-        paste_field (const String& field_name, T& o);
+        paste_field (const ID& field, T& o);
 
-        template<class T>
-        typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), void>::type
-        paste_field (size_t index, T& o);
-
-        template<class T>
+        template<class T, class ID>
         typename std::enable_if<TpTools::is_scope(Lib::Switch<T>::type), void>::type
-        paste_field (const String& field_name, T& o);
-
-        template<class T>
-        typename std::enable_if<TpTools::is_scope(Lib::Switch<T>::type), void>::type
-        paste_field (size_t index, T& o);
-
-        template<class T> T unwrap_field (const String& field_name);
-        template<class T> T unwrap_field (size_t index);
+        paste_field (const ID& field, T& o);
 
         Node& node (const String& name);
         Node& node (size_t index);
@@ -90,6 +80,7 @@ namespace Srl {
 
         inline size_t num_nodes()    const;
         inline size_t num_values()   const;
+
         inline Type   type()         const;
         inline const  String& name() const;
 
@@ -128,11 +119,11 @@ namespace Srl {
         void  read_source ();
 
         void  consume_scope ();
-        Node  consume_node  (bool throw_exception);
-        Value consume_value (bool throw_exception); 
+        Node  consume_node  (bool throw_ex, const String& name);
+        Value consume_value (bool throw_ex, const String& name); 
 
-        Node  consume_node  (const String& name);
-        Value consume_value (const String& name);
+        Node  consume_node  (bool throw_ex, size_t idx);
+        Value consume_value (bool throw_ex, size_t idx); 
 
         template<class T>
         typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), Value>::type

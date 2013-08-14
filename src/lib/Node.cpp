@@ -182,11 +182,9 @@ void Node::read_source()
         auto field_name = String(seg_name, Encoding::UTF8);
 
         if(!TpTools::is_scope(val.type())) {
-            /* new value */
             this->env->store_value(*this, val, field_name);
 
         } else {
-            /* new node */
             auto* link = this->env->store_node(*this, Node(this->env->tree, val.type()), field_name);
 
             link->field.read_source();
@@ -194,7 +192,7 @@ void Node::read_source()
     }
 }
 
-Node Node::consume_node(const String& id)
+Node Node::consume_node(bool throw_ex, const String& id)
 {
     auto* stored = find_link_remove(id, this->nodes, *this->env);
 
@@ -229,10 +227,14 @@ Node Node::consume_node(const String& id)
         }
     }
 
-    throw Exception("Field " + id.unwrap(false) + " not found");
+    if(throw_ex) {
+        throw Exception("Field " + id.unwrap(false) + " not found");
+    }
+
+    return Node(this->env->tree);
 }
 
-Value Node::consume_value(const String& id)
+Value Node::consume_value(bool throw_ex, const String& id)
 {
     auto* stored = find_link_remove(id, this->values, *this->env);
 
@@ -267,11 +269,15 @@ Value Node::consume_value(const String& id)
         }
     }
 
-    throw Exception("Field " + id.unwrap(false) + " not found");
+    if(throw_ex) {
+        throw Exception("Field " + id.unwrap(false) + " not found");
+    }
+
+    return Value(Type::Null);
 }
 
 
-Node Node::consume_node(bool throw_exception)
+Node Node::consume_node(bool throw_ex, size_t)
 {
     if(this->nodes.size() > 0) {
         auto itr = this->nodes.begin();
@@ -300,14 +306,14 @@ Node Node::consume_node(bool throw_exception)
         }
     }
 
-    if(throw_exception) {
+    if(throw_ex) {
         throw Exception("Cannot access Node. Index out of bounds");
     }
 
     return Node(*this->env->tree);
 }
 
-Value Node::consume_value(bool throw_exception)
+Value Node::consume_value(bool throw_ex, size_t)
 {
     if(this->values.size() > 0) {
         auto itr = this->values.begin();
@@ -337,7 +343,7 @@ Value Node::consume_value(bool throw_exception)
         }
     }
 
-    if(throw_exception) {
+    if(throw_ex) {
         throw Exception("Cannot access Value. Index out of bounds");
     }
 
