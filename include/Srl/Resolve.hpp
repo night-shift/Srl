@@ -191,7 +191,8 @@ namespace Srl { namespace Lib {
 
         static std::pair<Encoding, MemBlock> Wrap(const T& pointer)
         {
-            size_t size = strlen(pointer);
+            size_t size = 0;
+            while(pointer[size]) size++;
 
             return std::make_pair(
                 get_encoding<typename std::remove_pointer<T>::type>(),
@@ -484,7 +485,8 @@ namespace Srl { namespace Lib {
     /* arrays */
     template<class T>
     struct Switch<T, typename std::enable_if<std::is_array<T>::value && !is_char_array<T>::value>::type> {
-        static const Type type = Type::Array;
+        static const Type type  = Type::Array;
+        static const size_t len = std::extent<T>::value;
         typedef typename array_type<T>::type E;
 
         static void Insert(const T& ar, Node& node, const String& name)
@@ -507,19 +509,23 @@ namespace Srl { namespace Lib {
             size_t count = 0;
 
             if(node.parsed) {
+
+                Aux::check_size(len, node.items<E>().size(), id);
+
                 for(auto& itm : node.items<E>()) {
                     Switch<E>::Paste(ar[count], itm.field, count);
                     count++;
                 }
 
             } else {
-                while(!node.parsed && count < std::extent<T>::value) {
+                while(!node.parsed && count < len) {
                     node.paste_field(count, ar[count]);
                     count++;
                 }
+
+                Aux::check_size(len, count, id);
             }
 
-            Aux::check_size(std::extent<T>::value, count, id);
         }
     };
 
