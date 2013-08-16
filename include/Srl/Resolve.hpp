@@ -472,12 +472,10 @@ namespace Srl { namespace Lib {
                 auto key = Ctor<KeyNC>::Create();
                 itm.paste_field(Aux::Str_Key, key);
 
-                auto itr = c.emplace(std::move(key), Ctor<Value>::Create());
-                if(!itr.second) {
-                    /* entry duplication */
-                    throw Exception("Unable to restore map. Key duplication");
-                }
-                itm.paste_field(Aux::Str_Value, itr.first->second);
+                auto val = Ctor<Value>::Create();
+                itm.paste_field(Aux::Str_Value, val);
+
+                c.emplace(std::move(key), std::move(val));
             }
         };
     };

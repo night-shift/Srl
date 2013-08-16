@@ -152,10 +152,6 @@ namespace {
 
         } while(sz > sz_buf);
 
-        while(sz > 1 && *(out.data() + sz - 1) == '0') {
-            sz--;
-        }
-
         return sz;
     }
 

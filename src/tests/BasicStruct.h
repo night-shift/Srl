@@ -3,6 +3,8 @@
 
 #include "Tests.h"
 
+#include <limits>
+
 namespace Tests {
 
     #define TEST(assertion) \
@@ -18,7 +20,7 @@ namespace Tests {
         FIELDS(X, uint32_t, P) FIELDS(X, int32_t, P) FIELDS(X, uint64_t, P)
 
     #define DECLARE_FIELD(N, T, P) \
-        T N = P;
+        T N = std::numeric_limits<T>::max() / 2;
 
     #define RESOLVE_FIELD(N, T, P) \
         (#N, N)
@@ -27,7 +29,7 @@ namespace Tests {
         TEST(N == P.N)
 
     #define SHUFFLE_FIELD(N, T, P) \
-         N = P;
+        N = std::numeric_limits<T>::max();
 
     #define INSERT_FIELD(N, T, P) \
         tree.root().insert(#N, N);
@@ -39,7 +41,7 @@ namespace Tests {
 
         std::string SCOPE = "BasicStruct";
 
-        FIELDS_FNC(DECLARE_FIELD, 120)
+        FIELDS_FNC(DECLARE_FIELD, 0)
 
         void srl_resolve(Srl::Context& ctx)
         {

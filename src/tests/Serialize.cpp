@@ -2,6 +2,8 @@
 #include "BasicStruct.h"
 
 #include <list>
+#include <forward_list>
+#include <queue>
 #include <cmath>
 #include <deque>
 #include <stack>
@@ -18,11 +20,6 @@ using namespace std;
 using namespace Tests;
 
 bool in_text_format = false;
-
-struct TestClassH {
-
-    const string SCOPE = "TestClassH";
-};
 
 struct TestClassG {
 

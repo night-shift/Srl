@@ -43,6 +43,9 @@ namespace Srl { namespace Lib {
     template<bool Not, class... Tokens>
     size_t In::move_until(const Error& error, const Tokens&... tokens)
     {
+        if(!this->pos) {
+            error();
+        }
         auto steps = 0U;
 
         while(Not == this->is_at_token(tokens...)) {

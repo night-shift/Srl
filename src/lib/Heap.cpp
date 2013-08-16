@@ -66,6 +66,8 @@ void Aux::SList<T>::append(SList<T>::Link* link)
         this->back->next = link;
         this->back = link;
     }
+
+    link->next = nullptr;
 }
 
 template<class T>
