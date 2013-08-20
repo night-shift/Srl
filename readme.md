@@ -20,7 +20,7 @@ public :
     void srl_resolve (Srl::Context& ctx) {
         // tell the context what to serialize, field names are optional
         ctx ("a", a) ("b", b) ("c", c)
-            ("d", d) ("e", e) ("f", f);
+            ("d", d) ("e", e);
     }
 };
 
@@ -270,7 +270,7 @@ For text-based serialization formats binary data will be converted to a base64 s
 ```
 
 #### Serialization formats
-Srl supports 4 serialization formats
+Srl supports 4 serialization formats:
 * Json
 * Xml
 * MessagePack
