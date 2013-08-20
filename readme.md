@@ -1,4 +1,5 @@
-## Srl
+Srl
+=====
 ```cpp
 #include "Srl/Srl.h"
 
@@ -7,14 +8,12 @@ class YourClass {
     int a = 10;
     // strings
     u32string b = U"string";
-    // stl-containers...
+    // stl-containers
     vector<double> c { 1.0, 2.0, 3.0 };
-    // ...including maps
-    map<short, string> d { { 0, "0" }, { 1, "1" } };
     // shared_ / unique_ptrs
-    shared_ptr<int> e = make_shared<int>(5);
+    shared_ptr<int> d = make_shared<int>(5);
     // tuples
-    tuple<bool, string, char> f { false, "tuple", 'N' };
+    tuple<bool, string, char> e { false, "tuple", 'N' };
 
 public :
     // implement a srl_resolve method
@@ -36,12 +35,14 @@ int main() {
     // or use streams
     ofstream fso("file");
     tree.store<Srl::PMsgPack>(original, fso);
+    
     ifstream fsi("file");
     tree.restore<Srl::PMsgPack>(restored, fsi);
     // Thats it.
     return 0;
 }
 ```
+##Overview
 #### Processing documents
 ```cpp
 string json = "{ "
@@ -57,7 +58,7 @@ Node& root = tree.root();
 auto version = root.value("version").unwrap<int>();
 // or just 'paste'
 string name;
-root.paste_field("name", name);
+root.value("name").paste(name);
 // insert data
 root.insert("extensions", { ".cpp", ".cc" });
 // access nodes
@@ -67,8 +68,6 @@ extensions.insert(".hpp");
 auto extension = extensions.value(2).unwrap<string>();
 // unwrap nodes
 auto vec = extensions.unwrap<vector<string>>();
-// paste nodes
-extensions.paste(vec);
 // translate the tree - to plain bytes...
 vector<uint8_t> bytes = tree.to_source<PJson>();
 // ...or to a stream
@@ -79,7 +78,7 @@ tree.to_source<PJson>(cout); // will print...
     "name": "cpp", "version": 11, "extensions": [ ".cpp", ".cc", ".hpp" ]
 }
 ```
-Same output as a single expression:
+Same output as a single expression
 ```cpp
 Tree().root().insert(
     "name", "cpp",
@@ -88,7 +87,7 @@ Tree().root().insert(
 ).to_source<PJson>(cout);
 ```
 #### Serializing your types
-Implement a resolve method to tell Srl how to handle your types:
+Implement a resolve method to tell Srl how to handle your types
 ```cpp 
 struct Lang {
     string name; int version; list<string> extensions;
@@ -101,7 +100,7 @@ struct Lang {
 ```
 What Context basically does is, depending on ```Srl::Mode```, calling insert or paste on a given ```Srl::Node```.
 Mode is either ```::Insert``` or ```::Paste```, you can query the current mode with ```ctx.mode()```.
-Taking the vector of bytes from above, you can call:
+Taking the vector of bytes from above you can call:
 ```cpp
 auto lang = Tree().restore<Lang, PJson>(bytes);
 ```
@@ -121,8 +120,9 @@ struct Base {
 
     virtual ~Base { }
 };
-// register a type in your implementation.cpp to avoid duplicate registrations of the same type
-// this will force a registration on program initialization, no RTTI needed
+// register a type in your implementation.cpp to avoid duplicate
+// registrations of the same type
+// no RTTI needed
 const auto base_id = Srl::register_type<Base>("Base");
 // return the ID
 const Srl::TypeID& Base::srl_type_id() { return base_id; }
@@ -199,7 +199,7 @@ composite = tree.root().unwrap<Composite>();
 assert(composite.at(0).srl_type_id().name() == "Derived");
 ```
 #### Handling shared references
-Simply use ```std::shared_ptr / std::weak_ptr```:
+Simply use ```std::shared_ptr / std::weak_ptr```
 ```cpp
 auto first  = make_shared<Lang>("objc", 2, list<string> { ".h", ".m", ".mm" });
 auto second = first;
@@ -222,7 +222,7 @@ Tree().root().insert("first", first, "second", second)
 }
 ```
 #### Handling binary data
-Use ```Srl::BitWrap / Srl::VecWrap``` to serialize raw binary data:
+Use ```Srl::BitWrap / Srl::VecWrap``` to serialize raw binary data
 ```cpp
 // in a srl_resolve method
 struct SomeStruct {
@@ -234,8 +234,9 @@ struct SomeStruct {
         // Pass a pointer to memory along with the size.
         // This data will be stored on ctx.mode() == Mode::Insert.
         binary.data(), binary.size(),
-        // Pass a function f(size)->*mem, the function will be called on ctx.mode() == Mode::Paste
-        // with the restored size of the memory block as parameter. The restored data will be
+        // Pass a function f(size)->*mem, the function will be called on
+        // ctx.mode() == Mode::Paste with the restored size of the
+        // memory block as parameter. The restored data will be
         // copied to the returned pointer.
         [this](size_t size) -> uint8_t* {
             binary.resize(size);
@@ -269,8 +270,11 @@ For text-based serialization formats binary data will be converted to a base64 s
 ```
 
 #### Serialization formats
-Srl supports 4 serialization formats. Json, Xml, MessagePack, and
-[Srl](https://github.com/night-shift/Srl/blob/master/src/lib/PSrl.cpp), a custom space efficient binary format.
+Srl supports 4 serialization formats
+* Json
+* Xml
+* MessagePack
+* [Srl](https://github.com/night-shift/Srl/blob/master/src/lib/PSrl.cpp), a custom space efficient binary format.
 
 Select a format by...
 ```cpp
@@ -286,7 +290,7 @@ Output encoding for text-based formats is UTF-8. Input is also expected to be UT
 correct encoding before parsing.
 You can use ```convert_charset``` from ```Srl::Tools::``` for converting to the appropriate character set.
 
-#### Compiler support
+#### Supported compilers
 At least GCC 4.8 or Clang 3.2 are required. MSVC is lacking some vital C++11 features, so no support as of now.
 
 #### License
