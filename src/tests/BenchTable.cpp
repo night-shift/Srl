@@ -30,7 +30,7 @@ struct BStruct {
 
     void srl_resolve(Context& ctx)
     {
-        ctx ("struct", strct) ("vec", str_vec) ("fp_vec", VecWrap<double>(fp_vec)) ("int_vec", int_vec);
+        ctx ("struct", strct) ("vec", str_vec) ("fp_vec", fp_vec) ("int_vec", int_vec);
     }
 
 };
@@ -88,14 +88,12 @@ void run_bench(Tree& tree, T&& parser, const string& name, Tail&&... tail)
         print_log("\nBenching parser " + name +  "...\n");
 
         vector<uint8_t> source;
-       
 
         Tree reuse;
         measure([&](){ tree.to_source(source, parser); },   "\tparse out  ms: ");
         measure([&](){ reuse.load_source(source, parser); }, "\tparse in   ms: ");
 
         measure([&](){ ofstream fs("File"); tree.to_source(fs, parser); },        "\twrite file ms: ", []{ }, 1);
-        
         measure([&](){ ifstream fsi("File"); reuse.load_source(fsi, parser); },    "\tread file  ms: ", []{ }, 1);
 
         unlink("File");
@@ -117,7 +115,6 @@ void run_bench(Tree& tree, T&& parser, const string& name, Tail&&... tail)
                         break;
                     }
                 }
-                
             }
         }, "\tParse in / no store ms: ");
 

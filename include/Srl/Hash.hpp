@@ -81,7 +81,7 @@ namespace Srl { namespace Lib {
 
         return nullptr;
     }
-        
+
     template<class K, class V, class H>
     std::pair<bool, V*> HTable<K, V, H>::insert(const K& key, const V& val)
     {
@@ -124,6 +124,26 @@ namespace Srl { namespace Lib {
         this->heap.clear();
         this->limit    = 0;
         this->elements = 0;
+    }
+
+    template<class K, class V, class H>
+    HTable<K, V, H>& HTable<K, V, H>::operator= (HTable<K, V, H>&& m)
+    {
+        this->destroy<V>();
+
+        this->limit    = m.limit;
+        this->elements = m.elements;
+
+        m.limit    = 0;
+        m.elements = 0;
+
+        this->cap         = m.cap;
+        this->load_factor = m.load_factor;
+
+        this->heap  = std::move(m.heap);
+        this->table = m.table;
+
+        return *this;
     }
 
     template<class K, class V, class H>

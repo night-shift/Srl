@@ -19,8 +19,6 @@ using namespace Srl;
 using namespace std;
 using namespace Tests;
 
-bool in_text_format = false;
-
 struct TestClassG {
 
     const string SCOPE = "TestClassG";
@@ -56,28 +54,13 @@ struct TestClassG {
 
     void test(TestClassG& n)
     {
-        if(in_text_format) {
+        TEST(d_min == n.d_min)
+        TEST(d_low == n.d_low)
+        TEST(d_max == n.d_max)
 
-            double ed = 0.00000000001;
-
-            TEST(fabs(d_min - n.d_min) < ed)
-            TEST(fabs(d_low - n.d_low) < ed)
-            TEST(fabs(d_max - n.d_max) < ed)
-
-            TEST(fabs(f_min - n.f_min) < ed)
-            TEST(fabs(f_max - n.f_max) < ed)
-            TEST(fabs(f_low - n.f_low) < ed)
-
-        } else {
-
-            TEST(d_min == n.d_min)
-            TEST(d_low == n.d_low)
-            TEST(d_max == n.d_max)
-
-            TEST(f_min == n.f_min)
-            TEST(f_max == n.f_max)
-            TEST(f_low == n.f_low)
-        }
+        TEST(f_min == n.f_min)
+        TEST(f_max == n.f_max)
+        TEST(f_low == n.f_low)
     }
 };
 
@@ -396,7 +379,6 @@ bool test_serialize() { return true; }
 template<class TParser, class... Tail>
 bool test_serialize(TParser&& parser, const string& parser_name, Tail&&... tail)
 {
-    in_text_format = parser.get_format() == Format::Text;
     bool success = true;
 
     try {

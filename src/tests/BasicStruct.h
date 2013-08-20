@@ -20,7 +20,7 @@ namespace Tests {
         FIELDS(X, uint32_t, P) FIELDS(X, int32_t, P) FIELDS(X, uint64_t, P)
 
     #define DECLARE_FIELD(N, T, P) \
-        T N = std::numeric_limits<T>::max() / 2;
+        T N = std::numeric_limits<T>::max();
 
     #define RESOLVE_FIELD(N, T, P) \
         (#N, N)
@@ -29,7 +29,7 @@ namespace Tests {
         TEST(N == P.N)
 
     #define SHUFFLE_FIELD(N, T, P) \
-        N = std::numeric_limits<T>::max();
+        N = std::numeric_limits<T>::max() / 2;
 
     #define INSERT_FIELD(N, T, P) \
         tree.root().insert(#N, N);

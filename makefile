@@ -25,6 +25,7 @@ endif
 
 header     = -Iinclude
 libsrcdir  = src/lib
+fpconvdir  = $(libsrcdir)/fpconv
 testsrcdir = src/tests
 
 testfile   = tests
@@ -32,9 +33,11 @@ testfile   = tests
 ########################################################################
 
 lib         = $(out)/lib$(libname)
-libsrcs     = $(wildcard $(libsrcdir)/*.cpp)
-libobjs_pic = $(patsubst %.cpp,$(cache)/pic/%.o, $(libsrcs))
-libobjs_pdc = $(patsubst %.cpp,$(cache)/pdc/%.o, $(libsrcs))
+libsrcs     = $(patsubst %.cpp,%.o, $(wildcard $(libsrcdir)/*.cpp))
+libsrcs    += $(patsubst %.c,%.o, $(wildcard $(fpconvdir)/*.c))
+
+libobjs_pic = $(patsubst %.o,$(cache)/pic/%.o, $(libsrcs))
+libobjs_pdc = $(patsubst %.o,$(cache)/pdc/%.o, $(libsrcs))
 
 testsrcs = $(wildcard $(testsrcdir)/*.cpp)
 testobjs = $(patsubst %.cpp,$(cache)/pdc/%.o, $(testsrcs))
@@ -69,10 +72,10 @@ $(lib).a: $(libobjs_pdc)
 	@$(AR) rcs $(lib).a $(libobjs_pdc)
 
 # compile files
-$(cache)/pic/%.o: %.cpp
+$(cache)/pic/%.o: %.c*
 	@$(call compile,$@,$<,-fPIC)
 
-$(cache)/pdc/%.o: %.cpp
+$(cache)/pdc/%.o: %.c*
 	@$(call compile,$@,$<)
 	
 # build and run test

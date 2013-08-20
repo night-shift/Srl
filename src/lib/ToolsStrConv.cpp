@@ -1,8 +1,9 @@
 #include "Srl/Srl.h"
 #include "Srl/Internal.h"
+#include "fpconv/fpconv.h"
 
 #include <limits>
-#include <math.h>
+#include <cmath>
 
 using namespace std;
 using namespace Srl;
@@ -125,6 +126,7 @@ namespace {
         return str_len;
     }
 
+
     template<Type type> typename enable_if<TpTools::is_fp(type), size_t>::type
     conv_type(const Value& value, vector<uint8_t>& out)
     {
@@ -135,24 +137,11 @@ namespace {
             return conv_type<Type::I64>((int64_t)val, out);
         }
 
-        int sz_buf = out.size();
-        int sz = 64;
+        if(out.size() < 24) {
+            out.resize(24);
+        }
 
-        do {
-            if(sz_buf < sz + 1) /* string terminator */ {
-                sz_buf = sz + 1;
-                out.resize(sz_buf);
-            }
-
-            sz = snprintf((char*)out.data(), sz_buf, "%f", val);
-
-            if(sz < 0) {
-                throw Exception("Error occurred on converting floating point value to string.");
-            }
-
-        } while(sz > sz_buf);
-
-        return sz;
+        return fpconv_dtoa(val, (char*)out.data());
     }
 
     template<Type type> typename enable_if<type == Type::Bool, size_t>::type
