@@ -8,13 +8,13 @@ namespace Srl {
 
     class Node;
     class String;
-    class InsertContext;
-    class PasteContext;
+    class StoreContext;
+    class RestoreContext;
 
     class Context {
 
-    friend class InsertContext;
-    friend class PasteContext;
+    friend class StoreContext;
+    friend class RestoreContext;
 
     public :
         Context(Node& node_, Mode mode_) : context_node(&node_), context_mode(mode_) { }
@@ -39,27 +39,27 @@ namespace Srl {
     };
 
 
-    class InsertContext {
+    class StoreContext {
     public:
-        InsertContext(Node& node) : context(Context(node, Mode::Insert)) { }
+        StoreContext(Node& node) : context(Context(node, Mode::Insert)) { }
 
         template<class T>
-        InsertContext& operator () (const T& o);
+        StoreContext& operator () (const T& o);
         template<class T>
-        InsertContext& operator () (const String& name, const T& o);
+        StoreContext& operator () (const String& name, const T& o);
 
     private:
         Context context;
     };
 
-    class PasteContext {
+    class RestoreContext {
     public:
-        PasteContext(Node& node) : context(Context(node, Mode::Paste)) { }
+        RestoreContext(Node& node) : context(Context(node, Mode::Paste)) { }
 
         template<class T>
-        PasteContext& operator () (T&& o);
+        RestoreContext& operator () (T&& o);
         template<class T>
-        PasteContext& operator () (const String& name, T&& o);
+        RestoreContext& operator () (const String& name, T&& o);
 
     private:
         Context context;

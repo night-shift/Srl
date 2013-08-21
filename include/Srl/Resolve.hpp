@@ -308,12 +308,12 @@ namespace Srl { namespace Lib {
     /* Classes / structs which have srl_resolve methods but no type_id method */
     template<class T>
     struct Switch<T, typename std::enable_if<
-        has_resolve_method<T>::value || has_insert_method<T>::value || has_paste_method<T>::value>::type> {
+        has_resolve_method<T>::value || has_store_method<T>::value || has_restore_method<T>::value>::type> {
 
         static_assert(
-            has_resolve_method<T>::value || (has_insert_method<T>::value && has_paste_method<T>::value),
-            "Srl error. Classes either need to have a single srl_resolve method or both "
-            "srl_paste and srl_insert methods implemented"
+            has_resolve_method<T>::value || (has_store_method<T>::value && has_restore_method<T>::value),
+            "Srl error. Classes either need to implement a single srl_resolve method or both "
+            "srl_restore and srl_store methods"
         );
 
         static const Type type = Type::Object;
@@ -329,11 +329,11 @@ namespace Srl { namespace Lib {
         }
 
         template<class U>
-        typename std::enable_if<has_insert_method<U>::value, void>::type
+        typename std::enable_if<has_store_method<U>::value, void>::type
         static InsertCall(Node& node, const T& o)
         {
-            InsertContext ctx(node);
-            o.srl_insert(ctx);
+            StoreContext ctx(node);
+            o.srl_store(ctx);
         }
 
         template<class U>
@@ -361,11 +361,11 @@ namespace Srl { namespace Lib {
         }
 
         template<class U>
-        typename std::enable_if<has_paste_method<U>::value, void>::type
+        typename std::enable_if<has_restore_method<U>::value, void>::type
         static PasteCall(Node& node, T& o)
         {
-            PasteContext ctx(node);
-            o.srl_paste(ctx);
+            RestoreContext ctx(node);
+            o.srl_restore(ctx);
         }
     };
 

@@ -98,10 +98,10 @@ struct Lang {
     }
 };
 ```
-You can either use a single resolve or dedicated insert and paste methods
+You can either use a single resolve or dedicated store and restore methods
 
-	void srl_insert (Srl::InsertContext& ctx) const { ... }
-	void srl_paste  (Srl::PasteContext& ctx) { ... }
+	void srl_store   (Srl::StoreContext& ctx) const { ... }
+	void srl_restore (Srl::RestoreContext& ctx) { ... }
 	
 Taking the vector of bytes from above you could now call:
 

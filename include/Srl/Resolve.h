@@ -23,8 +23,8 @@ namespace Srl {
     };
 
     class Context;
-    class InsertContext;
-    class PasteContext;
+    class StoreContext;
+    class RestoreContext;
     class String;
     class Node;
     struct TypeID;
@@ -37,24 +37,24 @@ namespace Lib {
 
     template<class TChar> Encoding get_encoding();
 
-    template<class T> struct has_insert_method {
+    template<class T> struct has_store_method {
 
         template<class U, U> struct test_sig { };
 
         template <class U>
-        static char test(test_sig<void(U::*)(Srl::InsertContext&) const, &U::srl_insert>*);
+        static char test(test_sig<void(U::*)(Srl::StoreContext&) const, &U::srl_store>*);
         template <class U>
         static long test(...);
 
         static const bool value = sizeof(test<T>(0)) == sizeof(char);
     };
 
-    template<class T> struct has_paste_method {
+    template<class T> struct has_restore_method {
 
         template<class U, U> struct test_sig { };
 
         template <class U>
-        static char test(test_sig<void(U::*)(Srl::PasteContext&), &U::srl_paste>*);
+        static char test(test_sig<void(U::*)(Srl::RestoreContext&), &U::srl_restore>*);
         template <class U>
         static long test(...);
 
@@ -94,7 +94,7 @@ namespace Lib {
 
         static_assert(has_resolve_method<T>::value,
         "Srl error. Unable to resolve type. Did you implement either a srl_resolve(Context&) "
-        "or both srl_insert(InsertContext&) and srl_paste(PasteContext&) methods?"
+        "or both srl_store(StoreContext&) and srl_restore(RestoreContext&) methods?"
         );
     };
 

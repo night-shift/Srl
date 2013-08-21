@@ -38,7 +38,7 @@ namespace Srl {
 
                 auto uptr = (*make)();
 
-                return std::unique_ptr<T>(static_cast<T*>(uptr.release())); 
+                return std::unique_ptr<T>(static_cast<T*>(uptr.release()));
             }
 
         private:

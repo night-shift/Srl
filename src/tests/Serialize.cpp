@@ -180,14 +180,14 @@ struct TestClassC {
 
     set<string> set_string { "a" };
 
-    void srl_paste(PasteContext& ctx)
+    void srl_restore(RestoreContext& ctx)
     {
         ctx ("map_class", map_class)
             ("vector_nested", vector_nested)
             ("set_string", set_string);
     }
 
-    void srl_insert(InsertContext& ctx) const
+    void srl_store(StoreContext& ctx) const
     {
         ctx ("map_class", map_class)
             ("vector_nested", vector_nested)

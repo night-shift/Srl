@@ -8,26 +8,26 @@
 namespace Srl {
 
     template<class T>
-    InsertContext& InsertContext::operator () (const T& o)
+    StoreContext& StoreContext::operator () (const T& o)
     {
         return this->operator()(String(), o);
     }
 
     template<class T>
-    PasteContext& PasteContext::operator () (T&& o)
+    RestoreContext& RestoreContext::operator () (T&& o)
     {
         return this->operator()(String(), o);
     }
 
     template<class T>
-    InsertContext& InsertContext::operator () (const String& name, const T& o)
+    StoreContext& StoreContext::operator () (const String& name, const T& o)
     {
         this->context.insert(o, name);
         return *this;
     }
 
     template<class T>
-    PasteContext& PasteContext::operator () (const String& name, T&& o)
+    RestoreContext& RestoreContext::operator () (const String& name, T&& o)
     {
         this->context.paste(o, name);
         return *this;
