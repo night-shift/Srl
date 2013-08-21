@@ -48,7 +48,7 @@ static Fp build_fp(double d)
     } else {
         fp.exp = -expbias + 1;
     }
-    
+
     return fp;
 }
 
@@ -59,7 +59,6 @@ static void normalize(Fp* fp)
         fp->exp--;
     }
 
-    /* exponent + hidden bit */
     int shift = 64 - 52 - 1;
     fp->frac <<= shift;
     fp->exp -= shift;
@@ -67,10 +66,10 @@ static void normalize(Fp* fp)
 
 static void get_normalized_boundaries(Fp* fp, Fp* lower, Fp* upper)
 {
-    upper->frac = (fp->frac << 1) + 1; 
+    upper->frac = (fp->frac << 1) + 1;
     upper->exp  = fp->exp - 1;
 
-    while (!(upper->frac & (hiddenbit << 1))) {
+    while ((upper->frac & (hiddenbit << 1)) == 0) {
         upper->frac <<= 1;
         upper->exp--;
     }
@@ -80,11 +79,12 @@ static void get_normalized_boundaries(Fp* fp, Fp* lower, Fp* upper)
     upper->frac <<= u_shift;
     upper->exp = upper->exp - u_shift;
 
-    bool fraction = fp->frac == hiddenbit;
-    int l_shift = fraction ? 2 : 1;
+
+    int l_shift = fp->frac == hiddenbit ? 2 : 1;
 
     lower->frac = (fp->frac << l_shift) - 1;
     lower->exp = fp->exp - l_shift;
+
 
     lower->frac <<= lower->exp - upper->exp;
     lower->exp = upper->exp;
@@ -107,7 +107,7 @@ static Fp multiply(Fp* a, Fp* b)
         ah_bh + (ah_bl >> 32) + (al_bh >> 32) + (tmp >> 32),
         a->exp + b->exp + 64
     };
-    
+
     return fp;
 }
 
@@ -129,7 +129,7 @@ static int generate_digits(Fp* fp, Fp* upper, Fp* lower, char* digits, int* K)
     Fp one;
     one.frac = 1UL << -upper->exp;
     one.exp  = upper->exp;
-    
+
     uint64_t part1 = upper->frac >> -one.exp;
     uint64_t part2 = upper->frac & (one.frac - 1);
 
@@ -210,7 +210,7 @@ static int emit_digits(char* digits, int ndigits, char* dest, int K, bool neg)
     int exp = absv(K + ndigits - 1);
 
     /* write plain integer */
-    if(K >= 0 && (exp < (ndigits + 4))) {
+    if(K >= 0 && (exp < (ndigits + 7))) {
         memcpy(dest, digits, ndigits);
         memset(dest + ndigits, '0', K);
 

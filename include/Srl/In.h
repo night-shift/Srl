@@ -3,7 +3,6 @@
 
 #include "Common.h"
 #include "Blocks.h"
-#include "String.h"
 
 #include <functional>
 #include <istream>
@@ -40,8 +39,7 @@ namespace Srl { namespace Lib {
         };
 
         In() { }
-        
-        void                  set(Source source); 
+        void                  set(Source source);
 
         inline bool           is_streaming() const;
         inline const uint8_t* pointer()      const;
@@ -89,8 +87,7 @@ namespace Srl { namespace Lib {
         std::istream* stream = nullptr;
         bool eof_reached     = false;
 
-        int swap_mod = 0;
-        std::vector<uint8_t> swap[2];
+        std::vector<uint8_t> buffer;
 
         const uint8_t* anchor = nullptr;
 

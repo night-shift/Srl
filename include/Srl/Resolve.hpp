@@ -16,10 +16,10 @@ namespace Srl { namespace Lib {
 
     namespace Aux {
 
-        const String Str_Key("key"),     Str_First ("first"),
-                     Str_Value("value"), Str_Second("second"),
-                     Str_Type_ID("srl_type_id"), Str_Shared_key("srl_shared_key"),
-                     Str_Shared_Value("srl_shared_value"), Str_Empty;
+        const String str_key("key"),     str_first ("first"),
+                     str_value("value"), str_second("second"),
+                     str_shared_value("srl_shared_value"), str_shared_key("srl_shared_key"),
+                     str_type_id("srl_type_id"), str_empty;
 
         inline void throw_error(const std::string& msg, size_t field_id);
 
@@ -97,7 +97,7 @@ namespace Srl { namespace Lib {
         }
 
         template<class ID = String>
-        static void Paste(std::basic_string<T>& str, const Value& value, const ID& id = Aux::Str_Empty)
+        static void Paste(std::basic_string<T>& str, const Value& value, const ID& id = Aux::str_empty)
         {
             auto val_type = value.type();
 
@@ -138,7 +138,7 @@ namespace Srl { namespace Lib {
         }
 
         template<class ID = String>
-        static void Paste(T& c, const Value& value, const ID& id = Aux::Str_Empty)
+        static void Paste(T& c, const Value& value, const ID& id = Aux::str_empty)
         {
             Aux::copy_string(&c, sizeof(T), value, id);
         }
@@ -169,7 +169,7 @@ namespace Srl { namespace Lib {
         }
 
         template<class ID = String>
-        static void Paste(T& str, const Value& value, const ID& id = Aux::Str_Empty)
+        static void Paste(T& str, const Value& value, const ID& id = Aux::str_empty)
         {
             Aux::copy_string(&str, str_size, value, id);
         }
@@ -213,7 +213,7 @@ namespace Srl { namespace Lib {
         }
 
         template<class ID = String>
-        static void Paste(String& s, const Value& value, const ID& id = Aux::Str_Empty)
+        static void Paste(String& s, const Value& value, const ID& id = Aux::str_empty)
         {
             Aux::check_type_string(value.type(), id);
             s = String({ value.data(), value.size() }, value.encoding());
@@ -221,7 +221,7 @@ namespace Srl { namespace Lib {
     };
 
     template<> struct Switch<std::nullptr_t> {
-        
+
         static void Insert(const std::nullptr_t&, Node& node, const String& name)
         {
             node.insert_value(Value(Type::Null), name);
@@ -245,7 +245,7 @@ namespace Srl { namespace Lib {
         }
 
         template<class ID = String>
-        static void Paste(T& o, const Value& value, const ID& id = Aux::Str_Empty)
+        static void Paste(T& o, const Value& value, const ID& id = Aux::str_empty)
         {
             auto val_type = value.type();
 
@@ -260,7 +260,7 @@ namespace Srl { namespace Lib {
         }
 
         template<class ID = String>
-        static void Apply_String(T& o, const Value& value, const ID& id = Aux::Str_Empty)
+        static void Apply_String(T& o, const Value& value, const ID& id = Aux::str_empty)
         {
             String wrap(value.data(), value.size(), value.encoding());
 
@@ -276,7 +276,7 @@ namespace Srl { namespace Lib {
         }
 
         template<class ID = String>
-        static void Apply(T& o, const Value& value, const ID& id = Aux::Str_Empty)
+        static void Apply(T& o, const Value& value, const ID& id = Aux::str_empty)
         {
             auto success = TpTools::apply_type(o, value);
 
@@ -288,7 +288,6 @@ namespace Srl { namespace Lib {
         }
     };
 
-    /* precision loss, so be aware */
     template<> struct Switch<long double> {
         static const Type type = Switch<double>::type;
 
@@ -298,7 +297,7 @@ namespace Srl { namespace Lib {
         }
 
         template<class ID = String>
-        static void Paste(long double& ld, const Value& value, const ID& id = Aux::Str_Empty)
+        static void Paste(long double& ld, const Value& value, const ID& id = Aux::str_empty)
         {
             double d;
             Switch<double>::Paste(d, value, id);
@@ -306,9 +305,17 @@ namespace Srl { namespace Lib {
         }
     };
 
-    /* Classes / structs which have a srl_resolve method but no type_id method */
+    /* Classes / structs which have srl_resolve methods but no type_id method */
     template<class T>
-    struct Switch<T, typename std::enable_if<has_resolve_method<T>::value>::type> {
+    struct Switch<T, typename std::enable_if<
+        has_resolve_method<T>::value || has_insert_method<T>::value || has_paste_method<T>::value>::type> {
+
+        static_assert(
+            has_resolve_method<T>::value || (has_insert_method<T>::value && has_paste_method<T>::value),
+            "Srl error. Classes either need to have a single srl_resolve method or both "
+            "srl_paste and srl_insert methods implemented"
+        );
+
         static const Type type = Type::Object;
 
         static void Insert(const T& o, Node& node, const String& name)
@@ -318,18 +325,47 @@ namespace Srl { namespace Lib {
 
         static void Insert(Node& node, const T& o)
         {
-            /* const-cast necessary for making a single resolve function possible */
+            InsertCall<T>(node, o);
+        }
+
+        template<class U>
+        typename std::enable_if<has_insert_method<U>::value, void>::type
+        static InsertCall(Node& node, const T& o)
+        {
+            InsertContext ctx(node);
+            o.srl_insert(ctx);
+        }
+
+        template<class U>
+        typename std::enable_if<has_resolve_method<U>::value, void>::type
+        static InsertCall(Node& node, const T& o)
+        {
             Context ctx(node, Mode::Insert);
             const_cast<T*>(&o)->srl_resolve(ctx);
         }
 
         template<class ID = String>
-        static void Paste(T& o, Node& node, const ID& id = Aux::Str_Empty)
+        static void Paste(T& o, Node& node, const ID& id = Aux::str_empty)
         {
             Aux::check_type_scope(node.type(), id);
 
+            PasteCall<T>(node, o);
+        }
+
+        template<class U>
+        typename std::enable_if<has_resolve_method<U>::value, void>::type
+        static PasteCall(Node& node, T& o)
+        {
             Context ctx(node, Mode::Paste);
             o.srl_resolve(ctx);
+        }
+
+        template<class U>
+        typename std::enable_if<has_paste_method<U>::value, void>::type
+        static PasteCall(Node& node, T& o)
+        {
+            PasteContext ctx(node);
+            o.srl_paste(ctx);
         }
     };
 
@@ -351,13 +387,13 @@ namespace Srl { namespace Lib {
         {
             Context ctx(node, Mode::Insert);
             auto* id = o->srl_type_id().name();
-            ctx(Aux::Str_Type_ID, id);
+            ctx(Aux::str_type_id, id);
 
             const_cast<T>(o)->srl_resolve(ctx);
         }
 
         template<class ID = String>
-        static void Paste(T& o, Node& node, const ID& id = Aux::Str_Empty)
+        static void Paste(T& o, Node& node, const ID& id = Aux::str_empty)
         {
             typedef typename std::remove_pointer<T>::type U;
 
@@ -365,7 +401,7 @@ namespace Srl { namespace Lib {
 
             Context ctx(node, Mode::Paste);
             String type_id;
-            ctx(Aux::Str_Type_ID, type_id);
+            ctx(Aux::str_type_id, type_id);
 
             /* be aware, non nullptr pointers will be deleted */
             if(o != nullptr) {
@@ -405,7 +441,7 @@ namespace Srl { namespace Lib {
         Finish(Item& node) { node.consume_scope(); }
 
         template<class ID = String>
-        static void Paste(T& c, Node& node, const ID& id = Aux::Str_Empty)
+        static void Paste(T& c, Node& node, const ID& id = Aux::str_empty)
         {
             Aux::check_type_scope(node.type(), id);
 
@@ -433,7 +469,7 @@ namespace Srl { namespace Lib {
 
         template<class Cont, class Elem, typename = void> struct ElemSwitch {
             static void Extract(const Elem& e, Node& node) {
-                Switch<Elem>::Insert(e, node, Aux::Str_Empty);
+                Switch<Elem>::Insert(e, node, Aux::str_empty);
             }
             template<class Item>
             static void Insert(Cont& c, Item& itm, size_t index) {
@@ -448,9 +484,9 @@ namespace Srl { namespace Lib {
             typedef typename std::remove_const<Elem>::type ElemNC;
 
             static void Extract(const Elem& e, Node& node) {
-                Switch<Elem>::Insert(e, node, Aux::Str_Empty);
+                Switch<Elem>::Insert(e, node, Aux::str_empty);
             }
-            
+
             template<class Item>
             static void Insert(Cont& c, Item& itm, size_t index) {
                 auto elem = Ctor<ElemNC>::Create();
@@ -464,16 +500,16 @@ namespace Srl { namespace Lib {
             typedef typename std::remove_const<Key>::type KeyNC;
 
             static void Extract(const std::pair<Key,Value>& p, Node& node) {
-                Switch<std::pair<KeyNC, Value>>::Insert_Pair(p, node, Aux::Str_Empty, Aux::Str_Key, Aux::Str_Value);
+                Switch<std::pair<KeyNC, Value>>::InsertPair(p, node, Aux::str_empty, Aux::str_key, Aux::str_value);
             }
 
             template<class Item>
             static void Insert(Cont& c, Item& itm, size_t) {
                 auto key = Ctor<KeyNC>::Create();
-                itm.paste_field(Aux::Str_Key, key);
+                itm.paste_field(Aux::str_key, key);
 
                 auto val = Ctor<Value>::Create();
-                itm.paste_field(Aux::Str_Value, val);
+                itm.paste_field(Aux::str_value, val);
 
                 c.emplace(std::move(key), std::move(val));
             }
@@ -495,12 +531,12 @@ namespace Srl { namespace Lib {
         static void Insert(Node& node, const T& ar)
         {
             for(auto& e : ar) {
-                Switch<E>::Insert(e, node, Aux::Str_Empty);
+                Switch<E>::Insert(e, node, Aux::str_empty);
             }
         }
 
         template<class ID = String>
-        static void Paste(T& ar, Node& node, const ID& id = Aux::Str_Empty)
+        static void Paste(T& ar, Node& node, const ID& id = Aux::str_empty)
         {
             Aux::check_type_scope(node.type(), id);
 
@@ -532,10 +568,10 @@ namespace Srl { namespace Lib {
 
         static void Insert(const std::pair<F,S>& p, Node& node, const String& name)
         {
-            Insert_Pair(p, node, name, Aux::Str_First, Aux::Str_Second);
+            InsertPair(p, node, name, Aux::str_first, Aux::str_second);
         }
 
-        static void Insert_Pair(const std::pair<F,S>& p, Node& node, const String& node_name,
+        static void InsertPair(const std::pair<F,S>& p, Node& node, const String& node_name,
                                 const String& first_id, const String& second_id)
         {
             node.open_scope(&Insert, Type::Object, node_name, p, first_id, second_id);
@@ -549,12 +585,12 @@ namespace Srl { namespace Lib {
         }
 
         template<class ID = String>
-        static void Paste(std::pair<F,S>& p, Node& node, const ID& id = Aux::Str_Empty)
+        static void Paste(std::pair<F,S>& p, Node& node, const ID& id = Aux::str_empty)
         {
             Aux::check_type(Type::Object, node.type(), id);
 
-            node.paste_field(Aux::Str_First, p.first);
-            node.paste_field(Aux::Str_Second, p.second);
+            node.paste_field(Aux::str_first, p.first);
+            node.paste_field(Aux::str_second, p.second);
         }
     };
 
@@ -576,7 +612,7 @@ namespace Srl { namespace Lib {
         }
 
         template<class ID = String>
-        static void Paste(std::tuple<T...>& tpl, Node& node, const ID& id = Aux::Str_Empty)
+        static void Paste(std::tuple<T...>& tpl, Node& node, const ID& id = Aux::str_empty)
         {
             Aux::check_type_scope(node.type(), id);
 
@@ -610,7 +646,7 @@ namespace Srl { namespace Lib {
         }
 
         template<class Item, class ID = String>
-        static void Paste(T& p, Item& item, const ID& id = Aux::Str_Empty)
+        static void Paste(T& p, Item& item, const ID& id = Aux::str_empty)
         {
             E* content = nullptr;
             Apply(content, item, id);
@@ -651,16 +687,16 @@ namespace Srl { namespace Lib {
 
         static void Insert_Key(Node& node, const T& p, const bool& first, const size_t& key)
         {
-            node.insert_value(key, Aux::Str_Shared_key);
+            node.insert_value(key, Aux::str_shared_key);
             if(first) {
-                Aux::ptr_insert<E>(p.get(), node, Aux::Str_Shared_Value);
+                Aux::ptr_insert<E>(p.get(), node, Aux::str_shared_value);
             }
         }
 
         template<class ID = String>
-        static void Paste(T& p, Node& node, const ID& = Aux::Str_Empty)
+        static void Paste(T& p, Node& node, const ID& = Aux::str_empty)
         {
-            size_t key = node.unwrap_field<size_t>(Aux::Str_Shared_key);
+            size_t key = node.unwrap_field<size_t>(Aux::str_shared_key);
             bool inserted_new; std::shared_ptr<void>* sptr;
 
             std::tie(inserted_new, sptr) = node.find_shared(key, [&p, &node] {
@@ -679,15 +715,15 @@ namespace Srl { namespace Lib {
         static typename std::enable_if<is_polymorphic<C*>::value, void>::type
         Apply(C*& p, Node& node)
         {
-            node.paste_field(Aux::Str_Shared_Value, p);
+            node.paste_field(Aux::str_shared_value, p);
         }
 
         template<class C>
         static typename std::enable_if<!is_polymorphic<C*>::value, void>::type
         Apply(C*& p, Node& node)
-        { 
+        {
             auto uptr = Ctor<C>::Create_New();
-            node.paste_field(Aux::Str_Shared_Value, *uptr.get());
+            node.paste_field(Aux::str_shared_value, *uptr.get());
             p = uptr.release();
         }
     };
@@ -704,7 +740,7 @@ namespace Srl { namespace Lib {
         }
 
         template<class ID = String>
-        static void Paste(T& p, Node& node, const ID& id = Aux::Str_Empty)
+        static void Paste(T& p, Node& node, const ID& id = Aux::str_empty)
         {
             std::shared_ptr<E> tmp;
             Switch<std::shared_ptr<E>>::Paste(tmp, node, id);
@@ -729,7 +765,7 @@ namespace Srl { namespace Lib {
         }
 
         template<class ID = String>
-        static void Paste(BitWrap& wrap, const Value& value, const ID& id = Aux::Str_Empty)
+        static void Paste(BitWrap& wrap, const Value& value, const ID& id = Aux::str_empty)
         {
             Aux::check_type_string(value.type(), id);
 
@@ -765,7 +801,7 @@ namespace Srl { namespace Lib {
         }
 
         template<class ID = String>
-        static void Paste(VecWrap<T>& wrap, const Value& value, const ID& id = Aux::Str_Empty)
+        static void Paste(VecWrap<T>& wrap, const Value& value, const ID& id = Aux::str_empty)
         {
             Switch<BitWrap>::Paste(wrap.bitwrap, value, id);
         }

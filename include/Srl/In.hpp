@@ -109,49 +109,49 @@ namespace Srl { namespace Lib {
 
     template<class... Tokens>
     size_t In::read_substitue(const Error& error, uint8_t delimiter,
-                              std::vector<uint8_t>& buffer, const Tokens&... tokens)
+                              std::vector<uint8_t>& buf, const Tokens&... tokens)
     {
         const size_t max = Aux::max_len<Tokens...>();
 
         auto steps = 0U;
-        auto bufsz = buffer.size();
+        auto bufsz = buf.size();
 
         while(*this->peek(0, error) != delimiter) {
 
             if(srl_unlikely(steps + 1 > bufsz)) {
                 bufsz += steps + 10;
-                buffer.resize(bufsz);
+                buf.resize(bufsz);
             }
 
             auto left = this->try_peek(max) ? max : this->end - this->pos - 1;
-            steps += this->substitute_token(buffer, steps, left, tokens...);
+            steps += this->substitute_token(buf, steps, left, tokens...);
         }
 
         return steps;
     }
 
     template<class Sub, class Token, class... Tail>
-    size_t In::substitute_token(std::vector<uint8_t>& buffer, size_t idx, size_t left,
+    size_t In::substitute_token(std::vector<uint8_t>& buf, size_t idx, size_t left,
                                 const Sub& sub, const Token& token, const Tail&... tail)
     {
         const auto N = std::tuple_size<Token>::value;
 
         return left >= N && Aux::comp<N>(this->pos, token.data())
-                ? this->replace<Sub, N>(sub, buffer, idx)
-                : this->substitute_token(buffer, idx, left, tail...);
+                ? this->replace<Sub, N>(sub, buf, idx)
+                : this->substitute_token(buf, idx, left, tail...);
     }
 
-    inline size_t In::substitute_token(std::vector<uint8_t>& buffer, size_t idx, size_t)
+    inline size_t In::substitute_token(std::vector<uint8_t>& buf, size_t idx, size_t)
     {
-        buffer[idx] = *this->pos++;
+        buf[idx] = *this->pos++;
         return 1;
     }
 
     template<class Sub, size_t N>
     typename std::enable_if<!std::is_same<Sub, In::Substitute>::value, size_t>::type
-    In::replace(const Sub& substitute, std::vector<uint8_t>& buffer, size_t idx)
+    In::replace(const Sub& substitute, std::vector<uint8_t>& buf, size_t idx)
     {
-        buffer[idx] = substitute;
+        buf[idx] = substitute;
         this->pos += N;
 
         return 1;
@@ -159,9 +159,9 @@ namespace Srl { namespace Lib {
 
     template<class Sub, size_t N>
     typename std::enable_if<std::is_same<Sub, In::Substitute>::value, size_t>::type
-    In::replace(const Sub& substitute, std::vector<uint8_t>& buffer, size_t idx)
+    In::replace(const Sub& substitute, std::vector<uint8_t>& buf, size_t idx)
     {
-        return substitute(*this, buffer, idx);
+        return substitute(*this, buf, idx);
     }
 
     inline const uint8_t* In::pointer() const

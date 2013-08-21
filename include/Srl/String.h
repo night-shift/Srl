@@ -9,7 +9,9 @@
 
 namespace Srl {
 
-    namespace Lib { struct Environment; }
+    namespace Lib {
+        struct Environment;
+    }
 
     class String {
 

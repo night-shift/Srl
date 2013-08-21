@@ -2,7 +2,7 @@
 #define TESTS_H
 
 #include "Srl/Srl.h"
-#include "Srl/Internal.h"
+#include "Srl/Lib.h"
 
 #include <iostream>
 

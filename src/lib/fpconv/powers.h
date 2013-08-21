@@ -7,6 +7,7 @@
 #define expmax     -32
 #define expmin     -60
 
+
 typedef struct Fp {
     uint64_t frac;
     int exp;
@@ -63,7 +64,7 @@ static Fp find_cachedpow10(int exp, int* k)
 {
     const double one_log_ten = 0.30102999566398114;
 
-    int approx = -(exp + 100) * one_log_ten;
+    int approx = -(exp + npowers) * one_log_ten;
     int idx = (approx - firstpower) / steppowers;
 
     while(1) {

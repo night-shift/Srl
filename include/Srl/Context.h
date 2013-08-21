@@ -8,8 +8,13 @@ namespace Srl {
 
     class Node;
     class String;
+    class InsertContext;
+    class PasteContext;
 
     class Context {
+
+    friend class InsertContext;
+    friend class PasteContext;
 
     public :
         Context(Node& node_, Mode mode_) : context_node(&node_), context_mode(mode_) { }
@@ -19,7 +24,7 @@ namespace Srl {
         template<class T>
         Context& operator () (const String& name, T&& o);
 
-        Node* node() const { return this->context_node; }
+        Node& node() const { return *this->context_node; }
         Mode  mode() const { return this->context_mode; }
 
     private :
@@ -29,9 +34,35 @@ namespace Srl {
         size_t nodes_index  = 0;
         size_t values_index = 0;
 
-        template<class T> void insert (const T& o, const String& name); 
+        template<class T> void insert (const T& o, const String& name);
         template<class T> void paste  (T& o, const String& name);
+    };
 
+
+    class InsertContext {
+    public:
+        InsertContext(Node& node) : context(Context(node, Mode::Insert)) { }
+
+        template<class T>
+        InsertContext& operator () (const T& o);
+        template<class T>
+        InsertContext& operator () (const String& name, const T& o);
+
+    private:
+        Context context;
+    };
+
+    class PasteContext {
+    public:
+        PasteContext(Node& node) : context(Context(node, Mode::Paste)) { }
+
+        template<class T>
+        PasteContext& operator () (T&& o);
+        template<class T>
+        PasteContext& operator () (const String& name, T&& o);
+
+    private:
+        Context context;
     };
 }
 

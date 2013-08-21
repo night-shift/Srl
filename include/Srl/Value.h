@@ -8,11 +8,14 @@
 namespace Srl {
 
     class String;
-    namespace Lib { class Environment; }
+
+    namespace Lib {
+        struct Environment;
+    }
 
     class Value {
 
-        friend class Lib::Environment;
+        friend struct Lib::Environment;
 
     public:
         template<class T> Value (const T& val);

@@ -1,5 +1,5 @@
 #include "Srl/Srl.h"
-#include "Srl/Internal.h"
+#include "Srl/Lib.h"
 
 using namespace std;
 using namespace Srl;

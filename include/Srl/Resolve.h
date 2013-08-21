@@ -23,6 +23,8 @@ namespace Srl {
     };
 
     class Context;
+    class InsertContext;
+    class PasteContext;
     class String;
     class Node;
     struct TypeID;
@@ -34,6 +36,30 @@ namespace Lib {
     template<class TString> std::pair<Encoding, MemBlock> wrap_string(const TString& str);
 
     template<class TChar> Encoding get_encoding();
+
+    template<class T> struct has_insert_method {
+
+        template<class U, U> struct test_sig { };
+
+        template <class U>
+        static char test(test_sig<void(U::*)(Srl::InsertContext&) const, &U::srl_insert>*);
+        template <class U>
+        static long test(...);
+
+        static const bool value = sizeof(test<T>(0)) == sizeof(char);
+    };
+
+    template<class T> struct has_paste_method {
+
+        template<class U, U> struct test_sig { };
+
+        template <class U>
+        static char test(test_sig<void(U::*)(Srl::PasteContext&), &U::srl_paste>*);
+        template <class U>
+        static long test(...);
+
+        static const bool value = sizeof(test<T>(0)) == sizeof(char);
+    };
 
     template<class T> struct has_resolve_method {
 
@@ -59,15 +85,16 @@ namespace Lib {
         static const bool value = sizeof(test<T>(0)) == sizeof(char);
     };
 
-    /* Switch<T> resolves types. Basically it tells Srl::Node how to dismantle,
+    /* Switch<T> resolves types. Basically it tells Srl::Node how to
      * store and restore types.
      * 'Batteries included'-specializations are implemented in Resolve.hpp.
-     * Types that can't be resolved end up in this default template: */
+     * Types that can't be resolved end up in this default template. */
     template<class T, class = void> struct Switch {
         static const Type type = Type::Null;
 
         static_assert(has_resolve_method<T>::value,
-        "Srl error. Unable to resolve type. Did you implement a srl_resolve(Srl::Context<Mode>&) -> void method?"
+        "Srl error. Unable to resolve type. Did you implement either a srl_resolve(Context&) "
+        "or both srl_insert(InsertContext&) and srl_paste(PasteContext&) methods?"
         );
     };
 

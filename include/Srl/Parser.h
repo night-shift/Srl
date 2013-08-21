@@ -1,7 +1,6 @@
 #ifndef SRL_PARSER_H
 #define SRL_PARSER_H
 
-#include "Common.h"
 #include "Enums.h"
 #include "Value.h"
 

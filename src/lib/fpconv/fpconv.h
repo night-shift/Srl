@@ -3,8 +3,8 @@
 
 /* Fast and accurate double to string conversion based on Florian Loitsch's
  * Grisu-algorithm[1].
- * 
- * Input: 
+ *
+ * Input:
  * fp -> the double to convert, dest -> destination buffer.
  * The generated string will never be longer than 24 characters.
  * Make sure to pass a pointer to at least 24 bytes of memory.

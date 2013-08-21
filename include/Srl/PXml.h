@@ -1,11 +1,9 @@
 #ifndef SRL_PASRERXML_H
 #define SRL_PARSERXML_H
 
-#include "Common.h"
 #include "Parser.h"
-#include "Blocks.h"
-#include "Hash.h"
 #include "Type.h"
+#include "Hash.h"
 #include "Heap.h"
 
 namespace Srl {

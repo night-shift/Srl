@@ -35,7 +35,7 @@ int main() {
     // or use streams
     ofstream fso("file");
     tree.store<Srl::PMsgPack>(original, fso);
-    
+
     ifstream fsi("file");
     tree.restore<Srl::PMsgPack>(restored, fsi);
     // Thats it.
@@ -87,8 +87,17 @@ Tree().root().insert(
 ).to_source<PJson>(cout);
 ```
 #### Serializing your types
-Implement a resolve method to tell Srl how to handle your types
-```cpp 
+To tell Srl how to handle your types implement either a single resolve method
+```cpp
+void srl_resolve (Srl::Context& ctx) { ... }
+```
+or dedicated insert and paste methods
+```cpp
+void srl_insert (Srl::InsertContext& ctx) const { ... }
+void srl_paste  (Srl::PasteContext& ctx) { ... }
+```
+
+```cpp
 struct Lang {
     string name; int version; list<string> extensions;
 
@@ -98,7 +107,8 @@ struct Lang {
     }
 };
 ```
-What Context basically does is, depending on ```Srl::Mode```, calling insert or paste on a given ```Srl::Node```.
+
+What Context does is, depending on ```Srl::Mode```, calling insert or paste on a given ```Srl::Node```.
 Mode is either ```::Insert``` or ```::Paste```, you can query the current mode with ```ctx.mode()```.
 Taking the vector of bytes from above you can call:
 ```cpp

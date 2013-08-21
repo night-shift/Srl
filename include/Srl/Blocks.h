@@ -2,8 +2,8 @@
 #define SRL_BLOCKS_H
 
 #include "Common.h"
-#include "Type.h"
 #include "Enums.h"
+#include "Type.h"
 
 namespace Srl { namespace Lib {
 

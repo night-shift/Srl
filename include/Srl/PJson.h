@@ -1,12 +1,7 @@
 #ifndef SRL_PARSERJSON_H
 #define SRL_PARSERJSON_H
 
-#include "Common.h"
-#include "Enums.h"
 #include "Parser.h"
-#include "Blocks.h"
-#include "Value.h"
-#include "String.h"
 
 namespace Srl {
 

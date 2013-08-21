@@ -9,6 +9,8 @@
 #include "In.h"
 #include "Out.h"
 
+#include <list>
+
 namespace Srl {
 
     class Tree;

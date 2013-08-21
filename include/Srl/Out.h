@@ -2,7 +2,7 @@
 #define SRL_OUT_H
 
 #include "Heap.h"
-#include "String.h"
+#include "Blocks.h"
 
 #include <ostream>
 

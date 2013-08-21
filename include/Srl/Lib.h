@@ -1,5 +1,5 @@
-#ifndef SRL_INTERNAL_H
-#define SRL_INTERNAL_H
+#ifndef SRL_Lib_H
+#define SRL_Lib_H
 
 #include "Heap.hpp"
 #include "In.hpp"

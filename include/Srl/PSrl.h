@@ -2,13 +2,13 @@
 #define SRL_PARSERSRL_H
 
 #include "Common.h"
-#include "Parser.h"
 #include "Blocks.h"
 #include "Hash.h"
+#include "Parser.h"
 
 namespace Srl {
 
-    namespace Lib { 
+    namespace Lib {
         template<> struct HashSrl<MemBlock> {
             inline size_t operator() (const MemBlock& s) const
             {
