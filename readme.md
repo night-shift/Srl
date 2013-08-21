@@ -87,16 +87,7 @@ Tree().root().insert(
 ).to_source<PJson>(cout);
 ```
 #### Serializing your types
-To tell Srl how to handle your types implement either a single resolve method
-```cpp
-void srl_resolve (Srl::Context& ctx) { ... }
-```
-or dedicated insert and paste methods
-```cpp
-void srl_insert (Srl::InsertContext& ctx) const { ... }
-void srl_paste  (Srl::PasteContext& ctx) { ... }
-```
-
+Implement a resolve method to tell Srl how to handle your types
 ```cpp
 struct Lang {
     string name; int version; list<string> extensions;
@@ -107,13 +98,15 @@ struct Lang {
     }
 };
 ```
+You can either use a single resolve or dedicated insert and paste methods
 
-What Context does is, depending on ```Srl::Mode```, calling insert or paste on a given ```Srl::Node```.
-Mode is either ```::Insert``` or ```::Paste```, you can query the current mode with ```ctx.mode()```.
-Taking the vector of bytes from above you can call:
-```cpp
-auto lang = Tree().restore<Lang, PJson>(bytes);
-```
+	void srl_insert (Srl::InsertContext& ctx) const { ... }
+	void srl_paste  (Srl::PasteContext& ctx) { ... }
+	
+Taking the vector of bytes from above you could now call:
+
+	auto lang = Tree().restore<Lang, PJson>(bytes);
+
 #### Handling non-default constructors
 Objects are instantiated through a factory ```struct Srl::Ctor<T>```. As default parameterless constructors are required. You can declare
 ```friend struct Srl::Ctor<YourClass>``` if you don't want to expose public default constructors. Or specialize
@@ -284,7 +277,7 @@ Srl supports 4 serialization formats:
 * Json
 * Xml
 * MessagePack
-* [Srl](https://github.com/night-shift/Srl/blob/master/src/lib/PSrl.cpp), a custom space efficient binary format.
+* [Srl](https://github.com/night-shift/Srl/blob/master/src/lib/PSrl.cpp), a custom space efficient binary format
 
 Select a format by...
 ```cpp
