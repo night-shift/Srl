@@ -16,5 +16,6 @@
 #include "Value.hpp"
 #include "Resolve.hpp"
 #include "Tools.hpp"
+#include "Hash.hpp"
 
 #endif
