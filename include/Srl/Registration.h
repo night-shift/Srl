@@ -2,7 +2,7 @@
 #define SRL_REGISTRATION_H
 
 #include "String.h"
-#include "Hash.h"
+#include "Hash.hpp"
 #include "Exception.h"
 #include "Resolve.h"
 
