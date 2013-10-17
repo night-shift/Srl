@@ -14,6 +14,7 @@ out      = bin
 cache    = cache
 
 CXXFLAGS = -std=c++11 -Wfatal-errors
+CFLAGS   = -std=c99 -O3
 
 ifeq ($(debug), 1)
 	CXXFLAGS += -g -O0 -DDEBUG -pedantic -Wall -Wextra -Wshadow -ftrapv -Wcast-align
@@ -72,11 +73,17 @@ $(lib).a: $(libobjs_pdc)
 	@$(AR) rcs $(lib).a $(libobjs_pdc)
 
 # compile files
-$(cache)/pic/%.o: %.c*
-	@$(call compile,$@,$<,-fPIC)
+$(cache)/pic/%.o: %.cpp
+	@$(call compile,$(CXX),$(CXXFLAGS) -fPIC,$@,$<)
 
-$(cache)/pdc/%.o: %.c*
-	@$(call compile,$@,$<)
+$(cache)/pdc/%.o: %.cpp
+	@$(call compile,$(CXX),$(CXXFLAGS),$@,$<)
+	
+$(cache)/pic/%.o: %.c
+	@$(call compile,$(CC),$(CFLAGS) -fPIC,$@,$<)
+
+$(cache)/pdc/%.o: %.c
+	@$(call compile,$(CC),$(CFLAGS),$@,$<)
 	
 # build and run test
 test: print run
@@ -90,13 +97,13 @@ $(out)/$(testfile): $(lib).a $(testobjs)
 	@echo "\tlinking $(out)/$(testfile)"
 	@$(CXX) $(CXXFLAGS) -o $(out)/$(testfile) $(testobjs) $(lib).a
 
-# $1 -> output object-file $2 -> source-file $3 -> additional flags
+# $1 -> compiler $2 -> flags $3 -> output object-file $4 -> source-file
 define compile
 	mkdir -p $(out)
-	mkdir -p $(dir $1)
-	echo "\tcompiling $1"
+	mkdir -p $(dir $3)
+	echo "\tcompiling $3"
 	#compile and generate dependencies
-	$(CXX) $(CXXFLAGS) $3 $(header) -MMD -MP -c -o $1 $2
+	$1 $2 $4 $(header) -MMD -MP -c -o $3
 endef
 
 # include dependencies

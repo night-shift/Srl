@@ -1,6 +1,8 @@
 #include "Srl/Srl.h"
 #include "Srl/Lib.h"
+extern "C" {
 #include "fpconv/fpconv.h"
+}
 
 #include <limits>
 #include <cmath>
