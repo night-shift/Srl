@@ -164,6 +164,34 @@ Node& Node::node(const String& name_)
     return find_link<Throw | Hash>(hash, this->nodes, name_)->field;
 }
 
+
+Union Node::field(const String& name_)
+{
+    auto hash = hash_string(name_, *this->env);
+    auto* resnode = find_link<Hash>(hash, this->nodes, name_);
+
+    if(resnode) {
+        return Union(resnode->field);
+    }
+
+    auto* resvalue = find_link<Throw | Hash>(hash, this->values, name_);
+
+    return Union(resvalue->field);
+}
+
+Union Node::field(size_t index)
+{
+    auto* resnode = find_link<Index>(index, this->nodes);
+
+    if(resnode) {
+        return Union(resnode->field);
+    }
+
+    auto* resvalue = find_link<Throw | Index>(index, this->values);
+
+    return Union(resvalue->field);
+}
+
 void Node::read_source()
 {
     auto& parser = *this->env->parser;
@@ -281,10 +309,10 @@ Node Node::consume_node(bool throw_ex, size_t)
 {
     if(this->nodes.size() > 0) {
         auto itr = this->nodes.begin();
-        auto& field = itr->field;
+        auto& fld = itr->field;
         this->nodes.erase(itr);
 
-        return move(field);
+        return move(fld);
     }
 
     while(!this->parsed) {
@@ -317,10 +345,10 @@ Value Node::consume_value(bool throw_ex, size_t)
 {
     if(this->values.size() > 0) {
         auto itr = this->values.begin();
-        auto& field = itr->field;
+        auto& fld = itr->field;
         this->values.erase(itr);
 
-        return field;
+        return fld;
     }
 
     while(!this->parsed) {

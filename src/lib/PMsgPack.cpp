@@ -27,7 +27,7 @@ namespace {
     {
         if(i > -1 || i < -31) {
             return false;
-        } 
+        }
 
         out.write_byte(0xE0 | (uint8_t)-i);
         return true;
@@ -58,7 +58,7 @@ namespace {
                 return;
             }
 
-            out.write(prefix); 
+            out.write(prefix);
             out.write((Real)i);
 
         } else {
@@ -68,7 +68,7 @@ namespace {
                 return;
             }
 
-            out.write(prefix); 
+            out.write(prefix);
             out.write((Real)i);
         }
     }
@@ -77,11 +77,11 @@ namespace {
     write_scalar (const Value& val, Out& out)
     {
         if(TP == Type::FP32) {
-            out.write_byte(0xCA); 
+            out.write_byte(0xCA);
             out.write(val.pblock().fp32);
 
         } else {
-            out.write_byte(0xCB); 
+            out.write_byte(0xCB);
             out.write(val.pblock().fp64);
         }
     }
@@ -89,24 +89,52 @@ namespace {
     template<Type TP> typename enable_if<TP == Type::Bool, void>::type
     write_scalar (const Value& val, Out& out)
     {
-        out.write_byte(val.pblock().ui64 ? 0xC3 : 0xC2); 
+        out.write_byte(val.pblock().ui64 ? 0xC3 : 0xC2);
     }
 
     template<Type TP> typename enable_if<TP == Type::Null, void>::type
     write_scalar (const Value&, Out& out)
     {
-        out.write_byte(0xC0); 
+        out.write_byte(0xC0);
     }
 
-    /* FixRaw 101xxxxx 0xa0 - 0xbf
-       raw 16 11011010 0xda
-       raw 32 11011011 0xdb */
-    void write_raw(const MemBlock& block, Out& out)
+    /* bin  8 11000100 0xc4
+       bin 16 11000101 0xc5
+       bin 32 11000110 0xc6 */
+    void write_bin(const MemBlock& block, Out& out)
     {
-        if(block.size <= 16) {
+        if(block.size <= 255) {
+            out.write_byte(0xC4);
+            out.write_byte(block.size);
+
+        } else if (block.size <= 0xFFFE) {
+            uint16_t sz = block.size;
+            out.write_byte(0xC5);
+            out.write(sz);
+
+        } else {
+            uint32_t sz = block.size;
+            out.write_byte(0xC6);
+            out.write(sz);
+        }
+
+        out.write(block.ptr, block.size);
+    }
+
+    /* strfix 101xxxxx 0xa0 - 0xbf
+       str  8 11011001 0xd9
+       str 16 11011010 0xda
+       str 32 11011011 0xdb */
+    void write_str(const MemBlock& block, Out& out)
+    {
+        if(block.size <= 31) {
             out.write_byte(0xA0 | block.size);
 
-        } else if (block.size <= 0xFFFF) {
+        } else if(block.size <= 255) {
+            out.write_byte(0xD9);
+            out.write_byte(block.size);
+
+        } else if (block.size <= 0xFFFE) {
             uint16_t sz = block.size;
             out.write_byte(0xDA);
             out.write(sz);
@@ -119,23 +147,22 @@ namespace {
 
         out.write(block.ptr, block.size);
     }
-    
-    void write_raw(const Value& val, Out& out)
-    {
-        write_raw(MemBlock(val.data(), val.size()), out);
-    }
 
     #define SRL_TYPE_TO_MSGP(id, v, t, s) \
-        case Type::id : write_scalar<Type::id>(value, out); break;
+        case Type::id : write_scalar<Type::id>(val, out); break;
 
-    void srl_to_msgp(const Value& value, Out& out)
+    void srl_to_msgp(const Value& val, Out& out)
     {
-        switch(value.type()) {
+        switch(val.type()) {
 
             SRL_TYPES_SCALAR(SRL_TYPE_TO_MSGP)
 
             case Type::Binary :
-            case Type::String : write_raw(value, out); break;
+                write_bin(MemBlock(val.data(), val.size()), out);
+                break;
+            case Type::String :
+                write_str(MemBlock(val.data(), val.size()), out);
+                break;
 
             default : assert(0);
         }
@@ -143,18 +170,33 @@ namespace {
 
     #undef SRL_TYPE_TO_MSGP
 
-    bool prefix_is_raw(uint8_t prefix)
+    bool prefix_is_bin(uint8_t prefix)
     {
-        return (prefix >= 0xA0 && prefix <= 0xBF) || prefix == 0xDA || prefix == 0xDB; 
+        return prefix >= 0xC4 && prefix <= 0xC6;
     }
 
-    size_t get_raw_size(uint8_t prefix, In& in)
+    bool prefix_is_str(uint8_t prefix)
     {
-        assert(prefix_is_raw(prefix));
+        return (prefix >= 0xA0 && prefix <= 0xBF) || (prefix >= 0xD9 && prefix <= 0xDB);
+    }
 
-        return prefix <= 0xBF ? prefix & 0xFF >> 3
-             : prefix & 1 ? in.read_move<uint32_t>(error)
-             : in.read_move<uint16_t>(error);
+    size_t get_str_size(uint8_t prefix, In& in)
+    {
+        assert(prefix_is_str(prefix));
+
+        return (prefix & 0xA0) ? prefix & 0x1F
+             : prefix == 0xD9 ? in.read_move<uint8_t>(error)
+             : prefix == 0xDA ? in.read_move<uint16_t>(error)
+             : in.read_move<uint32_t>(error);
+    }
+
+    size_t get_bin_size(uint8_t prefix, In& in)
+    {
+        assert(prefix_is_bin(prefix));
+
+        return prefix == 0xC4 ? in.read_move<uint8_t>(error)
+             : prefix == 0xC5 ? in.read_move<uint16_t>(error)
+             : in.read_move<uint32_t>(error);
     }
 
     template<Type TP> Value read_num(In& in)
@@ -219,12 +261,20 @@ namespace {
              : read_fixnum(prefix);
     }
 
-    Value read_raw(uint8_t prefix, In& in)
+    Value read_str(uint8_t prefix, In& in)
     {
-        auto size = get_raw_size(prefix, in);
+        auto size = get_str_size(prefix, in);
         auto block = in.read_block(size, error);
 
-        return Value(block, Type::Binary, Encoding::UTF8);
+        return Value(block, Type::String, Encoding::UTF8);
+    }
+
+    Value read_bin(uint8_t prefix, In& in)
+    {
+        auto size = get_bin_size(prefix, in);
+        auto block = in.read_block(size, error);
+
+        return Value(block, Type::Binary);
     }
 
     /* FixMap	 1000xxxx 0x80 - 0x8f
@@ -260,7 +310,7 @@ namespace {
 
     MemBlock read_name(uint8_t prefix, vector<uint8_t>& buffer, In& in)
     {
-        auto size = get_raw_size(prefix, in);
+        auto size = get_str_size(prefix, in);
         auto block = in.read_block(size, error);
 
         if(in.is_streaming()) {
@@ -288,9 +338,9 @@ void PMsgPack::write(const Value& value, const MemBlock& name, Out& out)
         return;
     }
 
-    if(this->scope) { 
+    if(this->scope) {
         if(this->scope->type == Type::Object) {
-            write_raw(name, out);
+            write_str(name, out);
         }
         this->scope_stack.top().elements++;
     }
@@ -308,7 +358,7 @@ void PMsgPack::write_scope(Type type, Out& out)
 {
     uint8_t prefix = type == Type::Object ? 0xDF : 0xDD;
 
-   out.write(prefix); 
+   out.write(prefix);
    auto ticket = out.reserve(4);
    this->scope_stack.emplace(type, 0, ticket);
    this->scope = &this->scope_stack.top();
@@ -335,7 +385,7 @@ pair<MemBlock, Value> PMsgPack::read(In& source)
     auto prefix = source.read_move<uint8_t>(error);
 
     if(this->scope && this->scope->type == Type::Object) {
-        name = prefix_is_raw(prefix) ? read_name(prefix, this->buffer, source) : name;
+        name = prefix_is_str(prefix) ? read_name(prefix, this->buffer, source) : name;
         prefix = source.read_move<uint8_t>(error);
     }
 
@@ -346,15 +396,19 @@ pair<MemBlock, Value> PMsgPack::read(In& source)
         this->scope_stack.emplace(type, size);
         this->scope = &this->scope_stack.top();
 
-        return { name, type }; 
+        return { name, type };
     }
 
     if(prefix_is_scalar(prefix)) {
         return { name, read_scalar(prefix, source) };
     }
 
-    if(prefix_is_raw(prefix)) {
-        return { name, read_raw(prefix, source) };
+    if(prefix_is_str(prefix)) {
+        return { name, read_str(prefix, source) };
+    }
+
+    if(prefix_is_bin(prefix)) {
+        return { name, read_bin(prefix, source) };
     }
 
     /* shouldn't end here */

@@ -40,8 +40,11 @@ namespace Srl { namespace Lib {
 
         Val* get (const Key& key);
         /* fst -> exists? snd -> entry */
-        std::pair<bool, Val*> insert (const Key& key, const Val& val);
-        std::pair<bool, Val*> insert_hash (size_t hash, const Val& val);
+        template<class... Args>
+        std::pair<bool, Val*> insert (const Key& key, Args&&... args);
+
+        template<class... Args>
+        std::pair<bool, Val*> insert_hash (size_t hash, Args&&... args);
 
         void foreach_entry(const std::function<void(size_t, Val&)>& fnc);
 
@@ -51,8 +54,9 @@ namespace Srl { namespace Lib {
 
     private:
         struct Entry {
-            Entry (size_t hash_, const Val& val_)
-                : hash(hash_), val(val_) { }
+
+            template<class... Args> Entry (size_t hash_, Args&&... args)
+                : hash(hash_), val { std::forward<Args>(args)... } { }
 
             size_t hash;
             Entry* next = nullptr;

@@ -1,9 +1,7 @@
 #ifndef SRL_HEAP_HPP
 #define SRL_HEAP_HPP
 
-#include "Common.h"
 #include "Heap.h"
-#include "Aux.h"
 
 namespace Srl { namespace Lib {
 
@@ -14,7 +12,7 @@ namespace Srl { namespace Lib {
 
         auto sz = n_elems * sizeof(T);
 
-        if(srl_unlikely(!this->crr_seg || this->crr_seg->left < sz + etra_alignment)) {
+        if(!this->crr_seg || this->crr_seg->left < sz + etra_alignment) {
             this->crr_seg = this->alloc(sz + etra_alignment);
         }
 
@@ -30,11 +28,11 @@ namespace Srl { namespace Lib {
     }
 
     template<class T, class... Args>
-    T* Heap::create (const Args&... args)
+    T* Heap::create (Args&&... args)
     {
         auto* mem = get_mem<T>(1);
 
-        return new (mem) T { args... };
+        return new (mem) T { std::forward<Args>(args)... };
     }
 
 } }

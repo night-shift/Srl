@@ -10,6 +10,7 @@
 #include "Heap.h"
 #include "Environment.h"
 #include "Tree.h"
+#include "Union.h"
 
 namespace Srl {
 
@@ -57,6 +58,9 @@ namespace Srl {
 
         Value& value (const String& name);
         Value& value (size_t index);
+
+        Union field(const String& name);
+        Union field(size_t index);
 
         std::list<Node*>  find_nodes  (const String& name, bool recursive = false);
         std::list<Value*> find_values (const String& name, bool recursive = false);

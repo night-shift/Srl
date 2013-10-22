@@ -82,15 +82,15 @@ namespace Srl { namespace Lib {
         return nullptr;
     }
 
-    template<class K, class V, class H>
-    std::pair<bool, V*> HTable<K, V, H>::insert(const K& key, const V& val)
+    template<class K, class V, class H> template<class... Args>
+    std::pair<bool, V*> HTable<K, V, H>::insert(const K& key, Args&&... args)
     {
         auto hash = hash_fnc(key);
-        return insert_hash(hash, val);
+        return insert_hash(hash, std::forward<Args>(args)...);
     }
 
-    template<class K, class V, class H>
-    std::pair<bool, V*> HTable<K, V, H>::insert_hash(size_t hash, const V& val)
+    template<class K, class V, class H> template<class... Args>
+    std::pair<bool, V*> HTable<K, V, H>::insert_hash(size_t hash, Args&&... args)
     {
         if(srl_unlikely(this->elements >= this->limit)) {
             this->redistribute();
@@ -112,7 +112,7 @@ namespace Srl { namespace Lib {
         this->elements++;
 
         auto& slot = node ? node->next : table[bucket];
-        slot = this->heap.template create<Entry>(hash, val);
+        slot = this->heap.template create<Entry>(hash, std::forward<Args>(args)...);
 
         return { false, &slot->val };
     }

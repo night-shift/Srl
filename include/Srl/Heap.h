@@ -5,7 +5,7 @@
 
 namespace Srl { namespace Lib {
 
-    namespace Aux { 
+    namespace Aux {
 
         template<class T> struct SList {
 
@@ -46,7 +46,7 @@ namespace Srl { namespace Lib {
         T* get_mem (size_t n_elems);
 
         template<class T, class... Args>
-        T* create (const Args&... args);
+        T* create (Args&&... args);
 
         void put_mem(uint8_t* mem, size_t sz);
 
@@ -62,7 +62,7 @@ namespace Srl { namespace Lib {
             uint8_t* data    = nullptr;
             bool     sub_seg = false;
 
-            void     dec (size_t n) { this->left -= n; } 
+            void     dec (size_t n) { this->left -= n; }
             uint8_t* pointer()      { return data + size - left; }
         };
 
@@ -127,12 +127,12 @@ namespace Srl { namespace Lib {
         void construct(T* mem, const Args&... args)
         {
             new (mem) T { args... };
-        } 
+        }
 
         void construct(T* mem, const T& t)
         {
             new (mem) T { t };
-        } 
+        }
 
         template<typename U>
         struct rebind {
@@ -141,5 +141,7 @@ namespace Srl { namespace Lib {
     };
 
 } }
+
+#include "Heap.hpp"
 
 #endif

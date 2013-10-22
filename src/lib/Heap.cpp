@@ -153,8 +153,9 @@ Heap::Segment* Heap::alloc(size_t n)
 
     if(this->crr_seg && crr_seg->left > recycle_thld) {
         this->put_mem(crr_seg->pointer(), this->crr_seg->left);
+    }
 
-    } else if(chain.free_segs.front && (seg = find_free_seg(n))) {
+    if(chain.free_segs.front && (seg = find_free_seg(n))) {
         return seg;
     }
 

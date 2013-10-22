@@ -71,38 +71,38 @@ namespace Srl {
     }
 
     template<class T, class ID>
-    T Node::unwrap_field(const ID& field)
+    T Node::unwrap_field(const ID& fieldID)
     {
         auto r = Ctor<T>::Create();
-        this->paste_field(field, r);
+        this->paste_field(fieldID, r);
 
         return std::move(r);
     }
 
     template<class T, class ID>
     typename std::enable_if<TpTools::is_scope(Lib::Switch<T>::type), void>::type
-    Node::paste_field (const ID& field, T& o)
+    Node::paste_field (const ID& fieldID, T& o)
     {
         if(this->parsed) {
-            Lib::Switch<T>::Paste(o, this->node(field), field);
+            Lib::Switch<T>::Paste(o, this->node(fieldID), fieldID);
 
         } else {
-            auto itm = this->consume_node(true, field);
-            Lib::Switch<T>::Paste(o, itm, field);
+            auto itm = this->consume_node(true, fieldID);
+            Lib::Switch<T>::Paste(o, itm, fieldID);
             itm.consume_scope();
         }
     }
 
     template<class T, class ID>
     typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), void>::type
-    Node::paste_field (const ID& field, T& o)
+    Node::paste_field (const ID& fieldID, T& o)
     {
         if(this->parsed) {
-            Lib::Switch<T>::Paste(o, this->value(field), field);
+            Lib::Switch<T>::Paste(o, this->value(fieldID), fieldID);
 
         } else {
-            auto itm = this->consume_value(true, field);
-            Lib::Switch<T>::Paste(o, itm, field);
+            auto itm = this->consume_value(true, fieldID);
+            Lib::Switch<T>::Paste(o, itm, fieldID);
         }
     }
 
@@ -156,6 +156,8 @@ namespace Srl {
     {
         std::vector<uint8_t> vec;
         this->to_source(vec, parser);
+        parser.clear();
+
         return std::move(vec);
     }
 
@@ -165,6 +167,7 @@ namespace Srl {
         this->env->set_output(parser, source);
         this->to_source();
         this->env->out.flush();
+        parser.clear();
     }
 
     inline size_t Node::num_nodes() const
