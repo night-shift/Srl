@@ -27,7 +27,7 @@ namespace Srl { namespace Lib {
     class HTable {
 
     public:
-        HTable(size_t buckets = 64, double load_factor_ = 1.0) 
+        HTable(size_t buckets = 64, double load_factor_ = 1.0)
             : load_factor(fmax(load_factor_, 0.1)), cap(Aux::round_pow2(buckets)) { }
 
         ~HTable() { destroy<Val>(); }
@@ -48,6 +48,8 @@ namespace Srl { namespace Lib {
 
         void foreach_entry(const std::function<void(size_t, Val&)>& fnc);
 
+        void remove(const Key& key);
+
         size_t num_entries() const { return this->elements; }
 
         void clear();
@@ -66,7 +68,7 @@ namespace Srl { namespace Lib {
         double load_factor;
         size_t cap;
 
-        size_t limit    = 0; 
+        size_t limit    = 0;
         size_t elements = 0;
 
         Entry** table   = nullptr;
@@ -77,6 +79,16 @@ namespace Srl { namespace Lib {
         size_t get_bucket(size_t hash);
 
         Entry** alloc_table();
+
+        Entry* get_rm (size_t hash);
+
+        template<class T>
+        typename std::enable_if<std::is_trivially_destructible<T>::value, void>::type
+        destroy(Val&) { }
+
+        template<class T>
+        typename std::enable_if<!std::is_trivially_destructible<T>::value, void>::type
+        destroy(Val&);
 
         template<class T>
         typename std::enable_if<std::is_trivially_destructible<T>::value, void>::type

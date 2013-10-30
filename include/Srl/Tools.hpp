@@ -25,7 +25,7 @@ namespace Srl { namespace Tools {
         auto n_chars = converted.size() / sizeof(TChar);
 
         return n_chars > 0
-            ? std::basic_string<TChar>(reinterpret_cast<const TChar*>(&converted[0]), n_chars)
+            ? std::basic_string<TChar>(reinterpret_cast<const TChar*>(converted.data()), n_chars)
             : std::basic_string<TChar>();
     }
 

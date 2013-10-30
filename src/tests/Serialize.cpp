@@ -229,7 +229,7 @@ class TestClassB {
     const string SCOPE = "TestClassB";
 
 public :
-    const size_t binary_sz = 100000;
+    const size_t binary_sz = 2000000;
 
     void srl_resolve (Context& ctx)
     {
@@ -262,7 +262,7 @@ public :
         }
 
         huge_binary.resize(binary_sz);
-        for(auto i = 0U; i < binary_sz / 4; i += 4) {
+        for(auto i = 0U; i < binary_sz ; i ++) {
             huge_binary[i] = i % 128;
         }
 

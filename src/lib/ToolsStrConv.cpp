@@ -299,7 +299,7 @@ namespace {
 }
 
 size_t Tools::conv_charset(Encoding target_encoding, const String& str_wrap,
-                              vector<uint8_t>& buffer,  bool throw_error, size_t buffer_index)
+                           vector<uint8_t>& buffer,  bool throw_error, size_t buffer_index)
 {
     if(str_wrap.size() < 1) {
         return 0;

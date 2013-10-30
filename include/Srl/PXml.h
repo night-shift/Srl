@@ -1,5 +1,5 @@
-#ifndef SRL_PASRERXML_H
-#define SRL_PARSERXML_H
+#ifndef SRL_PXML_H
+#define SRL_PXML_H
 
 #include "Parser.h"
 #include "Type.h"

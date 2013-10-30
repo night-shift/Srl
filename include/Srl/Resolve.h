@@ -188,7 +188,6 @@ namespace Lib {
     template<class T> struct is_cstr_pointer {
         static const bool value =
             std::is_pointer<T>::value &&
-            std::is_const<typename std::remove_pointer<T>::type>::value &&
             is_char<typename std::remove_pointer<T>::type>::value;
     };
 

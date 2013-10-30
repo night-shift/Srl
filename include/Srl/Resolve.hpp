@@ -40,6 +40,9 @@ namespace Srl { namespace Lib {
         template<class ID>
         void check_size(size_t required_size, size_t actual_size, const ID& field_id);
 
+        template<class ID>
+        void check_size_max(size_t required_min_size, size_t actual_size, const ID& field_id);
+
         template<class TChar, class ID>
         void copy_string(TChar* dst, size_t size, const Value& value, const ID& id);
 
@@ -105,7 +108,7 @@ namespace Srl { namespace Lib {
                 return;
             }
 
-            if(val_type == Type::String || val_type == Type::Binary) {
+            if(val_type == Type::String) {
                 str = String(value.data(), value.size(), value.encoding()).unwrap<T>();
 
             } else {
@@ -150,12 +153,11 @@ namespace Srl { namespace Lib {
 
         static const Type type = Type::String;
 
-        static const size_t str_size = (std::extent<T>::value - 1) * sizeof(typename array_type<T>::type);
+        static const size_t chr_size = sizeof(typename array_type<T>::type);
+        static const size_t str_size = (std::extent<T>::value - 1) * chr_size;
 
         static void Insert(const T& str, Node& node, const String& name)
         {
-            assert(str[std::extent<T>::value - 1] == 0);
-
             auto pair = Wrap(str);
             node.insert_value(Value(pair.second, pair.first), name);
         }
@@ -164,16 +166,50 @@ namespace Srl { namespace Lib {
         {
             return std::make_pair(
                 get_encoding<typename array_type<T>::type>(),
-                MemBlock(reinterpret_cast<const uint8_t*>(str), str_size)
+                WrapArray<T>(str)
             );
+        }
+
+        template<class C>
+        typename std::enable_if<std::extent<C>::value - 1 != 0, MemBlock>::type
+        static WrapArray(const T& str)
+        {
+            size_t size = 0;
+            while(size < str_size && str[size]) size++;
+
+            return MemBlock(reinterpret_cast<const uint8_t*>(str), size * chr_size);
+        }
+
+        template<class C>
+        typename std::enable_if<std::extent<C>::value - 1 == 0, MemBlock>::type
+        static WrapArray(const T&)
+        {
+            return MemBlock();
         }
 
         template<class ID = String>
         static void Paste(T& str, const Value& value, const ID& id = Aux::str_empty)
         {
-            Aux::copy_string(&str, str_size, value, id);
-        }
+            Aux::check_type_string(value.type(), id);
 
+            auto encoding = get_encoding<typename array_type<T>::type>();
+
+            if(value.encoding() == encoding) {
+                Aux::check_size_max(str_size, value.size() + chr_size, id);
+                memcpy(str, value.data(), value.size());
+                str[value.size() / chr_size] = 0;
+
+            } else {
+                std::vector<uint8_t> buffer;
+                String wrap(value.data(), value.size(), value.encoding());
+
+                auto conv_size = Tools::conv_charset(encoding, wrap, buffer, true);
+
+                Aux::check_size_max(str_size, conv_size + chr_size, id);
+                memcpy(str, buffer.data(), conv_size);
+                str[value.size() / chr_size] = 0;
+            }
+        }
     };
 
     /* character arrays which decayed to pointers somewhere along the way,
@@ -181,6 +217,7 @@ namespace Srl { namespace Lib {
     template<class T>
     struct Switch<T, typename std::enable_if<is_cstr_pointer<T>::value>::type> {
 
+        static const size_t chr_size = sizeof(typename std::remove_pointer<T>::type);
         static const Type type = Type::String;
 
         static void Insert(const T& pointer, Node& node, const String& name)
@@ -196,7 +233,7 @@ namespace Srl { namespace Lib {
 
             return std::make_pair(
                 get_encoding<typename std::remove_pointer<T>::type>(),
-                MemBlock(reinterpret_cast<const uint8_t*>(pointer), size)
+                MemBlock(reinterpret_cast<const uint8_t*>(pointer), size * chr_size)
             );
         }
 
@@ -204,6 +241,7 @@ namespace Srl { namespace Lib {
         static void Paste(T&, const Value&, const ID&) { }
     };
 
+    /* srl string abstraction */
     template<> struct Switch<String> {
         static const Type type = Type::String;
 
@@ -217,6 +255,20 @@ namespace Srl { namespace Lib {
         {
             Aux::check_type_string(value.type(), id);
             s = String({ value.data(), value.size() }, value.encoding());
+        }
+    };
+
+    template<> struct Switch<Union> {
+
+        template<class ID = String>
+        static void Paste(Union& u, Node& node, const ID& id = Aux::str_empty)
+        {
+            if(node.parsed) {
+                u = node.field(id);
+            } else {
+                u = node.consume_item(id);
+                node.consume_scope();
+            }
         }
     };
 
@@ -663,7 +715,7 @@ namespace Srl { namespace Lib {
         template<class C, class Item, class ID>
         static typename std::enable_if<!is_polymorphic<C*>::value, void>::type
         Apply(C*& p, Item& item, const ID& id)
-        { 
+        {
             auto uptr = Ctor<C>::Create_New();
             Switch<C>::Paste(*uptr.get(), item, id);
             p = uptr.release();
@@ -888,6 +940,15 @@ namespace Srl { namespace Lib {
                 throw_error("Size mismatch.", field_id);
             }
         }
+
+        template<class ID>
+        void check_size_max(size_t required_max_size, size_t actual_size, const ID& field_id)
+        {
+            if(actual_size > required_max_size) {
+                throw_error("Size mismatch.", field_id);
+            }
+        }
+
         template<class T, class ID>
         typename std::enable_if<is_polymorphic<T*>::value, void>::type
         ptr_insert(T* const p, Node& node, const ID& id)
@@ -898,7 +959,7 @@ namespace Srl { namespace Lib {
         template<class T, class ID>
         typename std::enable_if<!is_polymorphic<T*>::value, void>::type
         ptr_insert(T* const p, Node& node, const ID& id)
-        { 
+        {
             if(!p) {
                 Switch<std::nullptr_t>::Insert(std::nullptr_t(), node, id);
 

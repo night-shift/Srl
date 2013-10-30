@@ -277,12 +277,12 @@ namespace {
         return Value(block, Type::Binary);
     }
 
-    /* FixMap	 1000xxxx 0x80 - 0x8f
-       FixArray	 1001xxxx 0x90 - 0x9f
-       array 16	 11011100 0xdc
-       array 32	 11011101 0xdd
-       map 16	 11011110 0xde
-       map 32	 11011111 0xdf */
+    /* FixMap    1000xxxx 0x80 - 0x8f
+       FixArray  1001xxxx 0x90 - 0x9f
+       array 16  11011100 0xdc
+       array 32  11011101 0xdd
+       map 16    11011110 0xde
+       map 32    11011111 0xdf */
     bool prefix_is_scope(uint8_t prefix)
     {
         return (prefix >= 0x80 && prefix <= 0x9F) || (prefix >= 0xDC && prefix <= 0xDF);

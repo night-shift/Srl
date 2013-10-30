@@ -23,7 +23,7 @@ namespace {
                 case 3 : hash ^= (uint64_t)bytes[2] << 16;
                 case 2 : hash ^= (uint64_t)bytes[1] << 8;
                 case 1 : hash ^= (uint64_t)bytes[0];
-                            hash *= Mul;
+                         hash *= Mul;
             };
 
             hash ^= hash >> Shr;
@@ -45,7 +45,7 @@ namespace {
                 case 3 : hash ^= (uint32_t)bytes[2] << 16;
                 case 2 : hash ^= (uint32_t)bytes[1] << 8;
                 case 1 : hash ^= (uint32_t)bytes[0];
-                        hash *= Mul;
+                         hash *= Mul;
             };
 
             hash ^= hash >> 13;

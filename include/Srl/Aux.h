@@ -46,7 +46,7 @@ namespace Srl { namespace Lib { namespace Aux {
     {
         return N == 0 || (*a == *b && comp<dec_saturate(N)>(a + 1, b + 1));
     }
-    
+
     template<size_t N> void copy (const uint8_t* src, uint8_t* dst)
     {
         *dst = *src;

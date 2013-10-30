@@ -94,13 +94,13 @@ namespace {
         auto shift = 7U;
         /* first block w/o msb set is the last 8-bit block of the integer to decode */
         while(mask_msb & block) {
-            /* no support for integers > 64 bit */
             source.move(1, error);
             block = *source.pointer();
             out_integer |= (mask_reset_msb & block) << shift;
             shift += 7;
         }
 
+        /* no support for integers > 64 bit */
         if(shift > 10 * 7) {
             error();
         }
@@ -184,7 +184,7 @@ void PSrl::write(const Value& value, const MemBlock& name, Out& out)
     }
 
     this->write_head(flag, name, out);
-    
+
     auto type = value.type();
     /* scope-starts carry no additional information */
     if(TpTools::is_scope(type)) {

@@ -134,8 +134,9 @@ static int generate_digits(Fp* fp, Fp* upper, Fp* lower, char* digits, int* K)
     uint64_t part2 = upper->frac & (one.frac - 1);
 
     int idx = 0, kappa = 10;
+    uint64_t* divp;
     /* 1000000000 */
-    for(uint64_t* divp = tens + 10; kappa > 0; divp++) {
+    for(divp = tens + 10; kappa > 0; divp++) {
 
         uint64_t div = *divp;
         unsigned digit = part1 / div;

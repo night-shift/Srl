@@ -25,6 +25,23 @@ Tree& Tree::operator= (Tree&& g)
     return *this;
 }
 
+void Tree::prologue_in(Parser& parser, Lib::In::Source& source)
+{
+    this->clear();
+
+    this->env->set_input(parser, source);
+
+    MemBlock name; Value val;
+    tie(name, val) = parser.read(this->env->in);
+
+    if(!TpTools::is_scope(val.type())) {
+        throw Exception("Unable to parse source. Data malformed.");
+    }
+
+    auto* link = this->env->create_node(val.type(), name);
+    this->root_node = &link->field;
+}
+
 void Tree::to_source(Type type, Parser& parser, Lib::Out::Source source, const function<void()>& store_switch)
 {
     this->env->set_output(parser, source);
@@ -37,40 +54,19 @@ void Tree::to_source(Type type, Parser& parser, Lib::Out::Source source, const f
 
     this->env->write(Value(Type::Scope_End), name);
 
+    this->env->parsing = false;
     this->env->out.flush();
 }
 
 void Tree::read_source(Parser& parser, In::Source source)
 {
-    this->clear();
-    
-    this->env->set_input(parser, source);
-
-    MemBlock name; Value val;
-    tie(name, val) = parser.read(this->env->in);
-
-    if(!TpTools::is_scope(val.type())) {
-        throw Exception("Unable to parse source. Data malformed.");
-    }
-
-    auto* link = this->env->create_node(val.type(), name);
-    this->root_node = &link->field;
-
+    prologue_in(parser, source);
     this->root_node->read_source();
 }
 
 void Tree::read_source(Parser& parser, In::Source source, const function<void()>& restore_switch)
 {
-    this->env->set_input(parser, source);
-
-    MemBlock name; Value val;
-    tie(name, val) = parser.read(this->env->in);
-
-    if(!TpTools::is_scope(val.type())) {
-        throw Exception("Unable to parse source. Data malformed.");
-    }
-
-    this->root_node = &this->env->create_node(val.type(), name)->field;
+    prologue_in(parser, source);
     this->root_node->parsed = false;
 
     restore_switch();

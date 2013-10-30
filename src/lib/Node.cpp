@@ -106,7 +106,7 @@ namespace {
     template<class T>
     T* find_link_remove(const String& name, Cont<T>& links, Environment& env)
     {
-        auto* link = links.size() > 0 
+        auto* link = links.size() > 0
             ? find_link<Hash | Remove>(hash_string(name, env), links)
             : nullptr;
 
@@ -218,6 +218,54 @@ void Node::read_source()
             link->field.read_source();
         }
     }
+}
+
+Union Node::consume_item(const String& id)
+{
+    auto hash = hash_string(id, *this->env);
+
+    auto* storednode = find_link<Hash>(hash, this->nodes);
+
+    if(storednode) {
+        return Union(storednode->field);
+    }
+
+    auto* storedvalue = find_link<Hash>(hash, this->values);
+
+    if(storedvalue) {
+        return Union(storedvalue->field);
+    }
+
+    auto idconv = this->env->conv_string(id);
+
+    while(!this->parsed) {
+
+        MemBlock seg_name; Value val;
+        tie(seg_name, val) = this->env->parser->read(this->env->in);
+
+        auto tp = val.type();
+
+        if(tp == Type::Scope_End) {
+            this->parsed = true;
+            break;
+        }
+
+        if(TpTools::is_scope(tp)) {
+            auto* link = this->env->store_node(*this, Node(this->env->tree, tp), seg_name);
+            link->field.read_source();
+            if(link->hash == hash) {
+                return Union(link->field);
+            }
+
+        } else {
+            auto* link = this->env->store_value(*this, val, seg_name);
+            if(link->hash == hash) {
+                return Union(storednode->field);
+            }
+        }
+    }
+
+    throw Exception("Field " + id.unwrap(false) + " not found.");
 }
 
 Node Node::consume_node(bool throw_ex, const String& id)
@@ -381,7 +429,7 @@ Value Node::consume_value(bool throw_ex, size_t)
 void Node::to_source()
 {
     Value scope_start = Value(this->scope_type);
-    this->env->write(scope_start, *this->name_ptr);
+    this->env->write(scope_start, this->name());
 
     for(auto& v : this->values) {
         this->env->write(v.field, v.field.name());

@@ -12,7 +12,7 @@ namespace Srl {
 
     class Tree {
 
-    friend class Node;  
+    friend class Node;
 
     public:
         Tree(const String& name = "");
@@ -60,6 +60,11 @@ namespace Srl {
         template<class Object, class TParser>
         Object restore(const uint8_t* data, size_t len, TParser&& parser = TParser());
 
+        template<class TParser, class... Items>
+        void pack(Lib::Out::Source out, TParser&& parser, const Items&... items);
+
+        template<class TParser, class... Items>
+        void unpack(Lib::In::Source in, TParser&& parser, Items&... items);
 
     private:
         std::unique_ptr<Lib::Environment> env;
@@ -70,6 +75,8 @@ namespace Srl {
 
         void read_source (Parser& parser, Lib::In::Source source);
         void read_source (Parser& parser, Lib::In::Source source, const std::function<void()>& restore_switch);
+
+        void prologue_in(Parser& parser, Lib::In::Source& source);
 
         template<class Object>
         friend void Restore(Object& object, Lib::In::Source source, Parser& parser);

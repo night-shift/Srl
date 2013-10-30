@@ -82,6 +82,34 @@ namespace Srl { namespace Lib {
         return nullptr;
     }
 
+    template<class K, class V, class H>
+    typename HTable<K, V, H>::Entry* HTable<K, V ,H>::get_rm(size_t hash)
+    {
+        auto bucket  = get_bucket(hash);
+        Entry* entry = table[bucket];
+        Entry* prev  = nullptr;
+
+        while(entry) {
+
+            if(entry->hash == hash) {
+                if(prev) {
+                    prev->next = entry->next;
+
+                } else if(table[bucket] == entry) {
+                    table[bucket] = entry->next;
+                }
+
+                return entry;
+
+            } else {
+                prev = entry;
+                entry = entry->next;
+            }
+        }
+
+        return nullptr;
+    }
+
     template<class K, class V, class H> template<class... Args>
     std::pair<bool, V*> HTable<K, V, H>::insert(const K& key, Args&&... args)
     {
@@ -161,13 +189,39 @@ namespace Srl { namespace Lib {
             return;
         }
 
+        auto n = 0U;
+
         for(auto i = 0U; i < this->cap; i++) {
             auto* entry = table[i];
             while(entry) {
                 fnc(entry->hash, entry->val);
                 entry = entry->next;
+                n++;
+            }
+            if(n >= this->elements) {
+                break;
             }
         }
+    }
+
+    template<class K, class V, class H>
+    void HTable<K, V, H>::remove(const K& key)
+    {
+        auto hash   = hash_fnc(key);
+        auto* entry = get_rm(hash);
+
+        if(entry) {
+            destroy<V>(entry->val);
+            heap.put_mem((uint8_t*)entry, sizeof(Entry));
+            elements--;
+        }
+    }
+
+    template<class K, class V, class H> template<class T>
+    typename std::enable_if<!std::is_trivially_destructible<T>::value, void>::type
+    HTable<K, V, H>::destroy(V& val)
+    {
+        val.~V();
     }
 
     template<class K, class V, class H> template<class T>

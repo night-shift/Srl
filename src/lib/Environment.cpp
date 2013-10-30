@@ -90,10 +90,10 @@ Link<Node>* Environment::store_node(Node& parent, const Node& node, const String
     if(node.env != this) {
         auto* link = this->create_link(parent.nodes, Node(this->tree, node.scope_type), name);
 
-        for(auto n : node.nodes) {
+        for(auto& n : node.nodes) {
             link->field.insert_node(n.field, n.field.name());
         }
-        for(auto v : node.values) {
+        for(auto& v : node.values) {
             link->field.insert_value(v.field, v.field.name());
         }
 

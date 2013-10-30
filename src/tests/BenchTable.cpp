@@ -104,7 +104,7 @@ void run_bench(Tree& tree, T&& parser, const string& name, Tail&&... tail)
             int depth = 0;
             parser.clear();
             while(true) {
-                auto seg = parser.read(src); 
+                auto seg = parser.read(src);
                 if(TpTools::is_scope(seg.second.type())) {
                     depth++;
                     continue;

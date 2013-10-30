@@ -14,6 +14,8 @@
 
 namespace Srl {
 
+    class ScopeWrap;
+
     class Node {
 
         friend class Tree;
@@ -36,7 +38,7 @@ namespace Srl {
         template<class T>
         Node& insert (const T& value);
 
-        inline Node& insert();
+        Node& insert() { return *this; }
 
         template<class T> T unwrap ();
 
@@ -45,13 +47,22 @@ namespace Srl {
         template<class T, class ID>
         T unwrap_field (const ID& field);
 
-        template<class T, class ID>
-        typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), void>::type
-        paste_field (const ID& field, T& o);
+        template<class Head, class... Tail>
+        void paste (String&& field_name, Head&& head, Tail&&... tail);
 
         template<class T, class ID>
-        typename std::enable_if<TpTools::is_scope(Lib::Switch<T>::type), void>::type
-        paste_field (const ID& field, T& o);
+        typename std::enable_if<!std::is_same<T, Srl::Union>::value && !TpTools::is_scope(Lib::Switch<T>::type), void>::type
+        paste_field (const ID& id, T& o);
+
+        template<class T, class ID>
+        typename std::enable_if<!std::is_same<T, Srl::Union>::value && TpTools::is_scope(Lib::Switch<T>::type), void>::type
+        paste_field (const ID& id, T& o);
+
+        template<class T, class ID>
+        typename std::enable_if<std::is_same<T, Srl::Union>::value, void>::type
+        paste_field (const ID& id, T& o);
+
+        void paste() { }
 
         Node& node (const String& name);
         Node& node (size_t index);
@@ -124,10 +135,12 @@ namespace Srl {
 
         void  consume_scope ();
         Node  consume_node  (bool throw_ex, const String& name);
-        Value consume_value (bool throw_ex, const String& name); 
+        Value consume_value (bool throw_ex, const String& name);
 
         Node  consume_node  (bool throw_ex, size_t idx);
-        Value consume_value (bool throw_ex, size_t idx); 
+        Value consume_value (bool throw_ex, size_t idx);
+
+        Union consume_item(const String& name);
 
         template<class T>
         typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), Value>::type

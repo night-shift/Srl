@@ -43,6 +43,34 @@ namespace Srl {
 
     } }
 
+    template<class TParser, class... Items>
+    void Tree::pack(Lib::Out::Source out, TParser&& parser, const Items&... items)
+    {
+        this->clear();
+
+        this->env->set_output(parser, out);
+        this->env->parsing = true;
+
+        this->env->write(Value(Type::Object), "");
+
+        this->root_node->insert(items...);
+
+        this->env->write(Value(Type::Scope_End), "");
+
+        this->env->parsing = false;
+        this->env->out.flush();
+    }
+
+    template<class TParser, class... Items>
+    void Tree::unpack(Lib::In::Source in, TParser&& parser, Items&... items)
+    {
+        this->prologue_in(parser, in);
+
+        this->root_node->parsed = false;
+
+        this->root_node->paste(items...);
+    }
+
     template<class TParser>
     void Tree::to_source(Lib::Out::Source source, TParser&& parser)
     {
@@ -74,7 +102,7 @@ namespace Srl {
     }
 
     template<class TParser, class T>
-    void Tree::store (const T& object, Lib::Out::Source out, TParser&& parser)
+    void Tree::store(const T& object, Lib::Out::Source out, TParser&& parser)
     {
         this->to_source(
             Lib::Aux::TypeSwitch<T>::type, parser, out, Lib::Aux::TypeSwitch<T>::Store(object, *this)

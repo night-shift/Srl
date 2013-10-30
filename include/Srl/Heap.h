@@ -26,6 +26,9 @@ namespace Srl { namespace Lib {
 
             template<class Predicate>
             Link* find_rm (const Predicate& predicate);
+
+            template<class Predicate>
+            void  prepend (const Predicate& predicate, Link* link);
         };
     }
 
@@ -67,7 +70,7 @@ namespace Srl { namespace Lib {
         };
 
     private:
-        static const size_t Max_Cap = 32768;
+        static const size_t Max_Cap = 65536;
 
         size_t   cap     = 256;
         Segment* crr_seg = nullptr;

@@ -3,6 +3,7 @@
 
 #include "Node.h"
 #include "Tree.h"
+#include "ScopeWrap.h"
 
 namespace Srl {
 
@@ -36,6 +37,24 @@ namespace Srl {
         return this->insert("", val);
     }
 
+
+    template<>
+    inline Node& Node::insert(const String& scope_name, const ScopeWrap& wrap)
+    {
+        if(this->env->parsing) {
+            this->env->write(Value(wrap.type()), scope_name);
+
+            wrap.insert(*this);
+
+            this->env->write(Value(Type::Scope_End), scope_name);
+
+        } else {
+           auto& new_node = this->insert_node(wrap.type(), scope_name);
+            wrap.insert(new_node);
+        }
+        return *this;
+    }
+
     template<>
     inline Node& Node::insert<Node>(const String& field_name, const Node& new_node)
     {
@@ -47,11 +66,6 @@ namespace Srl {
     inline Node& Node::insert<Value>(const String& field_name, const Value& new_value)
     {
         this->insert_value(new_value, field_name);
-        return *this;
-    }
-
-    inline Node& Node::insert()
-    {
         return *this;
     }
 
@@ -79,8 +93,15 @@ namespace Srl {
         return std::move(r);
     }
 
+    template<class Head, class... Tail>
+    void Node::paste(String&& field_name, Head&& head, Tail&&... tail)
+    {
+        this->paste_field(field_name, head);
+        this->paste(tail...);
+    }
+
     template<class T, class ID>
-    typename std::enable_if<TpTools::is_scope(Lib::Switch<T>::type), void>::type
+    typename std::enable_if<!std::is_same<T, Srl::Union>::value && TpTools::is_scope(Lib::Switch<T>::type), void>::type
     Node::paste_field (const ID& fieldID, T& o)
     {
         if(this->parsed) {
@@ -94,7 +115,7 @@ namespace Srl {
     }
 
     template<class T, class ID>
-    typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), void>::type
+    typename std::enable_if<!std::is_same<T, Srl::Union>::value && !TpTools::is_scope(Lib::Switch<T>::type), void>::type
     Node::paste_field (const ID& fieldID, T& o)
     {
         if(this->parsed) {
@@ -104,6 +125,13 @@ namespace Srl {
             auto itm = this->consume_value(true, fieldID);
             Lib::Switch<T>::Paste(o, itm, fieldID);
         }
+    }
+
+    template<class T, class ID>
+    typename std::enable_if<std::is_same<T, Srl::Union>::value, void>::type
+    Node::paste_field (const ID& id, T& o)
+    {
+        Lib::Switch<T>::Paste(o, *this, id);
     }
 
     template<class... Args>

@@ -6,8 +6,6 @@ using namespace Lib;
 
 namespace {
 
-    const size_t recycle_thld = 128;
-
     using SegLink   = Aux::SList<Heap::Segment>::Link;
     using ChainLink = Aux::SList<SegLink>::Link;
 
@@ -70,6 +68,39 @@ void Aux::SList<T>::append(SList<T>::Link* link)
     link->next = nullptr;
 }
 
+template<class T> template<class Pred>
+void Aux::SList<T>::prepend(const Pred& pred, SList<T>::Link* link)
+{
+    if(!this->back) {
+        this->front = link;
+        this->back  = link;
+
+    } else {
+
+        Link* curr = this->front;
+        Link* prev = nullptr;
+
+        while(curr) {
+            if(pred(curr->val)) {
+                link->next = curr;
+                if(prev) {
+                    prev->next = link;
+                } else {
+                    front = link;
+                }
+                return;
+            }
+            prev = curr;
+            curr = curr->next;
+        }
+
+        link->next = nullptr;
+        this->back->next = link;
+        this->back = link;
+
+    }
+}
+
 template<class T>
 void Aux::SList<T>::remove(SList<T>::Link* prev, SList<T>::Link* link)
 {
@@ -94,13 +125,13 @@ void Aux::SList<T>::prepend(SList<T>::Link* link)
 }
 
 template<class T> template<class Predicate> typename Aux::SList<T>::Link*
-Aux::SList<T>::find_rm(const Predicate& predicate)
+Aux::SList<T>::find_rm(const Predicate& pred)
 {
     Link* link = this->front;
     Link* prev = nullptr;
 
     while(link) {
-        if(predicate(link->val)) {
+        if(pred(link->val)) {
             remove(prev, link);
             return link;
         }
@@ -114,14 +145,11 @@ Aux::SList<T>::find_rm(const Predicate& predicate)
 
 void Heap::put_mem(uint8_t* mem, size_t sz)
 {
-    if(sz < recycle_thld) {
-        return;
-    }
 
     auto* link = this->chain.get_link();
     set_subsegment(link->val, mem, sz);
 
-    this->chain.free_segs.prepend(link);
+    this->chain.free_segs.append(link);
 }
 
 Heap::Segment* Heap::find_free_seg(size_t sz)
@@ -151,7 +179,7 @@ Heap::Segment* Heap::alloc(size_t n)
 {
     Segment* seg = nullptr;
 
-    if(this->crr_seg && crr_seg->left > recycle_thld) {
+    if(this->crr_seg && crr_seg->left > 0) {
         this->put_mem(crr_seg->pointer(), this->crr_seg->left);
     }
 
@@ -196,7 +224,7 @@ void Heap::clear()
         } else {
             prev = link;
             reset_segment(link->val);
-            this->chain.free_segs.prepend(&link->val);
+            this->chain.free_segs.prepend(Size(link->val.val.size), &link->val);
         }
 
         link = next;
@@ -213,7 +241,7 @@ Heap::~Heap()
 void Heap::destroy()
 {
     const auto free = [](Aux::SList<SegLink>& lst) {
-        auto* link = lst.front; 
+        auto* link = lst.front;
         while(link) {
             auto* next = link->next;
             delete link;

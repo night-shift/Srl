@@ -299,7 +299,7 @@ void PJson::process_char(In& source, State& state, bool& out_move)
 
 void PJson::process_literal(const MemBlock& str, State& state, Type hint)
 {
-    bool success; 
+    bool success;
 
     tie(success, state.value) = Tools::str_to_type(str.ptr, str.size, hint);
 
