@@ -11,6 +11,11 @@ namespace Srl {
     class StoreContext;
     class RestoreContext;
 
+    namespace CtxFlags {
+        const size_t None     = 0;
+        const size_t Optional = 1;
+    }
+
     class Context {
 
     friend class StoreContext;
@@ -22,7 +27,7 @@ namespace Srl {
         template<class T>
         Context& operator () (T&& o);
         template<class T>
-        Context& operator () (const String& name, T&& o);
+        Context& operator () (const String& name, T&& o, size_t flags = CtxFlags::None);
 
         Node& node() const { return *this->context_node; }
         Mode  mode() const { return this->context_mode; }
@@ -34,8 +39,8 @@ namespace Srl {
         size_t nodes_index  = 0;
         size_t values_index = 0;
 
-        template<class T> void insert (const T& o, const String& name);
-        template<class T> void paste  (T& o, const String& name);
+        template<class T> void insert (const T& o, const String& name, size_t flags);
+        template<class T> void paste  (T& o, const String& name, size_t flags);
     };
 
 
@@ -46,7 +51,7 @@ namespace Srl {
         template<class T>
         StoreContext& operator () (const T& o);
         template<class T>
-        StoreContext& operator () (const String& name, const T& o);
+        StoreContext& operator () (const String& name, const T& o, size_t flags = CtxFlags::None);
 
     private:
         Context context;
@@ -59,7 +64,7 @@ namespace Srl {
         template<class T>
         RestoreContext& operator () (T&& o);
         template<class T>
-        RestoreContext& operator () (const String& name, T&& o);
+        RestoreContext& operator () (const String& name, T&& o, size_t flags = CtxFlags::None);
 
     private:
         Context context;

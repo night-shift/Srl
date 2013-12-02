@@ -58,7 +58,7 @@ namespace Srl { namespace Lib {
         struct Entry {
 
             template<class... Args> Entry (size_t hash_, Args&&... args)
-                : hash(hash_), val { std::forward<Args>(args)... } { }
+                : hash(hash_), val(std::forward<Args>(args)...) { }
 
             size_t hash;
             Entry* next = nullptr;

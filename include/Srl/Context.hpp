@@ -20,16 +20,16 @@ namespace Srl {
     }
 
     template<class T>
-    StoreContext& StoreContext::operator () (const String& name, const T& o)
+    StoreContext& StoreContext::operator () (const String& name, const T& o, size_t flags)
     {
-        this->context.insert(o, name);
+        this->context.insert(o, name, flags);
         return *this;
     }
 
     template<class T>
-    RestoreContext& RestoreContext::operator () (const String& name, T&& o)
+    RestoreContext& RestoreContext::operator () (const String& name, T&& o, size_t flags)
     {
-        this->context.paste(o, name);
+        this->context.paste(o, name, flags);
         return *this;
     }
 
@@ -40,29 +40,40 @@ namespace Srl {
     }
 
     template<class T>
-    Context& Context::operator () (const String& name, T&& o)
+    Context& Context::operator () (const String& name, T&& o, size_t flags)
     {
         if(this->context_mode == Mode::Insert) {
-            this->insert(o, name);
+            this->insert(o, name, flags);
 
         } else {
-            this->paste(o, name);
+            this->paste(o, name, flags);
         }
 
         return *this;
     }
 
     template<class T>
-    void Context::insert(const T& o, const String& name)
+    void Context::insert(const T& o, const String& name, size_t)
     {
         this->context_node->insert(name, o);
     }
 
     template<class T>
-    void Context::paste(T& o, const String& name)
+    void Context::paste(T& o, const String& name, size_t flags)
     {
         auto type   = Lib::Switch<T>::type;
         auto& index = TpTools::is_scope(type) ? this->nodes_index : this->values_index;
+
+        if((flags & CtxFlags::Optional)) {
+
+            bool has = TpTools::is_scope(type)
+                ? context_node->has_node(name)
+                : context_node->has_value(name);
+
+            if(!has) {
+                return;
+            }
+        }
 
         if(name.size() > 0) {
             this->context_node->paste_field(name, o);

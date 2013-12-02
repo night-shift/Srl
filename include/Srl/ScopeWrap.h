@@ -12,11 +12,9 @@ namespace Srl {
     class ScopeWrap {
 
     public:
-        template<Type TP = Type::Object>
-        ScopeWrap(const std::function<void(Node&)>& insertfnc_)
-            : scope_type(TP), insertfnc(insertfnc_)
+        ScopeWrap(const std::function<void(Node&)>& insertfnc_, Type tp = Type::Object)
+            : scope_type(tp), insertfnc(insertfnc_)
         {
-            static_assert(TpTools::is_scope(TP), "Scope can only be of type Object or Array.");
         }
 
         void insert(Node& node) const { insertfnc(node); }

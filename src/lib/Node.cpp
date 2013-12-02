@@ -220,7 +220,7 @@ void Node::read_source()
     }
 }
 
-Union Node::consume_item(const String& id)
+Union Node::consume_item(const String& id, bool throw_err)
 {
     auto hash = hash_string(id, *this->env);
 
@@ -260,12 +260,16 @@ Union Node::consume_item(const String& id)
         } else {
             auto* link = this->env->store_value(*this, val, seg_name);
             if(link->hash == hash) {
-                return Union(storednode->field);
+                return Union(link->field);
             }
         }
     }
 
-    throw Exception("Field " + id.unwrap(false) + " not found.");
+    if(throw_err) {
+        throw Exception("Field " + id.unwrap(false) + " not found.");
+    }
+
+    return Union();
 }
 
 Node Node::consume_node(bool throw_ex, const String& id)
@@ -599,12 +603,24 @@ void Node::remove_value(Value* to_remove)
 
 bool Node::has_node(const String& field_name)
 {
-    auto hash = hash_string(field_name, *this->env);
-    return find_link<Hash>(hash, this->nodes, field_name) != nullptr;
+    if(this->parsed) {
+        auto hash = hash_string(field_name, *this->env);
+        return find_link<Hash>(hash, this->nodes, field_name) != nullptr;
+    }
+
+    auto unn = this->consume_item(field_name, false);
+
+    return unn.node() != nullptr;
 }
 
 bool Node::has_value(const String& field_name)
 {
-    auto hash = hash_string(field_name, *this->env);
-    return find_link<Hash>(hash, this->values, field_name) != nullptr;
+    if(this->parsed) {
+        auto hash = hash_string(field_name, *this->env);
+        return find_link<Hash>(hash, this->values, field_name) != nullptr;
+    }
+
+    auto unn = this->consume_item(field_name, false);
+
+    return unn.value() != nullptr;
 }

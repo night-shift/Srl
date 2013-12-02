@@ -140,7 +140,7 @@ namespace Srl {
         Node  consume_node  (bool throw_ex, size_t idx);
         Value consume_value (bool throw_ex, size_t idx);
 
-        Union consume_item(const String& name);
+        Union consume_item(const String& name, bool throw_err = true);
 
         template<class T>
         typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), Value>::type
