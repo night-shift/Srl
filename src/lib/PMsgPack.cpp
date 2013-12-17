@@ -127,10 +127,10 @@ namespace {
        str 32 11011011 0xdb */
     void write_str(const MemBlock& block, Out& out)
     {
-        if(block.size <= 31) {
+        if(block.size <= 0x1F) {
             out.write_byte(0xA0 | block.size);
 
-        } else if(block.size <= 255) {
+        } else if(block.size <= 0xFE) {
             out.write_byte(0xD9);
             out.write_byte(block.size);
 
@@ -178,25 +178,6 @@ namespace {
     bool prefix_is_str(uint8_t prefix)
     {
         return (prefix >= 0xA0 && prefix <= 0xBF) || (prefix >= 0xD9 && prefix <= 0xDB);
-    }
-
-    size_t get_str_size(uint8_t prefix, In& in)
-    {
-        assert(prefix_is_str(prefix));
-
-        return (prefix & 0xA0) ? prefix & 0x1F
-             : prefix == 0xD9 ? in.read_move<uint8_t>(error)
-             : prefix == 0xDA ? in.read_move<uint16_t>(error)
-             : in.read_move<uint32_t>(error);
-    }
-
-    size_t get_bin_size(uint8_t prefix, In& in)
-    {
-        assert(prefix_is_bin(prefix));
-
-        return prefix == 0xC4 ? in.read_move<uint8_t>(error)
-             : prefix == 0xC5 ? in.read_move<uint16_t>(error)
-             : in.read_move<uint32_t>(error);
     }
 
     template<Type TP> Value read_num(In& in)
@@ -255,10 +236,29 @@ namespace {
     {
         assert(prefix_is_scalar(prefix));
 
-        return prefix == 0xC2 || prefix == 0xC3 ? read_bool(prefix) 
-             : prefix >= 0xCA && prefix <= 0xD3 ? read_num(prefix, in) 
+        return prefix == 0xC2 || prefix == 0xC3 ? read_bool(prefix)
+             : prefix >= 0xCA && prefix <= 0xD3 ? read_num(prefix, in)
              : prefix == 0xC0 ? Value(MemBlock(), Type::Null)
              : read_fixnum(prefix);
+    }
+
+    size_t get_str_size(uint8_t prefix, In& in)
+    {
+        assert(prefix_is_str(prefix));
+
+        return prefix >= 0xA0 && prefix <= 0xBF ? (prefix & 0x1F)
+             : prefix == 0xD9 ? in.read_move<uint8_t>(error)
+             : prefix == 0xDA ? in.read_move<uint16_t>(error)
+             : in.read_move<uint32_t>(error);
+    }
+
+    size_t get_bin_size(uint8_t prefix, In& in)
+    {
+        assert(prefix_is_bin(prefix));
+
+        return prefix == 0xC4 ? in.read_move<uint8_t>(error)
+             : prefix == 0xC5 ? in.read_move<uint16_t>(error)
+             : in.read_move<uint32_t>(error);
     }
 
     Value read_str(uint8_t prefix, In& in)
@@ -310,14 +310,14 @@ namespace {
 
     MemBlock read_name(uint8_t prefix, vector<uint8_t>& buffer, In& in)
     {
-        auto size = get_str_size(prefix, in);
-        auto block = in.read_block(size, error);
+        auto val = read_str(prefix, in);
+        MemBlock block(val.data(), val.size());
 
         if(in.is_streaming()) {
-            if(buffer.size() < size) { buffer.resize(size); }
+            if(buffer.size() < block.size) { buffer.resize(block.size); }
 
-            memcpy(buffer.data(), block.ptr, size);
-            block = { buffer.data(), size };
+            memcpy(buffer.data(), block.ptr, block.size);
+            block = { buffer.data(), block.size };
         }
 
         return block;

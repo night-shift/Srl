@@ -195,7 +195,7 @@ namespace Srl { namespace Lib {
             auto encoding = get_encoding<typename array_type<T>::type>();
 
             if(value.encoding() == encoding) {
-                Aux::check_size_max(str_size, value.size() + chr_size, id);
+                Aux::check_size_max(str_size, value.size(), id);
                 memcpy(str, value.data(), value.size());
                 str[value.size() / chr_size] = 0;
 
@@ -205,7 +205,7 @@ namespace Srl { namespace Lib {
 
                 auto conv_size = Tools::conv_charset(encoding, wrap, buffer, true);
 
-                Aux::check_size_max(str_size, conv_size + chr_size, id);
+                Aux::check_size_max(str_size, conv_size, id);
                 memcpy(str, buffer.data(), conv_size);
                 str[value.size() / chr_size] = 0;
             }

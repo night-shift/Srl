@@ -238,6 +238,16 @@ public :
             return this->raw_binary;
         });
 
+        auto wrap_med = BitWrap(bin_med, sizeof(bin_med), [this](size_t size) {
+            TEST(size == sizeof(bin_med))
+            return this->bin_med;
+        });
+
+        auto wrap_large = BitWrap(bin_large, sizeof(bin_large), [this](size_t size) {
+            TEST(size == sizeof(bin_large))
+            return this->bin_large;
+        });
+
         ctx ("huge_binary", VecWrap<uint8_t>(huge_binary))
             ("string", string_)
             (u"string_u16", string_u16)
@@ -245,7 +255,12 @@ public :
             ("char_u16", char_u16)
             ("char_u32", char_u32)
             ("char_w", char_w)
-            ("raw_binary", wrap);
+            ("raw_binary", wrap)
+            ("bin_med", wrap_med)
+            ("bin_large", wrap_large)
+            ("str_med", str_med)
+            ("str_large", str_large)
+            ("str_xlarge", str_xlarge);
     }
 
     void shuffle()
@@ -261,7 +276,35 @@ public :
             e <<= 3;
         }
 
+        int strl = sizeof(str_med) - 1;
+
+        for(int i = 0; i < strl; i++) {
+            str_med[i] = 'b';
+        }
+
+        strl = sizeof(str_large) - 1;
+        for(int i = 0; i < strl; i++) {
+            str_large[i] = 'b';
+        }
+
+        strl = sizeof(str_xlarge) - 1;
+        for(int i = 0; i < strl; i++) {
+            str_xlarge[i] = 'b';
+        }
+
+        int binl = sizeof(bin_med);
+
+        for(int i = 0; i < binl; i++) {
+            bin_med[i] = 1;
+        }
+
+        binl = sizeof(bin_large);
+        for(int i = 0; i < binl; i++) {
+            bin_large[i] = 1;
+        }
+
         huge_binary.resize(binary_sz);
+
         for(auto i = 0U; i < binary_sz ; i ++) {
             huge_binary[i] = i % 128;
         }
@@ -278,6 +321,13 @@ public :
         TEST(char_w == n.char_w)
         TEST(memcmp(raw_binary, n.raw_binary, 10) == 0);
         TEST(huge_binary == n.huge_binary);
+
+        TEST(strcmp(str_med, n.str_med) == 0);
+        TEST(strcmp(str_large, n.str_large) == 0);
+        TEST(strcmp(str_xlarge, n.str_xlarge) == 0);
+
+        TEST(memcmp(bin_med, n.bin_med, sizeof(bin_med)) == 0);
+        TEST(memcmp(bin_large, n.bin_large, sizeof(bin_large)) == 0);
     }
 
 private :
@@ -285,6 +335,14 @@ private :
     string string_        = "string";
     u16string string_u16  = u"string";
     u32string string_u32  = U"string";
+
+    char str_med[255] { 'a' };
+    char str_large[513] { 'a' };
+    char str_xlarge[100000] { 'a' };
+
+    uint8_t bin_med[255] { 0 };
+    uint8_t bin_large[513] { 0 };
+
 
     char16_t char_u16 = u'c';
     char32_t char_u32 = U'c';
@@ -465,7 +523,7 @@ bool test_serialize(TParser&& parser, const string& parser_name, Tail&&... tail)
 bool Tests::test_parser()
 {
     bool success = test_serialize (
-        PSrl(),  "Srl",  PMsgPack(), "MsgPack", 
+        PSrl(),  "Srl",  PMsgPack(), "MsgPack",
         PJson(), "Json", PXml(),  "Xml",
         PJson(true), "Json w/o space", PXml(true), "Xml w/o space"
     );
