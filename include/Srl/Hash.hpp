@@ -130,8 +130,9 @@ namespace Srl { namespace Lib {
 
         while(entry) {
 
-            if(entry->hash == hash)
+            if(entry->hash == hash) {
                 return { true, &entry->val };
+            }
 
             node = entry;
             entry = entry->next;
@@ -183,25 +184,38 @@ namespace Srl { namespace Lib {
     }
 
     template<class K, class V, class H>
-    void HTable<K, V, H>::foreach_entry(const std::function<void(size_t, V&)>& fnc)
+    void HTable<K, V, H>::foreach_entry_cont(const std::function<bool(size_t, V&)>& fnc)
     {
         if(this->elements < 1) {
             return;
         }
 
         auto n = 0U;
+        bool abort = false;
 
         for(auto i = 0U; i < this->cap; i++) {
             auto* entry = table[i];
-            while(entry) {
-                fnc(entry->hash, entry->val);
+
+            while(entry && !abort) {
+                abort = fnc(entry->hash, entry->val);
                 entry = entry->next;
                 n++;
             }
-            if(n >= this->elements) {
+
+            if(n >= this->elements || abort) {
                 break;
             }
         }
+    }
+
+    template<class K, class V, class H>
+    void HTable<K, V, H>::foreach_entry(const std::function<void(size_t, V&)>& fnc)
+    {
+        this->foreach_entry_cont([&fnc](size_t h, V& val)
+        {
+            fnc(h, val);
+            return false;
+        });
     }
 
     template<class K, class V, class H>

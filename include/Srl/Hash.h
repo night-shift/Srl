@@ -48,6 +48,8 @@ namespace Srl { namespace Lib {
 
         void foreach_entry(const std::function<void(size_t, Val&)>& fnc);
 
+        void foreach_entry_cont(const std::function<bool(size_t, Val&)>& fnc);
+
         void remove(const Key& key);
 
         size_t num_entries() const { return this->elements; }
