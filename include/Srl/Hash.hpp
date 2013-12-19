@@ -85,6 +85,10 @@ namespace Srl { namespace Lib {
     template<class K, class V, class H>
     typename HTable<K, V, H>::Entry* HTable<K, V ,H>::get_rm(size_t hash)
     {
+        if(this->elements < 1) {
+            return nullptr;
+        }
+
         auto bucket  = get_bucket(hash);
         Entry* entry = table[bucket];
         Entry* prev  = nullptr;

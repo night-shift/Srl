@@ -78,13 +78,13 @@ $(cache)/pic/%.o: %.cpp
 
 $(cache)/pdc/%.o: %.cpp
 	@$(call compile,$(CXX),$(CXXFLAGS),$@,$<)
-	
+
 $(cache)/pic/%.o: %.c
 	@$(call compile,$(CC),$(CFLAGS) -fPIC,$@,$<)
 
 $(cache)/pdc/%.o: %.c
 	@$(call compile,$(CC),$(CFLAGS),$@,$<)
-	
+
 # build and run test
 test: print run
 	@echo "...complete."
