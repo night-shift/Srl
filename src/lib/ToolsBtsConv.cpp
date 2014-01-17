@@ -36,7 +36,7 @@ vector<uint8_t> Tools::bytes_to_base64(const uint8_t* bytes, size_t nbytes)
     vector<uint8_t> basev(4 * ((nbytes + 2) / 3));
     Tools::bytes_to_base64(bytes, nbytes, basev);
 
-    return move(basev);
+    return basev;
 }
 
 size_t Tools::bytes_to_base64(const uint8_t* bytes, size_t nbytes, vector<uint8_t>& out)
@@ -98,10 +98,10 @@ vector<uint8_t> Tools::base64_to_bytes(const char* str, size_t str_len)
     vector<uint8_t> bytesv(vsize);
     base64_to_bytes(bytesv.data(), vsize, str, str_len);
 
-    return move(bytesv);
+    return bytesv;
 }
 
-void Tools::base64_to_bytes(uint8_t* dest, size_t dest_size, const char* str, size_t str_len)
+size_t Tools::base64_to_bytes(uint8_t* dest, size_t dest_size, const char* str, size_t str_len)
 {
     Base64Table table;
 
@@ -133,6 +133,8 @@ void Tools::base64_to_bytes(uint8_t* dest, size_t dest_size, const char* str, si
             dest[out_idx + 2] = b2 << 6 | b3;
         }
     }
+
+    return get_base64_decoded_size(str, str_len);
 }
 
 vector<uint8_t> Tools::bytes_to_hex(const uint8_t* bytes, size_t nbytes)
@@ -150,7 +152,7 @@ vector<uint8_t> Tools::bytes_to_hex(const uint8_t* bytes, size_t nbytes)
         hexv[out_idx + 1] = hex_lk[bytes[in_idx] & 0x0F];
     }
 
-    return move(hexv);
+    return hexv;
 }
 
 vector<uint8_t> Tools::hex_to_bytes(const uint8_t* str, size_t str_len)
@@ -158,7 +160,7 @@ vector<uint8_t> Tools::hex_to_bytes(const uint8_t* str, size_t str_len)
     vector<uint8_t> bytesv(str_len * 2);
     Tools::hex_to_bytes(bytesv.data(), bytesv.size(), str, str_len);
 
-    return move(bytesv);
+    return bytesv;
 }
 
 void Tools::hex_to_bytes(uint8_t* dest, size_t dest_size, const uint8_t* str, size_t str_len)

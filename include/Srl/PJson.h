@@ -8,7 +8,7 @@ namespace Srl {
     class PJson : public Parser {
 
     public :
-        PJson(bool compact_ = false)
+        PJson(bool compact_ = true)
             : compact(compact_) {  }
 
         Format get_format() const     { return Format::Text; }

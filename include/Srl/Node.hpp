@@ -75,7 +75,7 @@ namespace Srl {
         auto r = Ctor<T>::Create();
         this->paste(r);
 
-        return std::move(r);
+        return r;
     }
 
     template<class T>
@@ -90,7 +90,7 @@ namespace Srl {
         auto r = Ctor<T>::Create();
         this->paste_field(fieldID, r);
 
-        return std::move(r);
+        return r;
     }
 
     template<class Head, class... Tail>
@@ -186,7 +186,7 @@ namespace Srl {
         this->to_source(vec, parser);
         parser.clear();
 
-        return std::move(vec);
+        return vec;
     }
 
     template<class TParser>

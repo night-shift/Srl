@@ -11,7 +11,7 @@ namespace Srl {
     class PXml : public Parser {
 
     public :
-        PXml(bool compact_ = false)
+        PXml(bool compact_ = true)
             : compact(compact_) {  }
 
         Format get_format() const  { return Format::Text; }

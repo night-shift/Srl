@@ -32,7 +32,7 @@ namespace Srl { namespace Lib {
     {
         auto* mem = get_mem<T>(1);
 
-        return new (mem) T { std::forward<Args>(args)... };
+        return new (mem) T (std::forward<Args>(args)...);
     }
 
 } }

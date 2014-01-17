@@ -114,7 +114,7 @@ namespace Srl {
     {
         std::vector<uint8_t> vec;
         store(object, vec, parser);
-        return std::move(vec);
+        return vec;
     }
 
     template<class TParser, class Object>
@@ -129,7 +129,7 @@ namespace Srl {
         auto object = Ctor<Object>::Create();
         this->restore(object, source, parser);
 
-        return std::move(object);
+        return object;
     }
 
     template<class TParser, class Object>
