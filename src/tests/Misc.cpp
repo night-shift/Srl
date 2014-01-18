@@ -350,7 +350,7 @@ bool test_shared_references()
     weak_ptr<Base>   res2;
 
     try {
-    
+
         {
             auto s0 = shared_ptr<Base>(new DerivedA());
             weak_ptr<Base> s1 = s0;

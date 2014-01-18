@@ -5,12 +5,6 @@ using namespace std;
 using namespace Srl;
 using namespace Lib;
 
-Tree::Tree(const String& name)
-{
-    this->env = unique_ptr<Environment>(new Environment(*this));
-    this->root_node = &env->create_node(Type::Object, name)->field;
-}
-
 Tree::Tree(Tree&& g)
 {
     *this = forward<Tree>(g);
@@ -18,16 +12,24 @@ Tree::Tree(Tree&& g)
 
 Tree& Tree::operator= (Tree&& g)
 {
-    this->env       = move(g.env);
     this->root_node = g.root_node;
-    this->env->tree = this;
+    this->env       = move(g.env);
+    if(this->env) {
+        this->env->tree = this;
+    }
+    g.root_node = nullptr;
 
     return *this;
 }
 
 void Tree::prologue_in(Parser& parser, Lib::In::Source& source)
 {
-    this->clear();
+    if(this->env) {
+        this->clear();
+
+    } else {
+        this->create_env();
+    }
 
     this->env->set_input(parser, source);
 
@@ -44,6 +46,9 @@ void Tree::prologue_in(Parser& parser, Lib::In::Source& source)
 
 void Tree::to_source(Type type, Parser& parser, Lib::Out::Source source, const function<void()>& store_switch)
 {
+    if(!this->env) {
+        this->create_env();
+    }
     this->env->set_output(parser, source);
     this->env->parsing = true;
 
@@ -74,11 +79,35 @@ void Tree::read_source(Parser& parser, In::Source source, const function<void()>
 
 Node& Tree::root()
 {
+    if(!this->env) {
+        this->create_env();
+    }
     return *this->root_node;
 }
 
 void Tree::clear()
 {
+    if(!this->env) {
+        return;
+    }
+
     this->env->clear();
-    this->root_node = &this->env->create_node(Type::Object, "")->field;
+    this->root_node = &env->create_node(Type::Object, "")->field;
+}
+
+void Tree::create_env()
+{
+    assert(!this->env);
+
+    this->env = unique_ptr<Environment>(new Environment(*this));
+    this->root_node = &env->create_node(Type::Object, "")->field;
+}
+
+Environment& Tree::get_env()
+{
+    if(!this->env) {
+        this->create_env();
+    }
+
+    return *this->env.get();
 }

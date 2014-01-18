@@ -15,7 +15,7 @@ namespace Srl {
     friend class Node;
 
     public:
-        Tree(const String& name = "");
+        Tree() { }
 
         Tree& operator= (Tree&& g);
         Tree(Tree&& g);
@@ -69,7 +69,7 @@ namespace Srl {
     private:
         std::unique_ptr<Lib::Environment> env;
 
-        Node* root_node;
+        Node* root_node = nullptr;
 
         void to_source(Type type, Parser& parser, Lib::Out::Source out, const std::function<void()>& store_switch);
 
@@ -77,6 +77,8 @@ namespace Srl {
         void read_source (Parser& parser, Lib::In::Source source, const std::function<void()>& restore_switch);
 
         void prologue_in(Parser& parser, Lib::In::Source& source);
+        void create_env();
+        Lib::Environment& get_env();
 
         template<class Object>
         friend void Restore(Object& object, Lib::In::Source source, Parser& parser);

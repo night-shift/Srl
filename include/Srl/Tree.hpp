@@ -46,7 +46,12 @@ namespace Srl {
     template<class TParser, class... Items>
     void Tree::pack(Lib::Out::Source out, TParser&& parser, const Items&... items)
     {
-        this->clear();
+        if(this->env) {
+            this->clear();
+
+        } else {
+            this->create_env();
+        }
 
         this->env->set_output(parser, out);
         this->env->parsing = true;
@@ -74,12 +79,18 @@ namespace Srl {
     template<class TParser>
     void Tree::to_source(Lib::Out::Source source, TParser&& parser)
     {
+        if(!this->env) {
+            this->create_env();
+        }
         this->root_node->to_source(source, parser);
     }
 
     template<class TParser>
     std::vector<uint8_t> Tree::to_source(TParser&& parser)
     {
+        if(!this->env) {
+            this->create_env();
+        }
         return this->root_node->to_source(parser);
     }
 

@@ -24,7 +24,7 @@ namespace Srl {
         friend struct Lib::Environment;
 
     public :
-        Node(Tree& tree_) : Node(&tree_, Type::Object) { }
+        Node(Tree& tree_) : Node(&tree_, Type::Object) {  }
 
         template<class Head, class... Tail>
         Node& insert (const String& field_name, const Head& head, const Tail&... tail);
@@ -107,7 +107,7 @@ namespace Srl {
 
     private:
         Node(Tree* tree, Type type_ = Type::Object, bool parsed_ = true)
-            : env(tree->env.get()), nodes(env->heap), values(env->heap),
+            : env(&tree->get_env()), nodes(env->heap), values(env->heap),
               scope_type(type_), parsed(parsed_) { }
 
         Lib::Environment* env;

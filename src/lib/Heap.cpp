@@ -37,12 +37,18 @@ namespace {
     };
 
     struct Size {
-        Size(size_t size_) : size(size_) { }
+        Size(size_t size_, size_t align_) : size(size_), align(align_) { }
 
         const size_t size;
+        const size_t align;
 
         template<class T>
-        bool operator() (const T& t) const { return t.size >= size; }
+        bool operator() (const T& t) const
+        {
+            assert(align > 0);
+
+            return t.size >= size + align - 1 || (t.size >= size && (size_t)t.data % align == 0);
+        }
     };
 }
 
@@ -152,9 +158,9 @@ void Heap::put_mem(uint8_t* mem, size_t sz)
     this->chain.free_segs.append(link);
 }
 
-Heap::Segment* Heap::find_free_seg(size_t sz)
+Heap::Segment* Heap::find_free_seg(size_t sz, size_t align)
 {
-    auto* link = this->chain.free_segs.find_rm(Size(sz));
+    auto* link = this->chain.free_segs.find_rm(Size(sz, align));
 
     if(link) {
         this->chain.used_segs.append(link);
@@ -175,7 +181,7 @@ SegLink* Heap::Chain::get_link()
     return &link->val;
 }
 
-Heap::Segment* Heap::alloc(size_t n)
+Heap::Segment* Heap::alloc(size_t n, size_t align)
 {
     Segment* seg = nullptr;
 
@@ -183,7 +189,7 @@ Heap::Segment* Heap::alloc(size_t n)
         this->put_mem(crr_seg->pointer(), this->crr_seg->left);
     }
 
-    if(chain.free_segs.front && (seg = find_free_seg(n))) {
+    if(chain.free_segs.front && (seg = find_free_seg(n, align))) {
         return seg;
     }
 
@@ -224,7 +230,7 @@ void Heap::clear()
         } else {
             prev = link;
             reset_segment(link->val);
-            this->chain.free_segs.prepend(Size(link->val.val.size), &link->val);
+            this->chain.free_segs.prepend(Size(link->val.val.size, 1), &link->val);
         }
 
         link = next;

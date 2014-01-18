@@ -98,7 +98,7 @@ namespace {
 
     size_t hash_string(const String& str, Environment& env)
     {
-        return str.encoding() == Environment::Str_Encoding 
+        return str.encoding() == Environment::Str_Encoding
             ? Aux::hash_fnc(str.data(), str.size())
             : env.hash_string(str);
     }
@@ -236,8 +236,6 @@ Union Node::consume_item(const String& id, bool throw_err)
         return Union(storedvalue->field);
     }
 
-    auto idconv = this->env->conv_string(id);
-
     while(!this->parsed) {
 
         MemBlock seg_name; Value val;
@@ -337,7 +335,7 @@ Value Node::consume_value(bool throw_ex, const String& id)
         }
 
         if(!TpTools::is_scope(tp)) {
-            if(compare(name_conv, seg_name)) { 
+            if(compare(name_conv, seg_name)) {
                 return val;
             }
 

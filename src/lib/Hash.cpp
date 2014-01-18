@@ -37,7 +37,6 @@ namespace {
     template<> struct Arch<4> {
         static const uint32_t Mul  = 0x5BD1E995;
         static const uint32_t Base = 0x811C9DC5;
-        static const uint32_t Shr  = 24;
 
         static size_t hash_rem (const uint8_t* bytes, size_t nbytes, uint32_t hash)
         {

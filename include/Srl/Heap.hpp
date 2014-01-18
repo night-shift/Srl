@@ -8,12 +8,10 @@ namespace Srl { namespace Lib {
     template<class T>
     T* Heap::get_mem(size_t n_elems)
     {
-        const auto etra_alignment = alignof(T) - 1;
-
         auto sz = n_elems * sizeof(T);
 
-        if(!this->crr_seg || this->crr_seg->left < sz + etra_alignment) {
-            this->crr_seg = this->alloc(sz + etra_alignment);
+        if(!this->crr_seg || this->crr_seg->left < sz + alignof(T) - 1) {
+            this->crr_seg = this->alloc(sz, alignof(T));
         }
 
         auto* mem = this->crr_seg->pointer();

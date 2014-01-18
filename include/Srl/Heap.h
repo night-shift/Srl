@@ -60,17 +60,17 @@ namespace Srl { namespace Lib {
             Segment () { }
             ~Segment();
 
+            uint8_t* data    = nullptr;
             uint32_t left    = 0;
             uint32_t size    = 0;
-            uint8_t* data    = nullptr;
             bool     sub_seg = false;
 
-            void     dec (size_t n) { this->left -= n; }
+            void     dec (size_t n) { assert(this->left >= n); this->left -= n; }
             uint8_t* pointer()      { return data + size - left; }
         };
 
     private:
-        static const size_t Max_Cap = 65536;
+        static const size_t Max_Cap = 65536 << 2;
 
         size_t   cap     = 256;
         Segment* crr_seg = nullptr;
@@ -87,8 +87,8 @@ namespace Srl { namespace Lib {
 
         } chain;
 
-        Segment* alloc         (size_t sz);
-        Segment* find_free_seg (size_t sz);
+        Segment* alloc         (size_t sz, size_t align);
+        Segment* find_free_seg (size_t sz, size_t align);
 
         void destroy();
     };

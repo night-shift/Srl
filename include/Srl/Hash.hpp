@@ -153,10 +153,14 @@ namespace Srl { namespace Lib {
     template<class K, class V, class H>
     void HTable<K, V, H>::clear()
     {
+        if(this->elements < 1) {
+            return;
+        }
+
         this->destroy<V>();
         this->heap.clear();
-        this->limit    = 0;
         this->elements = 0;
+        this->limit = 0;
     }
 
     template<class K, class V, class H>
