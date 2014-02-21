@@ -11,7 +11,7 @@ namespace Srl { namespace Lib {
 
     namespace Aux {
 
-        size_t hash_fnc(const uint8_t* bytes, size_t nbytes);
+        uint64_t hash_fnc(const uint8_t* bytes, size_t nbytes);
 
         inline size_t round_pow2(size_t sz)
         {
@@ -20,7 +20,7 @@ namespace Srl { namespace Lib {
     }
 
     template<class T> struct HashSrl {
-        size_t operator() (const T& t) const { return Aux::hash_fnc(t.data(), t.size()); }
+        uint64_t operator() (const T& t) const { return Aux::hash_fnc(t.data(), t.size()); }
     };
 
     template <class Key, class Val, class HashFnc = HashSrl<Key>>
@@ -44,13 +44,14 @@ namespace Srl { namespace Lib {
         std::pair<bool, Val*> insert (const Key& key, Args&&... args);
 
         template<class... Args>
-        std::pair<bool, Val*> insert_hash (size_t hash, Args&&... args);
+        std::pair<bool, Val*> insert_hash (uint64_t hash, Args&&... args);
 
-        void foreach_entry(const std::function<void(size_t, Val&)>& fnc);
+        void foreach_entry(const std::function<void(uint64_t, Val&)>& fnc);
 
-        void foreach_entry_cont(const std::function<bool(size_t, Val&)>& fnc);
+        void foreach_entry_cont(const std::function<bool(uint64_t, Val&)>& fnc);
 
         void remove(const Key& key);
+        void remove_hash(uint64_t  hash);
 
         size_t num_entries() const { return this->elements; }
 
@@ -59,12 +60,12 @@ namespace Srl { namespace Lib {
     private:
         struct Entry {
 
-            template<class... Args> Entry (size_t hash_, Args&&... args)
+            template<class... Args> Entry (uint64_t hash_, Args&&... args)
                 : hash(hash_), val(std::forward<Args>(args)...) { }
 
-            size_t hash;
-            Entry* next = nullptr;
-            Val    val;
+            uint64_t hash;
+            Entry*   next = nullptr;
+            Val      val;
         };
 
         double load_factor;
@@ -78,11 +79,11 @@ namespace Srl { namespace Lib {
         Heap    heap;
 
         void   redistribute();
-        size_t get_bucket(size_t hash);
+        size_t get_bucket(uint64_t hash);
 
         Entry** alloc_table();
 
-        Entry* get_rm (size_t hash);
+        Entry* get_rm (uint64_t hash);
 
         template<class T>
         typename std::enable_if<std::is_trivially_destructible<T>::value, void>::type

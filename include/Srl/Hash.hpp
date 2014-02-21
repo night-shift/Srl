@@ -6,11 +6,11 @@
 namespace Srl { namespace Lib {
 
     template<class K, class V, class H>
-    size_t HTable<K, V, H>::get_bucket(size_t hash)
+    uint64_t HTable<K, V, H>::get_bucket(uint64_t hash)
     {
         /* mix in the upper half bits of the hash unless table capacity is bigger 2 ^ (bits in word / 2) - 1 */
-        const auto shift = sizeof(size_t) * 4;
-        const auto lim   = ~(size_t)0 >> shift;
+        const auto shift = sizeof(uint64_t) * 4;
+        const auto lim   = ~(uint64_t)0 >> shift;
 
         return (this->cap <= lim ? hash ^ hash >> shift : hash) & (this->cap - 1);
     }
@@ -83,7 +83,7 @@ namespace Srl { namespace Lib {
     }
 
     template<class K, class V, class H>
-    typename HTable<K, V, H>::Entry* HTable<K, V ,H>::get_rm(size_t hash)
+    typename HTable<K, V, H>::Entry* HTable<K, V ,H>::get_rm(uint64_t hash)
     {
         if(this->elements < 1) {
             return nullptr;
@@ -122,7 +122,7 @@ namespace Srl { namespace Lib {
     }
 
     template<class K, class V, class H> template<class... Args>
-    std::pair<bool, V*> HTable<K, V, H>::insert_hash(size_t hash, Args&&... args)
+    std::pair<bool, V*> HTable<K, V, H>::insert_hash(uint64_t hash, Args&&... args)
     {
         if(srl_unlikely(this->elements >= this->limit)) {
             this->redistribute();
@@ -192,7 +192,7 @@ namespace Srl { namespace Lib {
     }
 
     template<class K, class V, class H>
-    void HTable<K, V, H>::foreach_entry_cont(const std::function<bool(size_t, V&)>& fnc)
+    void HTable<K, V, H>::foreach_entry_cont(const std::function<bool(uint64_t, V&)>& fnc)
     {
         if(this->elements < 1) {
             return;
@@ -217,7 +217,7 @@ namespace Srl { namespace Lib {
     }
 
     template<class K, class V, class H>
-    void HTable<K, V, H>::foreach_entry(const std::function<void(size_t, V&)>& fnc)
+    void HTable<K, V, H>::foreach_entry(const std::function<void(uint64_t, V&)>& fnc)
     {
         this->foreach_entry_cont([&fnc](size_t h, V& val)
         {
@@ -230,6 +230,12 @@ namespace Srl { namespace Lib {
     void HTable<K, V, H>::remove(const K& key)
     {
         auto hash   = hash_fnc(key);
+        remove_hash(hash);
+    }
+
+    template<class K, class V, class H>
+    void HTable<K, V, H>::remove_hash(uint64_t hash)
+    {
         auto* entry = get_rm(hash);
 
         if(entry) {
