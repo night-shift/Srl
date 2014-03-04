@@ -29,7 +29,7 @@ namespace {
     void write_escape(const MemBlock& str, Out& out)
     {
         out.write_substitute(str,
-            '\"', ar('\"'), '\'', ar('\''), '\\', ar('\\'), '/', ar('/'), '\n', ar('n'),
+            '\"', ar('\"'), '\\', ar('\\'), '/', ar('/'), '\n', ar('n'),
             '\t', ar('t'), '\r',  ar('r'), '\b',  ar('b'), '\f', ar('f')
         );
     }
