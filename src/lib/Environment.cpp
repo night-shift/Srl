@@ -87,6 +87,25 @@ Link<T>* Environment::create_link(Lib::Items<T>& lst, const T& val, const String
 
 Link<Node>* Environment::store_node(Node& parent, const Node& node, const String& name)
 {
+    if(this->parsing) {
+
+        Value scope_start = Value(node.scope_type);
+        this->write(scope_start, name);
+
+        for(auto& v : node.values) {
+            this->write(v.field, v.field.name());
+        }
+
+        for(auto& n : node.nodes) {
+            this->store_node(parent, n.field, n.field.name());
+        }
+
+        Value scope_end = Value(Type::Scope_End);
+        this->write(scope_end, name);
+
+        return create_node(node.scope_type, name);
+    }
+
     if(node.env != this) {
         auto* link = this->create_link(parent.nodes, Node(this->tree, node.scope_type), name);
 
