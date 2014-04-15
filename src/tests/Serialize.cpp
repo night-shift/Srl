@@ -525,7 +525,7 @@ bool Tests::test_parser()
     bool success = test_serialize (
         PSrl(),  "Srl",  PMsgPack(), "MsgPack",
         PJson(), "Json", PXml(),  "Xml",
-        PJson(true), "Json w/o space", PXml(true), "Xml w/o space"
+        PJson(false), "Json w/ space", PXml(false), "Xml w/ space"
     );
 
     return success;

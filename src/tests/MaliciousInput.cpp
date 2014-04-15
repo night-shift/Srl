@@ -168,7 +168,7 @@ bool Tests::test_malicious_input()
     bool success = malicious_input (
         PSrl(),  "Srl", PMsgPack(), "MsgPack",
         PJson(), "Json", PXml(),  "Xml",
-        PJson(true), "Json w/o space", PXml(true), "Xml w/o space"
+        PJson(false), "Json w/ space", PXml(false), "Xml w/ space"
     );
 
     return success;

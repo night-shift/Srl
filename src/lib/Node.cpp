@@ -48,6 +48,7 @@ namespace {
             auto* rslt = &*itr;
             if(enabled(Opt, Remove)) {
                 links.erase(itr);
+                return nullptr;
             }
             return rslt;
 
@@ -79,6 +80,7 @@ namespace {
 
                 if(enabled(Opt, Remove)) {
                     links.erase(itr);
+                    rslt = nullptr;
                     break;
                 }
 
@@ -104,13 +106,19 @@ namespace {
     }
 
     template<class T>
-    T* find_link_remove(const String& name, Cont<T>& links, Environment& env)
+    Itr<T> find_link_iterator(const String& name, Cont<T>& links, Environment& env)
     {
-        auto* link = links.size() > 0
-            ? find_link<Hash | Remove>(hash_string(name, env), links)
-            : nullptr;
+        auto hash = hash_string(name, env);
 
-        return link ? &link->field : nullptr;
+        for(auto itr = links.begin(), end = links.end(); itr != end; itr++) {
+
+            if(compare<Hash, T>(itr, hash)) {
+                return itr;
+
+            }
+        }
+
+        return links.end();
     }
 
     bool compare(const String& a, const MemBlock& b)
@@ -272,10 +280,12 @@ Union Node::consume_item(const String& id, bool throw_err)
 
 Node Node::consume_node(bool throw_ex, const String& id)
 {
-    auto* stored = find_link_remove(id, this->nodes, *this->env);
+    auto stored_itr = find_link_iterator(id, this->nodes, *this->env);
 
-    if(stored) {
-        return *stored;
+    if(stored_itr != this->nodes.end()) {
+        auto field = move(stored_itr->field);
+        this->nodes.erase(stored_itr);
+        return field;
     }
 
     auto id_conv = this->env->conv_string(id);
@@ -314,10 +324,12 @@ Node Node::consume_node(bool throw_ex, const String& id)
 
 Value Node::consume_value(bool throw_ex, const String& id)
 {
-    auto* stored = find_link_remove(id, this->values, *this->env);
+    auto stored_itr = find_link_iterator(id, this->values, *this->env);
 
-    if(stored) {
-        return *stored;
+    if(stored_itr != this->values.end()) {
+        auto field = move(stored_itr->field);
+        this->values.erase(stored_itr);
+        return field;
     }
 
     auto name_conv = this->env->conv_string(id);
@@ -359,10 +371,10 @@ Node Node::consume_node(bool throw_ex, size_t)
 {
     if(this->nodes.size() > 0) {
         auto itr = this->nodes.begin();
-        auto& fld = itr->field;
+        auto field = move(itr->field);
         this->nodes.erase(itr);
 
-        return move(fld);
+        return field;
     }
 
     while(!this->parsed) {
@@ -395,10 +407,10 @@ Value Node::consume_value(bool throw_ex, size_t)
 {
     if(this->values.size() > 0) {
         auto itr = this->values.begin();
-        auto& fld = itr->field;
+        auto field = move(itr->field);
         this->values.erase(itr);
 
-        return fld;
+        return field;
     }
 
     while(!this->parsed) {
@@ -528,7 +540,7 @@ list<Node*> Node::find_nodes(const String& name_, bool recursive)
         }
     }, recursive);
 
-    return move(rslt);
+    return rslt;
 }
 
 list<Value*> Node::find_values(const String& name_, bool recursive)
@@ -542,7 +554,7 @@ list<Value*> Node::find_values(const String& name_, bool recursive)
         }
     }, recursive);
 
-    return move(rslt);
+    return rslt;
 }
 
 list<Node*> Node::all_nodes(bool recursive)
@@ -553,7 +565,7 @@ list<Node*> Node::all_nodes(bool recursive)
         rslt.push_back(&node);
     }, recursive);
 
-    return move(rslt);
+    return rslt;
 }
 
 list<Value*> Node::all_values(bool recursive)
@@ -564,7 +576,7 @@ list<Value*> Node::all_values(bool recursive)
         rslt.push_back(&value);
     }, recursive);
 
-    return move(rslt);
+    return rslt;
 }
 
 void Node::remove_node(const String& name_)

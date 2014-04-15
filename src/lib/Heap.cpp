@@ -11,6 +11,7 @@ namespace {
 
     void set_subsegment(Heap::Segment& seg, uint8_t* data, size_t sz)
     {
+        memset(data, 0, sz);
         seg.data = data;
         seg.left = sz;
         seg.size = sz;
@@ -28,6 +29,7 @@ namespace {
     void reset_segment(SegLink& link)
     {
         link.val.left = link.val.size;
+        memset(link.val.data, 0, link.val.size);
         link.next = nullptr;
     }
 
