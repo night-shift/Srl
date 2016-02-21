@@ -83,7 +83,7 @@ namespace Srl { namespace Lib {
     }
 
     template<class K, class V, class H>
-    typename HTable<K, V, H>::Entry* HTable<K, V ,H>::get_rm(uint64_t hash)
+    typename HTable<K, V, H>::Entry* HTable<K, V ,H>::get_rm(const K& key, uint64_t hash)
     {
         if(this->elements < 1) {
             return nullptr;
@@ -95,7 +95,7 @@ namespace Srl { namespace Lib {
 
         while(entry) {
 
-            if(entry->hash == hash) {
+            if(entry->hash == hash && entry->key == key) {
                 if(prev) {
                     prev->next = entry->next;
 
@@ -192,7 +192,7 @@ namespace Srl { namespace Lib {
     }
 
     template<class K, class V, class H>
-    void HTable<K, V, H>::foreach_entry_cont(const std::function<bool(uint64_t, V&)>& fnc)
+    void HTable<K, V, H>::foreach_break(const std::function<bool(const K&, V&)>& fnc)
     {
         if(this->elements < 1) {
             return;
@@ -205,7 +205,7 @@ namespace Srl { namespace Lib {
             auto* entry = table[i];
 
             while(entry && !abort) {
-                abort = fnc(entry->hash, entry->val);
+                abort = fnc(entry->key, entry->val);
                 entry = entry->next;
                 n++;
             }
@@ -217,11 +217,11 @@ namespace Srl { namespace Lib {
     }
 
     template<class K, class V, class H>
-    void HTable<K, V, H>::foreach_entry(const std::function<void(uint64_t, V&)>& fnc)
+    void HTable<K, V, H>::foreach(const std::function<void(const K&, V&)>& fnc)
     {
-        this->foreach_entry_cont([&fnc](size_t h, V& val)
+        this->foreach_break([&fnc](const K& key, V& val)
         {
-            fnc(h, val);
+            fnc(key, val);
             return false;
         });
     }
@@ -230,13 +230,7 @@ namespace Srl { namespace Lib {
     void HTable<K, V, H>::remove(const K& key)
     {
         auto hash   = hash_fnc(key);
-        remove_hash(hash);
-    }
-
-    template<class K, class V, class H>
-    void HTable<K, V, H>::remove_hash(uint64_t hash)
-    {
-        auto* entry = get_rm(hash);
+        auto* entry = get_rm(key, hash);
 
         if(entry) {
             destroy<V>(entry->val);
@@ -256,7 +250,7 @@ namespace Srl { namespace Lib {
     typename std::enable_if<!std::is_trivially_destructible<T>::value, void>::type
     HTable<K, V, H>::destroy()
     {
-        foreach_entry([](size_t, V& val) { val.~V(); });
+        foreach([](const K&, V& val) { val.~V(); });
     }
 
 } }

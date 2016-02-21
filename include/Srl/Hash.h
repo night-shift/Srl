@@ -44,12 +44,11 @@ namespace Srl { namespace Lib {
         template<class KV, class... Args>
         std::pair<bool, Val*> insert (KV&& key, Args&&... args);
 
-        void foreach_entry(const std::function<void(uint64_t, Val&)>& fnc);
+        void foreach(const std::function<void(const Key&, Val&)>& fnc);
 
-        void foreach_entry_cont(const std::function<bool(uint64_t, Val&)>& fnc);
+        void foreach_break(const std::function<bool(const Key&, Val&)>& fnc);
 
         void remove(const Key& key);
-        void remove_hash(uint64_t  hash);
 
         size_t num_entries() const { return this->elements; }
 
@@ -82,7 +81,7 @@ namespace Srl { namespace Lib {
 
         Entry** alloc_table();
 
-        Entry* get_rm (uint64_t hash);
+        Entry* get_rm (const Key& k, uint64_t hash);
 
         template<class KV, class... Args>
         std::pair<bool, Val*> insert_hash (uint64_t hash, KV&& key, Args&&... args);
