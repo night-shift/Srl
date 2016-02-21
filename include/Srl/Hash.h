@@ -23,6 +23,10 @@ namespace Srl { namespace Lib {
         uint64_t operator() (const T& t) const { return Aux::hash_fnc(t.data(), t.size()); }
     };
 
+    template<> struct HashSrl<std::string> {
+        uint64_t operator() (const std::string& s) const { return Aux::hash_fnc((const uint8_t*)s.data(), s.size()); }
+    };
+
     template <class Key, class Val, class HashFnc = HashSrl<Key>>
     class HTable {
 
