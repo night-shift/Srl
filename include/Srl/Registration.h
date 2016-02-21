@@ -1,7 +1,7 @@
 #ifndef SRL_REGISTRATION_H
 #define SRL_REGISTRATION_H
 
-#include "String.h"
+#include "String.hpp"
 #include "Hash.hpp"
 #include "Exception.h"
 #include "Resolve.h"
@@ -14,13 +14,13 @@ namespace Srl {
 
         class Registrations {
 
-            typedef std::function<std::unique_ptr<void>(void)> Make;
+            typedef std::function<void*(void)> Make;
 
         public:
             template<class T>
             void add(const String& id)
             {
-                bool exists = this->insert(id, [] { return Ctor<T>::Create_New(); });
+                bool exists = this->insert(id, [] { return Ctor<T>::Create_New().release(); });
 
                 if(exists) {
                     throw Exception("Class id " + id.unwrap(false) + " duplicated.");
@@ -36,9 +36,8 @@ namespace Srl {
                     throw Exception("Class id " + id.unwrap(false) + " not registered.");
                 }
 
-                auto uptr = (*make)();
-
-                return std::unique_ptr<T>(static_cast<T*>(uptr.release()));
+                auto* ptr = (T*)((*make)());
+                return std::unique_ptr<T>(ptr);
             }
 
         private:

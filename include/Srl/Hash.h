@@ -32,6 +32,7 @@ namespace Srl { namespace Lib {
 
         ~HTable() { destroy<Val>(); }
 
+
         HTable(const HTable& m) = default;
 
         HTable(HTable&& m) { *this = std::forward<HTable>(m); }
@@ -40,11 +41,8 @@ namespace Srl { namespace Lib {
 
         Val* get (const Key& key);
         /* fst -> exists? snd -> entry */
-        template<class... Args>
-        std::pair<bool, Val*> insert (const Key& key, Args&&... args);
-
-        template<class... Args>
-        std::pair<bool, Val*> insert_hash (uint64_t hash, Args&&... args);
+        template<class KV, class... Args>
+        std::pair<bool, Val*> insert (KV&& key, Args&&... args);
 
         void foreach_entry(const std::function<void(uint64_t, Val&)>& fnc);
 
@@ -60,11 +58,12 @@ namespace Srl { namespace Lib {
     private:
         struct Entry {
 
-            template<class... Args> Entry (uint64_t hash_, Args&&... args)
-                : hash(hash_), val(std::forward<Args>(args)...) { }
+            template<class KV, class... Args> Entry (uint64_t hash_, KV&& key_, Args&&... args)
+                : hash(hash_), key(std::forward<KV>(key_)), val(std::forward<Args>(args)...) { }
 
             uint64_t hash;
             Entry*   next = nullptr;
+            Key      key;
             Val      val;
         };
 
@@ -84,6 +83,9 @@ namespace Srl { namespace Lib {
         Entry** alloc_table();
 
         Entry* get_rm (uint64_t hash);
+
+        template<class KV, class... Args>
+        std::pair<bool, Val*> insert_hash (uint64_t hash, KV&& key, Args&&... args);
 
         template<class T>
         typename std::enable_if<std::is_trivially_destructible<T>::value, void>::type

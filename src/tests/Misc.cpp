@@ -329,6 +329,7 @@ bool test_polymorphic_classes()
     return true;
 }
 
+
 struct Shared {
 
     shared_ptr<Base> base0;

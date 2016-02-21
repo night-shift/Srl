@@ -71,7 +71,7 @@ namespace Srl { namespace Lib {
         Entry* entry = table[bucket];
 
         while(entry) {
-            if(entry->hash == hash) {
+            if(entry->hash == hash && entry->key == key) {
                 return &entry->val;
 
             } else {
@@ -114,15 +114,15 @@ namespace Srl { namespace Lib {
         return nullptr;
     }
 
-    template<class K, class V, class H> template<class... Args>
-    std::pair<bool, V*> HTable<K, V, H>::insert(const K& key, Args&&... args)
+    template<class K, class V, class H> template<class KV, class... Args>
+    std::pair<bool, V*> HTable<K, V, H>::insert(KV&& key, Args&&... args)
     {
         auto hash = hash_fnc(key);
-        return insert_hash(hash, std::forward<Args>(args)...);
+        return insert_hash(hash, std::forward<KV>(key), std::forward<Args>(args)...);
     }
 
-    template<class K, class V, class H> template<class... Args>
-    std::pair<bool, V*> HTable<K, V, H>::insert_hash(uint64_t hash, Args&&... args)
+    template<class K, class V, class H> template<class KV, class... Args>
+    std::pair<bool, V*> HTable<K, V, H>::insert_hash(uint64_t hash, KV&& key, Args&&... args)
     {
         if(srl_unlikely(this->elements >= this->limit)) {
             this->redistribute();
@@ -134,7 +134,7 @@ namespace Srl { namespace Lib {
 
         while(entry) {
 
-            if(entry->hash == hash) {
+            if(entry->hash == hash && entry->key == key) {
                 return { true, &entry->val };
             }
 
@@ -145,7 +145,7 @@ namespace Srl { namespace Lib {
         this->elements++;
 
         auto& slot = node ? node->next : table[bucket];
-        slot = this->heap.template create<Entry>(hash, std::forward<Args>(args)...);
+        slot = this->heap.template create<Entry>(hash, std::forward<KV>(key), std::forward<Args>(args)...);
 
         return { false, &slot->val };
     }

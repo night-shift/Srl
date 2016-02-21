@@ -56,7 +56,7 @@ pair<const String*, size_t> Environment::store_string(const String& str)
         hash = hash_fnc(conv);
 
         bool exists; String* ptr;
-        tie(exists, ptr) = this->str_table.insert_hash(hash, conv);
+        tie(exists, ptr) = this->str_table.insert(conv, conv);
 
         if(!exists) {
             if(!ptr->block.try_store_local()) {

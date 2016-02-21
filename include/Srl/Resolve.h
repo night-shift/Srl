@@ -18,7 +18,6 @@ namespace Srl {
     template<class T, class... Rest> struct Ctor {
 
         static T                  Create()     { return T(); }
-                                                 /* TODO replace with std::make_unique */
         static std::unique_ptr<T> Create_New() { return std::unique_ptr<T>(new T()); }
     };
 

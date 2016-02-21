@@ -455,7 +455,6 @@ namespace Srl { namespace Lib {
             String type_id;
             ctx(Aux::str_type_id, type_id);
 
-            /* be aware, non nullptr pointers will be deleted */
             if(o != nullptr) {
                 delete o;
             }

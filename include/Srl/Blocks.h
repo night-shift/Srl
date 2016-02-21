@@ -14,6 +14,12 @@ namespace Srl { namespace Lib {
 
             const uint8_t* ptr;
             size_t         size;
+
+            bool operator== (const MemBlock& a) const
+            {
+                return this->size == a.size &&
+                       (this->ptr == a.ptr || memcmp(this->ptr, a.ptr, this->size) == 0);
+            }
         };
 
         struct PackedBlock {
