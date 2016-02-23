@@ -19,6 +19,7 @@ namespace Srl {
 
         Tree& operator= (Tree&& g);
         Tree(Tree&& g);
+        Tree(Srl::Type tp);
 
         Node& root();
 
@@ -77,7 +78,7 @@ namespace Srl {
         void read_source (Parser& parser, Lib::In::Source source, const std::function<void()>& restore_switch);
 
         void prologue_in(Parser& parser, Lib::In::Source& source);
-        void create_env();
+        void create_env(Srl::Type root_node_tp = Srl::Type::Object);
         Lib::Environment& get_env();
 
         template<class Object>

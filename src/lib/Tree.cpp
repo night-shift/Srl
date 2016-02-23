@@ -22,6 +22,11 @@ Tree& Tree::operator= (Tree&& g)
     return *this;
 }
 
+Tree::Tree(Type tp)
+{
+    this->create_env(tp);
+}
+
 void Tree::prologue_in(Parser& parser, Lib::In::Source& source)
 {
     if(this->env) {
@@ -91,16 +96,22 @@ void Tree::clear()
         return;
     }
 
+    auto rtp = this->root().scope_type;
+
     this->env->clear();
-    this->root_node = &env->create_node(Type::Object, "")->field;
+    this->root_node = &env->create_node(rtp, "")->field;
 }
 
-void Tree::create_env()
+void Tree::create_env(Type tp)
 {
     assert(!this->env);
 
+    if(tp != Srl::Type::Object && tp != Srl::Type::Array) {
+        tp = Srl::Type::Object;
+    }
+
     this->env = unique_ptr<Environment>(new Environment(*this));
-    this->root_node = &env->create_node(Type::Object, "")->field;
+    this->root_node = &env->create_node(tp, "")->field;
 }
 
 Environment& Tree::get_env()
