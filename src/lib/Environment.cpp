@@ -44,33 +44,22 @@ size_t Environment::hash_string(const String& str)
 
 pair<const String*, size_t> Environment::store_string(const String& str)
 {
-    static const String empty_str("");
-    static const size_t empty_hash = hash_fnc(empty_str);
+    auto conv = conv_str(str, this->str_buffer, Environment::Str_Encoding);
+    auto hash = hash_fnc(conv);
 
-    size_t hash;
-    const String* str_ptr;
+    auto* str_ptr = this->str_table.get(conv);
 
-    if(str.size() > 0) {
-
-        auto conv = conv_str(str, this->str_buffer, Environment::Str_Encoding);
-        hash = hash_fnc(conv);
-
-        bool exists; String* ptr;
-        tie(exists, ptr) = this->str_table.insert(conv, conv);
-
-        if(!exists) {
-            if(!ptr->block.try_store_local()) {
-                ptr->block.extern_data = Aux::copy(this->heap, conv).ptr;
-            }
-        }
-
-        str_ptr = ptr;
-
-    } else {
-        hash    = empty_hash;
-        str_ptr = &empty_str;
+    if(str_ptr) {
+        return { str_ptr, hash };
     }
 
+    String new_str(conv);
+
+    if(!new_str.block.try_store_local()) {
+        new_str.block.extern_data = Aux::copy(this->heap, conv).ptr;
+    }
+
+    str_ptr = this->str_table.insert(new_str, new_str).second;
     return { str_ptr, hash };
 }
 

@@ -143,11 +143,16 @@ namespace Srl { namespace Lib {
         }
 
         this->elements++;
+        auto* new_entry = this->heap.template create<Entry>(hash, std::forward<KV>(key), std::forward<Args>(args)...);
 
-        auto& slot = node ? node->next : table[bucket];
-        slot = this->heap.template create<Entry>(hash, std::forward<KV>(key), std::forward<Args>(args)...);
+        if(node) {
+            node->next = new_entry;
+        } else {
+            table[bucket] = new_entry;
+        }
 
-        return { false, &slot->val };
+
+        return { false, &(new_entry->val) };
     }
 
     template<class K, class V, class H>

@@ -283,9 +283,9 @@ Node Node::consume_node(bool throw_ex, const String& id)
     auto stored_itr = find_link_iterator(id, this->nodes, *this->env);
 
     if(stored_itr != this->nodes.end()) {
-        auto field = move(stored_itr->field);
+        auto stored_field = move(stored_itr->field);
         this->nodes.erase(stored_itr);
-        return field;
+        return stored_field;
     }
 
     auto id_conv = this->env->conv_string(id);
@@ -327,9 +327,9 @@ Value Node::consume_value(bool throw_ex, const String& id)
     auto stored_itr = find_link_iterator(id, this->values, *this->env);
 
     if(stored_itr != this->values.end()) {
-        auto field = move(stored_itr->field);
+        auto stored_field = move(stored_itr->field);
         this->values.erase(stored_itr);
-        return field;
+        return stored_field;
     }
 
     auto name_conv = this->env->conv_string(id);
@@ -371,10 +371,10 @@ Node Node::consume_node(bool throw_ex, size_t)
 {
     if(this->nodes.size() > 0) {
         auto itr = this->nodes.begin();
-        auto field = move(itr->field);
+        auto stored_field = move(itr->field);
         this->nodes.erase(itr);
 
-        return field;
+        return stored_field;
     }
 
     while(!this->parsed) {
@@ -407,10 +407,10 @@ Value Node::consume_value(bool throw_ex, size_t)
 {
     if(this->values.size() > 0) {
         auto itr = this->values.begin();
-        auto field = move(itr->field);
+        auto stored_field = move(itr->field);
         this->values.erase(itr);
 
-        return field;
+        return stored_field;
     }
 
     while(!this->parsed) {

@@ -16,8 +16,13 @@ namespace Srl {
     inline bool String::operator== (const String& a) const
     {
         const auto cmp = [this](const uint8_t* mem, size_t sz) {
+
             return this->block.size == sz && memcmp(this->block.data(), mem, sz) == 0;
         };
+
+        if(this->block.size == 0 && a.block.size == 0) {
+            return true;
+        }
 
         if(a.block.encoding == this->block.encoding) {
             return cmp(a.block.data(), a.block.size);
