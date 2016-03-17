@@ -81,7 +81,7 @@ namespace Srl { namespace Lib {
         Heap    heap;
 
         void   redistribute();
-        size_t get_bucket(uint64_t hash);
+        uint64_t get_bucket(uint64_t hash);
 
         Entry** alloc_table();
 

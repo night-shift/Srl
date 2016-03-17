@@ -98,7 +98,7 @@ namespace {
         return rslt;
     }
 
-    size_t hash_string(const String& str, Environment& env)
+    uint64_t hash_string(const String& str, Environment& env)
     {
         return str.encoding() == Environment::Str_Encoding
             ? Aux::hash_fnc(str.data(), str.size())
@@ -480,7 +480,7 @@ void Node::consume_scope()
     }
 }
 
-pair<bool, size_t> Node::insert_shared (const void* obj)
+pair<bool, uint64_t> Node::insert_shared (const void* obj)
 {
     bool exists; size_t* key;
     auto& table = this->env->shared_table_store;
@@ -490,7 +490,7 @@ pair<bool, size_t> Node::insert_shared (const void* obj)
     return { exists, *key };
 }
 
-pair<bool, shared_ptr<void>*> Node::find_shared (size_t key, const function<shared_ptr<void>(void)>& create)
+pair<bool, shared_ptr<void>*> Node::find_shared (uint64_t key, const function<shared_ptr<void>(void)>& create)
 {
     auto& table = this->env->shared_table_restore;
     auto* sptr = table.get(key);

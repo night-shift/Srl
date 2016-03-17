@@ -30,7 +30,12 @@ fpconvdir  = $(libsrcdir)/fpconv
 testsrcdir = src/tests
 
 testfile   = tests
+linklibs   =
 
+uname = $(shell uname -s)
+ifeq ($(uname), Darwin)
+	linklibs += -liconv
+endif
 ########################################################################
 
 lib         = $(out)/lib$(libname)
@@ -60,7 +65,7 @@ print:
 # shared lib
 $(lib).so: $(libobjs_pic)
 	@echo "\tlinking $(lib).so"
-	@$(CXX) $(CXXFLAGS) -shared -o $(lib).so $(libobjs_pic)
+	@$(CXX) $(CXXFLAGS) -shared -o $(lib).so $(libobjs_pic) $(linklibs)
 
 # static lib w/ -fPIC
 $(lib)pic.a: $(libobjs_pic)

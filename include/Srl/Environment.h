@@ -63,14 +63,14 @@ namespace Lib {
         bool      parsing = false;
         Lib::In   in;
         Lib::Out  out;
-        
+
         template<class T>
         Link<T>*     create_link(Lib::Items<T>& lst, const T& val, const String& name);
         Link<Node>*  create_node (Type type, const String& name);
         Link<Node>*  store_node  (Node& parent, const Node& node,  const String& name);
         Link<Value>* store_value (Node& parent, const Value& value, const String& name);
 
-        size_t       hash_string  (const String& str);
+        uint64_t     hash_string  (const String& str);
         String       conv_string  (const String& str);
 
         void write      (const Value& value, const String& name);

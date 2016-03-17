@@ -17,12 +17,12 @@ namespace {
         return MemBlock(buffer.data(), size);
     }
 
-    size_t hash_fnc(const MemBlock& block)
+    uint64_t hash_fnc(const MemBlock& block)
     {
         return Aux::hash_fnc(block.ptr, block.size);
     }
 
-    size_t hash_fnc(const String& str)
+    uint64_t hash_fnc(const String& str)
     {
         return Aux::hash_fnc(str.data(), str.size());
     }
@@ -35,7 +35,7 @@ String Environment::conv_string(const String& str)
         : conv_str(str, this->str_buffer, Environment::Str_Encoding);
 }
 
-size_t Environment::hash_string(const String& str)
+uint64_t Environment::hash_string(const String& str)
 {
     return str.encoding() == Environment::Str_Encoding
         ? hash_fnc(str)

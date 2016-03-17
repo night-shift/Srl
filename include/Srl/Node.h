@@ -123,8 +123,8 @@ namespace Srl {
         void open_scope (void (*Insert)(Node& node, const Args&... args),
                          Type node_type, const String& name, const Args&... args);
 
-        std::pair<bool, size_t> insert_shared (const void* obj);
-        std::pair<bool, std::shared_ptr<void>*>  find_shared (size_t key, const std::function<std::shared_ptr<void>(void)>& create);
+        std::pair<bool, uint64_t> insert_shared (const void* obj);
+        std::pair<bool, std::shared_ptr<void>*>  find_shared (uint64_t key, const std::function<std::shared_ptr<void>(void)>& create);
 
         Node& insert_node  (const Node& node, const String& name);
         Node& insert_node  (Type type, const String& name);
