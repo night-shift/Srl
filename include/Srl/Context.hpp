@@ -20,14 +20,14 @@ namespace Srl {
     }
 
     template<class T>
-    StoreContext& StoreContext::operator () (const String& name, const T& o, size_t flags)
+    StoreContext& StoreContext::operator () (const String& name, const T& o, uint64_t flags)
     {
         this->context.insert(o, name, flags);
         return *this;
     }
 
     template<class T>
-    RestoreContext& RestoreContext::operator () (const String& name, T&& o, size_t flags)
+    RestoreContext& RestoreContext::operator () (const String& name, T&& o, uint64_t flags)
     {
         this->context.paste(o, name, flags);
         return *this;
@@ -40,7 +40,7 @@ namespace Srl {
     }
 
     template<class T>
-    Context& Context::operator () (const String& name, T&& o, size_t flags)
+    Context& Context::operator () (const String& name, T&& o, uint64_t flags)
     {
         if(this->context_mode == Mode::Insert) {
             this->insert(o, name, flags);
@@ -53,13 +53,13 @@ namespace Srl {
     }
 
     template<class T>
-    void Context::insert(const T& o, const String& name, size_t)
+    void Context::insert(const T& o, const String& name, uint64_t)
     {
         this->context_node->insert(name, o);
     }
 
     template<class T>
-    void Context::paste(T& o, const String& name, size_t flags)
+    void Context::paste(T& o, const String& name, uint64_t flags)
     {
         auto type   = Lib::Switch<T>::type;
         auto& index = TpTools::is_scope(type) ? this->nodes_index : this->values_index;

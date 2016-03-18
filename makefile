@@ -100,7 +100,7 @@ run: $(out)/$(testfile)
 
 $(out)/$(testfile): $(lib).a $(testobjs)
 	@echo "\tlinking $(out)/$(testfile)"
-	@$(CXX) $(CXXFLAGS) -o $(out)/$(testfile) $(testobjs) $(lib).a
+	@$(CXX) $(CXXFLAGS) -o $(out)/$(testfile) $(testobjs) $(lib).a $(linklibs)
 
 # $1 -> compiler $2 -> flags $3 -> output object-file $4 -> source-file
 define compile

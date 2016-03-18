@@ -1,6 +1,8 @@
 #include "Srl/Srl.h"
 #include "Srl/Lib.h"
 
+#include <array>
+
 using namespace std;
 using namespace Srl;
 using namespace Lib;

@@ -736,7 +736,7 @@ namespace Srl { namespace Lib {
             node.open_scope(&Insert_Key, Type::Object, name, p, !key.first, key.second);
         }
 
-        static void Insert_Key(Node& node, const T& p, const bool& first, const size_t& key)
+        static void Insert_Key(Node& node, const T& p, const bool& first, const uint64_t& key)
         {
             node.insert_value(key, Aux::str_shared_key);
             if(first) {
@@ -747,7 +747,7 @@ namespace Srl { namespace Lib {
         template<class ID = String>
         static void Paste(T& p, Node& node, const ID& = Aux::str_empty)
         {
-            size_t key = node.unwrap_field<size_t>(Aux::str_shared_key);
+            uint64_t key = node.unwrap_field<uint64_t>(Aux::str_shared_key);
             bool inserted_new; std::shared_ptr<void>* sptr;
 
             std::tie(inserted_new, sptr) = node.find_shared(key, [&p, &node] {
