@@ -6,6 +6,7 @@
 #include "Enums.h"
 #include "Value.h"
 #include "Type.h"
+#include "Hash.h"
 
 namespace Srl {
 
@@ -44,6 +45,12 @@ namespace Srl {
     private:
         Lib::PackedBlock block;
     };
+
+    namespace Lib {
+        template<> struct HashSrl<String> {
+            uint64_t operator() (const String& s) const { return Aux::hash_fnc(s.data(), s.size()); }
+        };
+    }
 }
 
 #endif

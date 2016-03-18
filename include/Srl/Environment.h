@@ -29,18 +29,12 @@ namespace Lib {
     template<class T>
     using Items = std::list<Lib::Link<T>, Lib::HeapAllocator<Lib::Link<T>>>;
 
-    template<> struct HashSrl<size_t> {
-        size_t operator()(size_t s) const
-        {
-            return Aux::hash_fnc((uint8_t*)&s, sizeof(size_t));
-        }
-    };
 
     template<> struct HashSrl<const void*> {
         size_t operator()(const void* v) const
         {
-            size_t addr = (size_t)v;
-            return HashSrl<size_t>()(addr);
+            uint64_t addr = (uint64_t)v;
+            return HashSrl<uint64_t>()(addr);
         }
     };
 
