@@ -685,6 +685,43 @@ namespace Srl { namespace Lib {
         Insert(Node&, const std::tuple<T...>&) { }
     };
 
+
+    /* pointer -> value referenced by pointer will be serialized */
+    template<class T>
+    struct Switch<T, typename std::enable_if<std::is_pointer<T>::value && !is_polymorphic<T>::value && !is_cstr_pointer<T>::value>::type> {
+        typedef typename std::remove_pointer<T>::type E;
+        static const Type type = Switch<E>::type;
+
+        static void Insert(const T& p, Node& node, const String& name)
+        {
+            if(p == nullptr) {
+                Switch<std::nullptr_t>::Insert(nullptr, node, name);
+                return;
+            }
+            Aux::ptr_insert<E>(p, node, name);
+        }
+
+        template<class Item, class ID = String>
+        static void Paste(T& p, Item& item, const ID& id = Aux::str_empty)
+        {
+
+            if(p != nullptr) {
+                delete p;
+            }
+
+            auto val_type = item.type();
+
+            if(val_type == Type::Null) {
+                p = nullptr;
+                return;
+            }
+
+            auto uptr = Ctor<E>::Create_New();
+            Switch<E>::Paste(*uptr.get(), item, id);
+            p = uptr.release();
+        }
+    };
+
     /* unique_ptr */
     template<class T> struct Switch<T, typename std::enable_if<is_unique_ptr<T>::value>::type> {
         typedef typename T::element_type E;

@@ -14,7 +14,7 @@ namespace Srl {
         PXml(bool compact_ = true)
             : compact(compact_) {  }
 
-        Format get_format() const  { return Format::Text; }
+        Format get_format() const override { return Format::Text; }
 
         void set_compact(bool val) { this->compact = val; }
 

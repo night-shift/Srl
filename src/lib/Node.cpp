@@ -20,6 +20,8 @@ namespace {
     const Option Remove          = 1 << 3; /* remove found link */
     const Option Throw           = 1 << 4; /* throw exception on not found or multiple findings */
     const Option Check_Duplicate = 1 << 5; /* check for multiple results */
+    const Option Name            = 1 << 6; /* compare by name */
+
 
     constexpr bool enabled(Option options, Option option)
     {
@@ -34,6 +36,16 @@ namespace {
 
     template<Option Opt, class T> typename enable_if<enabled(Opt, Hash), bool>::type
     compare(Itr<T>& itr, size_t hash) { return itr->hash == hash; }
+
+    template<Option Opt, class T> typename enable_if<enabled(Opt, Name), bool>::type
+    compare(Itr<T>& itr, const String& name) { return itr->field.name() == name; }
+
+    template<Option Opt, class T> typename enable_if<enabled(Opt, Name) && enabled(Opt, Name), bool>::type
+    compare(Itr<T>& itr, const pair<uint64_t, const String*>& hash_name)
+    {
+        return itr->hash == hash_name.first &&
+               itr->field.name() == *hash_name.second;
+    }
 
     template<Option Opt, class T> typename enable_if<enabled(Opt, Address), bool>::type
     compare(Itr<T>& itr, T* pointer) { return &itr->field == pointer; }
@@ -112,7 +124,7 @@ namespace {
 
         for(auto itr = links.begin(), end = links.end(); itr != end; itr++) {
 
-            if(compare<Hash, T>(itr, hash)) {
+            if(compare<Hash, T>(itr, hash) && compare<Name, T>(itr, name)) {
                 return itr;
 
             }
@@ -150,7 +162,8 @@ Node& Node::insert_node(Type node_type, const String& name_)
 Value& Node::value(const String& name_)
 {
     auto hash  = hash_string(name_, *this->env);
-    auto* link = find_link<Throw | Hash>(hash, this->values, name_);
+    auto hash_name = make_pair(hash, &name_);
+    auto* link = find_link<Throw | Hash | Name>(hash_name, this->values, name_);
 
     return link->field;
 }
@@ -169,7 +182,8 @@ Node& Node::node(size_t index)
 Node& Node::node(const String& name_)
 {
     auto hash = hash_string(name_, *this->env);
-    return find_link<Throw | Hash>(hash, this->nodes, name_)->field;
+    auto hash_name = make_pair(hash, &name_);
+    return find_link<Throw | Hash | Name>(hash_name, this->nodes, name_)->field;
 }
 
 
@@ -230,19 +244,19 @@ void Node::read_source()
 
 Union Node::consume_item(const String& id, bool throw_err)
 {
-    auto hash = hash_string(id, *this->env);
-
-    auto* storednode = find_link<Hash>(hash, this->nodes);
+    auto* storednode = find_link<Name>(id, this->nodes);
 
     if(storednode) {
         return Union(storednode->field);
     }
 
-    auto* storedvalue = find_link<Hash>(hash, this->values);
+    auto* storedvalue = find_link<Name>(id, this->values);
 
     if(storedvalue) {
         return Union(storedvalue->field);
     }
+
+    auto hash = hash_string(id, *this->env);
 
     while(!this->parsed) {
 
@@ -259,13 +273,13 @@ Union Node::consume_item(const String& id, bool throw_err)
         if(TpTools::is_scope(tp)) {
             auto* link = this->env->store_node(*this, Node(this->env->tree, tp), seg_name);
             link->field.read_source();
-            if(link->hash == hash) {
+            if(link->hash == hash && link->field.name() == id) {
                 return Union(link->field);
             }
 
         } else {
             auto* link = this->env->store_value(*this, val, seg_name);
-            if(link->hash == hash) {
+            if(link->hash == hash && link->field.name() == id) {
                 return Union(link->field);
             }
         }
@@ -532,10 +546,9 @@ void Node::foreach_value(const function<void(Value&)>& fnc, bool recursive)
 list<Node*> Node::find_nodes(const String& name_, bool recursive)
 {
     list<Node*> rslt;
-    auto hash = hash_string(name_, *this->env);
 
-    this->foreach_node([&rslt, this, hash] (Node& node) {
-        if(hash_string(*node.name_ptr, *this->env) == hash) {
+    this->foreach_node([&rslt, this, name_] (Node& node) {
+        if(node.name() == name_) {
             rslt.push_back(&node);
         }
     }, recursive);
@@ -546,10 +559,9 @@ list<Node*> Node::find_nodes(const String& name_, bool recursive)
 list<Value*> Node::find_values(const String& name_, bool recursive)
 {
     list<Value*> rslt;
-    auto hash = hash_string(name_, *this->env);
 
-    this->foreach_value([&rslt, this, hash] (Value& value) {
-        if(hash_string(value.name(), *this->env) == hash) {
+    this->foreach_value([&rslt, this, name_] (Value& value) {
+        if(value.name() == name_) {
             rslt.push_back(&value);
         }
     }, recursive);
@@ -581,8 +593,7 @@ list<Value*> Node::all_values(bool recursive)
 
 void Node::remove_node(const String& name_)
 {
-    auto hash = hash_string(name_, *this->env);
-    find_link<Remove | Hash>(hash, this->nodes, name_);
+    find_link<Remove | Name>(name_, this->nodes, name_);
 }
 
 void Node::remove_node(size_t index)
@@ -597,8 +608,7 @@ void Node::remove_node(Node* to_remove)
 
 void Node::remove_value(const String& name_)
 {
-    auto hash = hash_string(name_, *this->env);
-    find_link<Remove | Hash>(hash, this->values, name_);
+    find_link<Remove | Name>(name_, this->values, name_);
 }
 
 void Node::remove_value(size_t index)
@@ -614,8 +624,7 @@ void Node::remove_value(Value* to_remove)
 bool Node::has_node(const String& field_name)
 {
     if(this->parsed) {
-        auto hash = hash_string(field_name, *this->env);
-        return find_link<Hash>(hash, this->nodes, field_name) != nullptr;
+        return find_link<Name>(field_name, this->nodes, field_name) != nullptr;
     }
 
     auto unn = this->consume_item(field_name, false);
@@ -626,8 +635,7 @@ bool Node::has_node(const String& field_name)
 bool Node::has_value(const String& field_name)
 {
     if(this->parsed) {
-        auto hash = hash_string(field_name, *this->env);
-        return find_link<Hash>(hash, this->values, field_name) != nullptr;
+        return find_link<Name>(field_name, this->values, field_name) != nullptr;
     }
 
     auto unn = this->consume_item(field_name, false);

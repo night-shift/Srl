@@ -380,6 +380,105 @@ bool test_shared_references()
     return true;
 }
 
+bool test_pointer_serializing()
+{
+    const string SCOPE = "Serializing pointers";
+    print_log("\t" + SCOPE + "...");
+
+    struct PtrTestStruct {
+        int               a = 0;
+        int               b = 1;
+        int*              c = nullptr;
+        int*              d = nullptr;
+        Root*             e = nullptr;
+
+        vector<TestClass*> vec;
+
+        void srl_resolve(Srl::Context& ctx)
+        {
+            ctx ("a", a)("b", b)("vec", vec)("c", c)
+                ("d", d) ("e", e);
+        }
+    };
+
+    vector<shared_ptr<PtrTestStruct>> storage;
+    vector<shared_ptr<int>>           int_storage;
+    vector<shared_ptr<Root>>          obj_storage;
+    vector<shared_ptr<TestClass>>     tst_storage;
+    vector<PtrTestStruct*>            pointers;
+
+    for(int i = 0; i < 10; i++) {
+        auto ptr = make_shared<PtrTestStruct>();
+        ptr->a = i;
+        ptr->b = i * 3;
+
+        auto int_ptr = make_shared<int>();
+        ptr->c = int_ptr.get();
+        *ptr->c = i * 6;
+
+        for(int j = i; j < 10; j++) {
+
+            auto cl_ptr = make_shared<TestClass>(new DerivedB(j), new DerivedA(j * i + 2));
+            tst_storage.push_back(cl_ptr);
+            ptr->vec.push_back(cl_ptr.get());
+        }
+
+        auto root_ptr = make_shared<Root>();
+        root_ptr->m = i * 7;
+        ptr->e = root_ptr.get();
+
+        storage.push_back(ptr);
+        int_storage.push_back(int_ptr);
+        obj_storage.push_back(root_ptr);
+        pointers.push_back(&*ptr.get());
+    }
+
+    vector<PtrTestStruct> restored;
+
+    try {
+        vector<uint8_t> bytes;
+        Srl::Tree().store(pointers, bytes, Srl::PSrl());
+        Srl::Tree().restore(restored, bytes, Srl::PSrl());
+
+
+    } catch(Exception& ex) {
+
+        print_log(string(ex.what()) + "\n");
+        return false;
+    }
+
+    TEST(restored.size() == pointers.size());
+
+    for(auto i = 0U; i < pointers.size(); i++) {
+
+        auto& a = restored[i];
+        auto& b = *pointers[i];
+
+        TEST(a.a == b.a);
+        TEST(a.b == b.b);
+        TEST(a.c && b.c && *a.c == *b.c);
+        TEST(a.d == nullptr && a.d == b.d);
+        TEST(a.e && b.e && a.e->m == b.e->m);
+
+        TEST(a.vec.size() == b.vec.size());
+
+
+        for(auto j = 0U; j < a.vec.size(); j++) {
+            auto& a_sub = *a.vec[j];
+            auto& b_sub = *b.vec[j];
+
+            TEST(a_sub.one->srl_type_id().name() == b_sub.one->srl_type_id().name());
+            TEST(a_sub.two->srl_type_id().name() == b_sub.two->srl_type_id().name());
+
+            TEST(a_sub.one->get() == b_sub.one->get());
+            TEST(a_sub.two->get() == b_sub.two->get());
+        }
+    }
+
+    print_log("ok.\n");
+    return true;
+}
+
 bool Tests::test_misc()
 {
     print_log("\nTest misc\n");
@@ -390,6 +489,7 @@ bool Tests::test_misc()
     success &= test_node_api();
     success &= test_polymorphic_classes();
     success &= test_shared_references();
+    success &= test_pointer_serializing();
 
     return success;
 }

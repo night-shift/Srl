@@ -11,7 +11,7 @@ namespace Srl {
     public :
         PMsgPack() { }
 
-        Format get_format() const { return Format::Binary; }
+        Format get_format() const override { return Format::Binary; }
 
         virtual void
         write (const Value& value, const Lib::MemBlock& name, Lib::Out& out) override;

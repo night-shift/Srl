@@ -359,6 +359,7 @@ struct TestClassA {
 
     const string SCOPE = "TestClassA";
 
+
     bool     bool_  = false;
     int64_t s_int64_n = 1;
     int64_t  s_int64 = 1;
@@ -366,6 +367,8 @@ struct TestClassA {
     uint64_t u_int64 = 1;
     long double long_double = 2.2;
     unsigned char u_char    = 'a';
+    const char*   c_string  = "c_str";
+
     int array[5] = {
         3, 6, 9, 12, 15
     };
@@ -388,7 +391,8 @@ struct TestClassA {
             ("s_int64", s_int64)
             ("s_int16", s_int16)
             ("u_int64", u_int64)
-            ("tpl", tpl);
+            ("tpl", tpl)
+            ("c_string", c_string);
     }
 
     void shuffle()
@@ -431,6 +435,7 @@ struct TestClassA {
         TEST(s_int64 == n.s_int64);
         TEST(s_int16 == n.s_int16);
         TEST(u_int64 == n.u_int64);
+        TEST(c_string == n.c_string);
 
         nested_class_b->test(*n.nested_class_b);
         nested_class_c->test(*n.nested_class_c);
