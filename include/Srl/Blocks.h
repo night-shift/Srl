@@ -25,7 +25,7 @@ namespace Srl { namespace Lib {
         struct PackedBlock {
 
             PackedBlock(uint32_t sz, Type type_, Encoding encoding_)
-                : size(sz), type(type_), encoding(encoding_) { }
+                : ui64(0), size(sz), type(type_), encoding(encoding_) { }
 
             PackedBlock(const Lib::MemBlock& block, Type type_, Encoding encoding_)
                 : extern_data(block.ptr), size(block.size), type(type_), encoding(encoding_) { }

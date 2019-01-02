@@ -27,6 +27,15 @@ bool test_node_api()
         size_t n_nodes  = 3;
         size_t n_values = (n_nodes + 1) * 3 + 1;
 
+        TEST(root.has_node("node0"));
+        TEST(root.has_node("node1"));
+        TEST(!root.has_node("node2"));
+
+        TEST(root.has_value("field0"));
+        TEST(root.has_value("field1"));
+        TEST(root.has_value("field2"));
+        TEST(!root.has_value("field3"));
+
         auto all_nodes = root.all_nodes(recursive);
         TEST(all_nodes.size() == n_nodes)
 

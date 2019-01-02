@@ -118,7 +118,7 @@ namespace Srl { namespace Lib {
 
         void deallocate(pointer mem, size_t n)
         {
-            this->heap->template put_mem((uint8_t*)mem, n * sizeof(T));
+            this->heap->put_mem((uint8_t*)mem, n * sizeof(T));
         }
 
         void destroy(T* t)

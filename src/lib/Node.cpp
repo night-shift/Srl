@@ -13,7 +13,6 @@ namespace {
 
     typedef uint8_t Option;
 
-    const Option None            = 0;
     const Option Hash            = 1 << 0; /* compare by name hash */
     const Option Address         = 1 << 1; /* compare by address */
     const Option Index           = 1 << 2; /* access  by Index */

@@ -59,7 +59,7 @@ namespace {
         }
 
         uint64_t tmp = 0;
-        for(char c; idx < str_len; idx++) {
+        for(char c = '\0'; idx < str_len; idx++) {
             c = str[idx];
 
             if(c < '0' || c > '9') {
@@ -221,7 +221,7 @@ pair<bool, Value> Tools::str_to_type(const uint8_t* str, size_t str_len, Type hi
         if(success) {
             return is_signed ? make_pair(true, Value(-(int64_t)i)) : make_pair(true, Value(i));
         }
-    } 
+    }
 
     double fp;
     tie(fp, success) = str_to_double(str, str_len);
@@ -273,7 +273,7 @@ vector<uint8_t> Tools::conv_charset(Encoding target_encoding, const String& stri
     auto converted_total = conv_charset(target_encoding, string_wrap, buffer, throw_error);
     buffer.resize(converted_total);
 
-    return move(buffer);
+    return buffer;
 }
 
 /* At time of writing standard code conversion facets aren't implemented in libstdc++, so:
