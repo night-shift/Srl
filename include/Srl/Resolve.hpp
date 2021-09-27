@@ -868,6 +868,10 @@ namespace Srl { namespace Lib {
             }
             uint8_t* data_dst = wrap.alloc(size);
 
+            if(size == 0) {
+                return;
+            }
+
             if(data_dst == nullptr) {
                 Aux::throw_error("Nullptr received form alloc() in BitWrap.", id);
             }
