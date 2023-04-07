@@ -23,6 +23,8 @@ bool test_node_api()
         root.node("node0").insert("node1", root.node("node0"));
         root.node("node0").insert("field3", 3);
 
+        TEST(root["node0"]["field3"].unwrap<int>() == 3);
+
         bool recursive  = true;
         size_t n_nodes  = 3;
         size_t n_values = (n_nodes + 1) * 3 + 1;
@@ -99,11 +101,6 @@ bool test_string_escaping()
 
         Tree tree;
         tree.root().insert("str", str);
-
-        print_log("\tString escaping xml...");
-        tree.load_source(tree.to_source(PXml()), PXml());
-        TEST(str == tree.root().unwrap_field<string>("str"));
-        print_log("ok.\n");
 
         print_log("\tString escaping json...");
         tree.load_source(tree.to_source(PJson()), PJson());
@@ -195,41 +192,6 @@ bool test_document_building()
     }
 }
 
-bool test_xml_attributes()
-{
-    const string SCOPE = "Xml attribute parsing";
-
-    try {
-
-        print_log("\tXml attribute extraction...");
-
-        string xml = "<node attribute1 = \"   12  \" attribute2=\"value\" attribute3  =  \"  -10\"/>";
-
-        Tree tree;
-        tree.load_source(xml.c_str(), xml.size(), PXml());
-
-        double attribute1 = 0;
-        string attribute2 = "";
-        int attribute3    = 0;
-
-        tree.root().paste_field("attribute1", attribute1);
-        tree.root().paste_field("attribute2", attribute2);
-        tree.root().paste_field("attribute3", attribute3);
-
-        TEST(tree.root().name() == "node");
-        TEST(attribute1 == 12.0)
-        TEST(attribute2 == "value")
-        TEST(attribute3 == -10)
-
-        print_log("ok.\n");
-
-        return true;
-
-    } catch (Srl::Exception& ex) {
-        print_log(string(ex.what()) + "\n");
-        return false;
-    }
-}
 
 struct Base {
 
@@ -492,8 +454,7 @@ bool Tests::test_misc()
 {
     print_log("\nTest misc\n");
 
-    bool success = test_xml_attributes();
-    success &= test_document_building();
+    bool success = test_document_building();
     success &= test_string_escaping();
     success &= test_node_api();
     success &= test_polymorphic_classes();

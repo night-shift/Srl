@@ -28,6 +28,11 @@ namespace {
     }
 }
 
+
+const String Environment::EmptyString = Srl::String();
+const uint64_t EmptyStringHash = hash_fnc(String());
+
+
 String Environment::conv_string(const String& str)
 {
     return str.encoding() == Environment::Str_Encoding
@@ -44,6 +49,10 @@ uint64_t Environment::hash_string(const String& str)
 
 pair<const String*, size_t> Environment::store_string(const String& str)
 {
+    if(str.size() < 1) {
+        return { &Environment::EmptyString, EmptyStringHash };
+    }
+
     auto conv = conv_str(str, this->str_buffer, Environment::Str_Encoding);
     auto hash = hash_fnc(conv);
 

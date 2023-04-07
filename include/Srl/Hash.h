@@ -56,9 +56,10 @@ namespace Srl { namespace Lib {
         template<class KV, class... Args>
         std::pair<bool, Val*> insert (KV&& key, Args&&... args);
 
-        void foreach(const std::function<void(const Key&, Val&)>& fnc);
 
-        void foreach_break(const std::function<bool(const Key&, Val&)>& fnc);
+        void foreach(const std::function<void(const Key&, Val&)>& fnc) const;
+
+        void foreach_break(const std::function<bool(const Key&, Val&)>& fnc) const;
 
         void remove(const Key& key);
 

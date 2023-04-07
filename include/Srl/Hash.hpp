@@ -197,7 +197,7 @@ namespace Srl { namespace Lib {
     }
 
     template<class K, class V, class H>
-    void HTable<K, V, H>::foreach_break(const std::function<bool(const K&, V&)>& fnc)
+    void HTable<K, V, H>::foreach_break(const std::function<bool(const K&, V&)>& fnc) const
     {
         if(this->elements < 1) {
             return;
@@ -222,7 +222,7 @@ namespace Srl { namespace Lib {
     }
 
     template<class K, class V, class H>
-    void HTable<K, V, H>::foreach(const std::function<void(const K&, V&)>& fnc)
+    void HTable<K, V, H>::foreach(const std::function<void(const K&, V&)>& fnc) const
     {
         this->foreach_break([&fnc](const K& key, V& val)
         {

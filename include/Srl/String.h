@@ -18,6 +18,7 @@ namespace Srl {
 
         friend struct Lib::Environment;
 
+
     public:
         template<class TString>
         String(const TString& str) : String(Lib::wrap_string(str)) { }
@@ -47,10 +48,12 @@ namespace Srl {
     };
 
     namespace Lib {
+
         template<> struct HashSrl<String> {
             uint64_t operator() (const String& s) const { return Aux::hash_fnc(s.data(), s.size()); }
         };
     }
+
 }
 
 #endif

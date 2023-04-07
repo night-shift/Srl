@@ -152,8 +152,7 @@ void Tests::run_benches()
         PSrl(), "PSrl",
         PMsgPack(), "PMsgPack",
         PJson(), "PJson",
-        PJson(false), "PJson w/ space",
-        PXml(false), "PXml w/ space"
+        PJson(false), "PJson w/ space"
     );
 
 }

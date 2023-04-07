@@ -2,6 +2,8 @@
 #define SRL_NODE_HPP
 
 #include "Node.h"
+#include "Srl/String.h"
+#include "Srl/Value.h"
 #include "Tree.h"
 #include "ScopeWrap.h"
 
@@ -210,12 +212,19 @@ namespace Srl {
 
     inline const String& Node::name() const
     {
-        return *this->name_ptr;
+        return this->name_ptr
+            ? *name_ptr
+            : Lib::Environment::EmptyString;
     }
 
     inline Type Node::type() const
     {
         return this->scope_type;
+    }
+
+    inline Union Node::operator[](const String& name)
+    {
+        return this->field(name);
     }
 }
 

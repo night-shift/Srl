@@ -199,7 +199,7 @@ pair<Lib::MemBlock, Value> PJson::read(In& source)
                        break;
 
             case ':' : if(state.reading_value) {
-                           this->throw_exception(state, "Redundant semicolon.");
+                           this->throw_exception(state, "Redundant colon.");
                         }
                         state.reading_value = true;
                         break;

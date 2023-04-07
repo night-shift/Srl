@@ -73,6 +73,8 @@ namespace Srl {
         Union field(const String& name);
         Union field(size_t index);
 
+        Union operator[](const String& name);
+
         std::list<Node*>  find_nodes  (const String& name, bool recursive = false);
         std::list<Value*> find_values (const String& name, bool recursive = false);
 
@@ -131,7 +133,7 @@ namespace Srl {
         void  insert_value (const Value& value, const String& name);
 
         void  to_source   ();
-        void  read_source ();
+        void  read_source (int scope_depth = 0);
 
         void  consume_scope ();
         Node  consume_node  (bool throw_ex, const String& name);

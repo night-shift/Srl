@@ -16,6 +16,7 @@ namespace Srl {
     class Value {
 
         friend struct Lib::Environment;
+        friend class Node;
 
     public:
         template<class T> Value (const T& val);

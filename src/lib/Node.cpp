@@ -7,6 +7,8 @@ using namespace Lib;
 
 namespace {
 
+    int MAX_SAFE_NESTED_SCOPE_DEPTH = 256;
+
     template<class T> const string& tp_name();
     template<> const string& tp_name<Node>()  { static const string str = "Node";  return str; }
     template<> const string& tp_name<Value>() { static const string str = "Value"; return str; }
@@ -213,7 +215,7 @@ Union Node::field(size_t index)
     return Union(resvalue->field);
 }
 
-void Node::read_source()
+void Node::read_source(int scope_depth)
 {
     auto& parser = *this->env->parser;
     auto& source = this->env->in;
@@ -234,9 +236,14 @@ void Node::read_source()
             this->env->store_value(*this, val, field_name);
 
         } else {
+
+            if(scope_depth + 1 > MAX_SAFE_NESTED_SCOPE_DEPTH) {
+                throw Exception("Abort parsing data MAX_SAFE_NESTED_SCOPE_DEPTH [" + to_string(MAX_SAFE_NESTED_SCOPE_DEPTH) + "] exceeded");
+            }
+
             auto* link = this->env->store_node(*this, Node(this->env->tree, val.type()), field_name);
 
-            link->field.read_source();
+            link->field.read_source(scope_depth + 1);
         }
     }
 }
@@ -390,6 +397,7 @@ Node Node::consume_node(bool throw_ex, size_t)
         return stored_field;
     }
 
+
     while(!this->parsed) {
         MemBlock seg_name; Value val;
         tie(seg_name, val) = this->env->parser->read(this->env->in);
@@ -402,7 +410,10 @@ Node Node::consume_node(bool throw_ex, size_t)
         }
 
         if(TpTools::is_scope(tp)) {
-            return Node(this->env->tree, tp, false);
+            Node node(this->env->tree, tp, false);
+            node.name_ptr = this->env->store_string(seg_name).first;
+
+            return node;
 
         } else {
             this->env->store_value(*this, val, seg_name);
@@ -438,6 +449,7 @@ Value Node::consume_value(bool throw_ex, size_t)
         }
 
         if(!TpTools::is_scope(tp)) {
+            val.name_ptr = this->env->store_string(seg_name).first;
             return val;
 
         } else {

@@ -19,6 +19,9 @@ namespace Srl { namespace Lib {
             Source(const uint8_t* data, size_t size)
                 : block({ data, size }), is_stream(false)  { }
 
+            Source(std::string& str)
+                : block({ (const uint8_t*)str.data(), str.size() }), is_stream(false)  { }
+
             Source(std::istream& stream_)
                 : stream(&stream_), is_stream(true) { }
 

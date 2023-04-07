@@ -610,7 +610,6 @@ namespace Srl { namespace Lib {
 
                 Aux::check_size(len, count, id);
             }
-
         }
     };
 
@@ -897,6 +896,61 @@ namespace Srl { namespace Lib {
         {
             Switch<BitWrap>::Paste(wrap.bitwrap, value, id);
         }
+    };
+
+    template<class V> struct Switch<HTable<std::string, V>> {
+        static const Type type = Type::Object;
+
+        static void Insert(const HTable<std::string, V>& ht, Node& node, const String& name)
+        {
+            node.open_scope(&Insert, type, name, ht);
+        }
+
+        static void Insert(Node& node, const HTable<std::string, V>& ht)
+        {
+            ht.foreach([&](const std::string& key, const V& value)
+            {
+                node.insert(key, value);
+            });
+        }
+
+        template<class ID = String>
+        static void Paste(HTable<std::string, V>& ht, Node& node, const ID& id = Aux::str_empty)
+        {
+            Aux::check_type(Type::Object, node.type(), id);
+
+            ht.clear();
+
+            if(node.parsed) {
+
+                for(auto& itm : node.items<V>()) {
+                    auto key = itm.field.name().unwrap();
+                    ht.insert(std::move(key), itm.field.template unwrap<V>());
+
+                }
+                return;
+            }
+
+            while(true) {
+
+                auto itm = node.consume_item<V>();
+                if(node.parsed) {
+                    return;
+                }
+
+                auto key = itm.name().unwrap();
+                ht.insert(std::move(key), itm.template unwrap<V>());
+                FinishScope(itm);
+            }
+        }
+
+        template<class Item>
+        static typename std::enable_if<std::is_same<Item, Value>::value, void>::type
+        FinishScope(Item&) { }
+
+        template<class Item>
+        static typename std::enable_if<std::is_same<Item, Node>::value, void>::type
+        FinishScope(Item& node) { node.consume_scope(); }
     };
 
     namespace Aux {

@@ -1,5 +1,6 @@
 #include "Srl/Srl.h"
 #include "Srl/Lib.h"
+#include "Srl/TpTools.h"
 
 using namespace std;
 using namespace Srl;
@@ -7,9 +8,27 @@ using namespace Lib;
 
 namespace {
 
+    int DEBUG = 0;
+
     const function<void()> error = [] {
         throw Exception("Unable to parse MessagePack data. Data malformed.");
     };
+
+    template<class C>
+    C swap_bytes(C in)
+    {
+        auto N = sizeof(C);
+
+        C out;
+        auto* mem_in = (uint8_t*)&in;
+        auto* mem_out = (uint8_t*)&out;
+
+        for(auto i = 0U; i < N; i++) {
+            mem_out[i] = mem_in[N - i - 1];
+        }
+
+        return out;
+    }
 
     /* Positive FixNum 0xxxxxxx 0x00 - 0x7f
        Negative FixNum 111xxxxx 0xe0 - 0xff */
@@ -29,16 +48,16 @@ namespace {
             return false;
         }
 
-        out.write_byte(0xE0 | (uint8_t)-i);
+        out.write_byte(0xE0 | (uint8_t)i);
         return true;
     }
 
     template<Type TP> typename enable_if<TpTools::is_num(TP) && !TpTools::is_fp(TP), void>::type
     write_scalar (const Value& val, Out& out)
     {
-        typedef typename TpTools::Real<TP>::type Real;
+        typedef typename TpTools::Real<TP>::type IntType;
 
-        const uint8_t lk[] {
+        uint8_t lk[] {
             0xD0 /* Type::I8 */,
             0xCC /* Type::UI8 */,
             0xD1 /* Type::I16 */,
@@ -49,27 +68,29 @@ namespace {
             0xCF /* Type::UI64 */
         };
 
-        const uint8_t prefix = lk[(uint8_t)TP - 1];
+        uint8_t prefix = lk[(uint8_t)TP - 1];
 
         if(TpTools::is_signed(TP)) {
 
-            int64_t i = val.pblock().i64;
+            IntType i = val.pblock().i64;
             if((i >= 0 && write_pfixnum(i, out)) || write_nfixnum(i, out)) {
                 return;
             }
 
+            auto swapped = swap_bytes(i);
             out.write(prefix);
-            out.write((Real)i);
+            out.write(swapped);
 
         } else {
 
-            uint64_t i = val.pblock().ui64;
-            if(write_pfixnum(i, out)) {
+            IntType u = val.pblock().ui64;
+            if(write_pfixnum(u, out)) {
                 return;
             }
 
+            auto swapped = swap_bytes(u);
             out.write(prefix);
-            out.write((Real)i);
+            out.write(swapped);
         }
     }
 
@@ -78,11 +99,19 @@ namespace {
     {
         if(TP == Type::FP32) {
             out.write_byte(0xCA);
-            out.write(val.pblock().fp32);
+
+            auto fp = val.pblock().fp32;
+            auto swapped = swap_bytes(fp);
+
+            out.write(swapped);
 
         } else {
             out.write_byte(0xCB);
-            out.write(val.pblock().fp64);
+
+            auto fp = val.pblock().fp64;
+            auto swapped = swap_bytes(fp);
+
+            out.write(swapped);
         }
     }
 
@@ -180,14 +209,20 @@ namespace {
         return (prefix >= 0xA0 && prefix <= 0xBF) || (prefix >= 0xD9 && prefix <= 0xDB);
     }
 
-    template<Type TP> Value read_num(In& in)
+    template<Type TP>
+    Value read_num(In& in)
     {
-        auto val = in.read_move<typename TpTools::Real<TP>::type>(error);
-        return Value(val);
+        typedef typename TpTools::Real<TP>::type NumTP;
+
+        auto num = in.read_move<NumTP>(error);
+        auto swapped = swap_bytes(num);
+
+        return Value(swapped);
     }
 
     Value read_num(uint8_t prefix, In& in)
     {
+        if(DEBUG) printf("\tread num pfx %02X\n", prefix);
         switch(prefix) {
             case 0xCA : return read_num<Type::FP32>(in);
             case 0xCB : return read_num<Type::FP64>(in);
@@ -206,10 +241,10 @@ namespace {
 
     bool prefix_is_scalar(uint8_t prefix)
     {
-        return (prefix >= 0xCA && prefix <= 0xD3) ||
-                prefix <= 0x7F || prefix >= 0xE0  ||
-                prefix == 0xC2 || prefix == 0xC3  ||
-                prefix == 0xC0;
+        return (prefix >= 0xCA && prefix <= 0xD3) || // integers / floats
+                prefix <= 0x7F || prefix >= 0xE0  || // pos fixnum / neg fixnum
+                prefix == 0xC2 || prefix <= 0xC3  || // true / false
+                prefix == 0xC0;                      // null
     }
 
     Value read_bool(uint8_t prefix)
@@ -220,15 +255,20 @@ namespace {
 
     Value read_fixnum(uint8_t prefix)
     {
+        auto is_neg_fixnum = (1 << 7) & prefix;
+
         int val;
-        if(1 << 7 & prefix) {
-            val = 0xFF >> 3 & prefix;
-            val = -val;
+        if(is_neg_fixnum) {
+
+            uint8_t neg_max = 1 + (0xFF >> 3);
+            val = (0xFF >> 3) & prefix;
+            val = val - (int)neg_max;
 
         } else {
-            val = 0x7F & prefix;
+            val = (0xFF >> 1) & prefix;
         }
 
+        //if(DEBUG) printf("      read fixnum pfx %02X (%d) -> %d\n", prefix, (is_neg_fixnum), val);
         return Value(val);
     }
 
@@ -266,6 +306,8 @@ namespace {
         auto size = get_str_size(prefix, in);
         auto block = in.read_block(size, error);
 
+        if(DEBUG) printf("\tread str sz [%lu]\n", size);
+
         return Value(block, Type::String, Encoding::UTF8);
     }
 
@@ -294,14 +336,15 @@ namespace {
 
         Type type; size_t size;
 
-        if(0x0D << 4 & prefix) {
-           type = prefix <= 0xDD ? Type::Array : Type::Object;
-           size = prefix & 1 ? in.read_move<uint32_t>(error) : in.read_move<uint16_t>(error);
+        /* big container bit at pos 7 set */
+        if(prefix & (1 << 6)) {
+            if(DEBUG) printf("\tbig cont");
+            type = prefix & 2 ? Type::Object : Type::Array;
+            size = prefix & 1 ? in.read_move<uint32_t>(error) : in.read_move<uint16_t>(error);
 
         } else {
-            assert(1 << 7 & prefix);
-
-            type = prefix & 1 << 4 ? Type::Array : Type::Object;
+            if(DEBUG) printf("\tsmall cont");
+            type = prefix & (1 << 4) ? Type::Array : Type::Object;
             size = 0xFF >> 4 & prefix;
         }
 
@@ -366,6 +409,8 @@ void PMsgPack::write_scope(Type type, Out& out)
 
 pair<MemBlock, Value> PMsgPack::read(In& source)
 {
+    if (DEBUG) printf("in pfx... ");
+
     if(this->scope) {
 
         if(this->scope->elements < 1) {
@@ -384,33 +429,45 @@ pair<MemBlock, Value> PMsgPack::read(In& source)
     MemBlock name;
     auto prefix = source.read_move<uint8_t>(error);
 
+    if(DEBUG) printf("%02X\n", prefix);
+
+
     if(this->scope && this->scope->type == Type::Object) {
         name = prefix_is_str(prefix) ? read_name(prefix, this->buffer, source) : name;
         prefix = source.read_move<uint8_t>(error);
+        if(DEBUG) printf("overwite pfx -> %02X [%s]\n", prefix, String(name).unwrap().c_str());
+
     }
 
     if(prefix_is_scope(prefix)) {
+
         Type type; size_t size;
         tie(type, size) = get_scope_info(prefix, source);
 
+        if(DEBUG) printf("    -> scope tp %d [%s] [%lu]\n", (int)type, String(name).unwrap().c_str(), size);
         this->scope_stack.emplace(type, size);
         this->scope = &this->scope_stack.top();
 
         return { name, type };
     }
 
-    if(prefix_is_scalar(prefix)) {
-        return { name, read_scalar(prefix, source) };
-    }
-
     if(prefix_is_str(prefix)) {
+        if(DEBUG) printf("    -> str [%s]\n", String(name).unwrap().c_str());
         return { name, read_str(prefix, source) };
     }
 
+    if(prefix_is_scalar(prefix)) {
+        if(DEBUG) printf("    -> scalar [%s]\n", String(name).unwrap().c_str());
+        return { name, read_scalar(prefix, source) };
+    }
+
+
     if(prefix_is_bin(prefix)) {
+        if(DEBUG) printf("    -> bin\n");
         return { name, read_bin(prefix, source) };
     }
 
+    if(DEBUG) printf("    -> err / unknow\n");
     /* shouldn't end here */
     error();
     return { MemBlock(), Type::Null };
@@ -418,6 +475,7 @@ pair<MemBlock, Value> PMsgPack::read(In& source)
 
 void PMsgPack::clear()
 {
+    if(DEBUG) printf("clear");
     Aux::clear_stack(this->scope_stack);
     this->scope = nullptr;
 }

@@ -39,6 +39,8 @@ namespace Lib {
     };
 
     struct Environment {
+
+        static const String EmptyString;
         static const Encoding Str_Encoding = Encoding::UTF8;
 
         Environment(Tree& tree_) : tree(&tree_) { }

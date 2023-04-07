@@ -82,7 +82,9 @@ namespace Srl {
 
     inline const String& Value::name() const
     {
-        return *this->name_ptr;
+        return this->name_ptr
+            ? *this->name_ptr
+            : Lib::Environment::EmptyString;
     }
 
     inline const Lib::PackedBlock& Value::pblock() const

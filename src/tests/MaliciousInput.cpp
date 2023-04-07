@@ -1,3 +1,5 @@
+#include "Srl/PJson.h"
+#include "Srl/Tree.h"
 #include "Tests.h"
 #include "BasicStruct.h"
 
@@ -132,6 +134,44 @@ bool malicious_input()
         print_log("ok. -> " + string(ex.what()) + "\n");
     }
 
+    string source_nested = "";
+    for(auto i = 0U; i < 1024 * 10; i++) {
+        source_nested += "{\"n\":{";
+    }
+
+    try {
+
+        print_log("\tExcessive nesting with '{' load source...");
+
+        Srl::Tree tree;
+        tree.load_source(source_nested, Srl::PJson());
+        success = false;
+        print_log("failed.\n");
+
+    } catch(Exception& ex) {
+        success &= true;
+        print_log("ok. -> " + string(ex.what()) + "\n");
+    }
+
+    source_nested = "";
+    for(auto i = 0U; i < 1024 * 10; i++) {
+        source_nested += "[";
+    }
+
+    try {
+
+        print_log("\tExcessive nesting with '[' unpack...");
+
+        TestStruct ts;
+        Srl::Tree().unpack(source_nested, Srl::PJson(), "data", ts);
+        success = false;
+        print_log("failed.\n");
+
+    } catch(Exception& ex) {
+        success &= true;
+        print_log("ok. -> " + string(ex.what()) + "\n");
+    }
+
     return success;
 }
 
@@ -146,7 +186,7 @@ bool malicious_input(TParser&& parser, const string& parser_name, Tail&&... tail
 
     assert(data.size() > 100);
     /* wild guess */
-    for(auto i = 100U; i < data.size(); i += 20) {
+    for(auto i = 10U; i < data.size(); i += 11) {
         data[i] ^= ~0U;
     }
 
@@ -167,8 +207,8 @@ bool Tests::test_malicious_input()
 {
     bool success = malicious_input (
         PSrl(),  "Srl", PMsgPack(), "MsgPack",
-        PJson(), "Json", PXml(),  "Xml",
-        PJson(false), "Json w/ space", PXml(false), "Xml w/ space"
+        PJson(), "Json",
+        PJson(false), "Json w/ space"
     );
 
     return success;

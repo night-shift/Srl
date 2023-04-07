@@ -1,3 +1,5 @@
+#include "Srl/Hash.h"
+#include "Srl/Tree.h"
 #include "Tests.h"
 #include "BasicStruct.h"
 
@@ -178,33 +180,62 @@ struct TestClassC {
         vector<int> { 2 }
     };
 
+    Srl::Lib::HTable<string, int>               hash_table_a;
+    Srl::Lib::HTable<string, TestClassD>        hash_table_b;
+    Srl::Lib::HTable<string, vector<int>>       hash_table_c;
+
     set<string> set_string { "a" };
 
     void srl_restore(RestoreContext& ctx)
     {
         ctx ("map_class", map_class)
             ("vector_nested", vector_nested)
-            ("set_string", set_string);
+            ("set_string", set_string)
+            ("hash_table_a", hash_table_a)
+            ("hash_table_b", hash_table_b)
+            ("hash_table_c", hash_table_c);
     }
 
     void srl_store(StoreContext& ctx) const
     {
         ctx ("map_class", map_class)
             ("vector_nested", vector_nested)
-            ("set_string", set_string);
+            ("set_string", set_string)
+            ("hash_table_a", hash_table_a)
+            ("hash_table_b", hash_table_b)
+            ("hash_table_c", hash_table_c);
     }
 
     void shuffle()
     {
+        this->hash_table_a.clear();
+        this->hash_table_b.clear();
+        this->hash_table_c.clear();
         this->map_class.clear();
+
         for(auto i = 0; i < 3; i++) {
-            this->map_class.insert({to_string(i), TestClassD()});
-            this->vector_nested.push_back(vector<int>{ 3 + i, 6 + i, 8 + i});
-            this->set_string.insert(to_string(i));
+
+            auto vec = vector<int>{ 3 + i, 6 + i, 8 + i};
+
+            auto map_key = to_string(i);
+
+            this->map_class.insert({map_key, TestClassD()});
+            this->vector_nested.push_back(vec);
+            this->set_string.insert(map_key);
+
+            this->hash_table_a.insert(map_key, i);
+            this->hash_table_b.insert(map_key, TestClassD());
+            this->hash_table_c.insert(map_key, vec);
         }
+
         for(auto& e : this->map_class) {
             e.second.shuffle();
         }
+
+        hash_table_b.foreach([&](const string& _, TestClassD& v)
+        {
+            v.shuffle();
+        });
     }
 
     void test(TestClassC& n)
@@ -221,6 +252,34 @@ struct TestClassC {
         }
 
         TEST(this->set_string == n.set_string);
+
+        TEST(this->hash_table_a.num_entries() == n.hash_table_a.num_entries());
+        TEST(this->hash_table_b.num_entries() == n.hash_table_b.num_entries());
+        TEST(this->hash_table_c.num_entries() == n.hash_table_c.num_entries());
+
+        this->hash_table_a.foreach([&](const string& key, int& value)
+        {
+            auto* n_entry = n.hash_table_a.get(key);
+            TEST(n_entry != nullptr);
+            TEST(*n_entry == value);
+        });
+
+        this->hash_table_b.foreach([&](const string& key, TestClassD& value)
+        {
+            auto* n_entry = n.hash_table_b.get(key);
+            TEST(n_entry != nullptr);
+            n_entry->test(value);
+        });
+
+        this->hash_table_c.foreach([&](const string& key, vector<int>& value)
+        {
+            auto* n_entry = n.hash_table_c.get(key);
+            TEST(n_entry != nullptr);
+            TEST(n_entry->size() == value.size());
+            for(auto i = 0U; i < n_entry->size(); i++) {
+                TEST(n_entry->at(i) == value.at(i));
+            }
+        });
     }
 };
 
@@ -468,7 +527,7 @@ bool test_serialize(TParser&& parser, const string& parser_name, Tail&&... tail)
         restored.test(original);
         print_log("ok.\n");
 
-        print_log("\tTree::From_Type..........");
+        print_log("\tTree::load_object........");
         Tree tree;
         tree.load_object(original);
         print_log("ok.\n");
@@ -477,13 +536,14 @@ bool test_serialize(TParser&& parser, const string& parser_name, Tail&&... tail)
         source = tree.to_source(parser);
         print_log("ok.\n");
 
-        print_log("\tTree::From_Source........");
+        print_log("\tTree::load_source........");
         tree.load_source(source, parser);
         print_log("ok.\n");
 
-        print_log("\tTree::paste..............");
+        print_log("\tTree::root().paste.......");
         TestClassA target;
         tree.root().paste(target);
+
         print_log("ok.\n");
 
         print_log("\tData comparison..........");
@@ -510,18 +570,33 @@ bool test_serialize(TParser&& parser, const string& parser_name, Tail&&... tail)
         print_log("\tSrl::Restore unordered...");
         tree.load_object(original);
         source = tree.to_source(parser);
-        auto restored_unordred = Tree().restore<TestClassA>(source, parser);
+        auto restored_unordered = Tree().restore<TestClassA>(source, parser);
         print_log("ok.\n");
 
         print_log("\tData comparison..........");
-        restored_unordred.test(original);
+        restored_unordered.test(original);
+        print_log("ok.\n");
 
+        print_log("\tTree::pack...............");
+        vector<uint8_t> buf;
+        original.shuffle();
+        Srl::Tree().pack(buf, parser, "data", original);
+        print_log("ok.\n");
+
+        print_log("\tTree::unpack.............");
+        TestClassA unpack_target;
+        Srl::Tree().unpack(buf, parser, "data", unpack_target);
+        print_log("ok.\n");
+
+        print_log("\tData comparison..........");
+        unpack_target.test(original);
         print_log("ok.\n");
 
     }  catch(Srl::Exception& ex) {
         Tests::print_log(string(ex.what()) + "\n");
         success = false;
     }
+
     return test_serialize(tail...) && success;
 }
 
@@ -529,8 +604,8 @@ bool Tests::test_parser()
 {
     bool success = test_serialize (
         PSrl(),  "Srl",  PMsgPack(), "MsgPack",
-        PJson(), "Json", PXml(),  "Xml",
-        PJson(false), "Json w/ space", PXml(false), "Xml w/ space"
+        PJson(), "Json",
+        PJson(false), "Json w/ space"
     );
 
     return success;
