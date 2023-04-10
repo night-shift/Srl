@@ -13,7 +13,7 @@ libname  = srl
 out      = bin
 cache    = cache
 
-CXXFLAGS = -std=c++11 -Wfatal-errors
+CXXFLAGS = -std=c++17 -Wfatal-errors
 CFLAGS   = -std=c99 -O3
 
 ifeq ($(debug), 1)
@@ -34,7 +34,7 @@ linklibs   =
 
 uname = $(shell uname -s)
 ifeq ($(uname), Darwin)
-	linklibs += -liconv
+	linklibs += -liconvpair
 endif
 ########################################################################
 

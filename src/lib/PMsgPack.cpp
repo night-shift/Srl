@@ -8,8 +8,6 @@ using namespace Lib;
 
 namespace {
 
-    int DEBUG = 0;
-
     const function<void()> error = [] {
         throw Exception("Unable to parse MessagePack data. Data malformed.");
     };
@@ -222,7 +220,6 @@ namespace {
 
     Value read_num(uint8_t prefix, In& in)
     {
-        if(DEBUG) printf("\tread num pfx %02X\n", prefix);
         switch(prefix) {
             case 0xCA : return read_num<Type::FP32>(in);
             case 0xCB : return read_num<Type::FP64>(in);
@@ -306,8 +303,6 @@ namespace {
         auto size = get_str_size(prefix, in);
         auto block = in.read_block(size, error);
 
-        if(DEBUG) printf("\tread str sz [%lu]\n", size);
-
         return Value(block, Type::String, Encoding::UTF8);
     }
 
@@ -338,12 +333,10 @@ namespace {
 
         /* big container bit at pos 7 set */
         if(prefix & (1 << 6)) {
-            if(DEBUG) printf("\tbig cont");
             type = prefix & 2 ? Type::Object : Type::Array;
             size = prefix & 1 ? in.read_move<uint32_t>(error) : in.read_move<uint16_t>(error);
 
         } else {
-            if(DEBUG) printf("\tsmall cont");
             type = prefix & (1 << 4) ? Type::Array : Type::Object;
             size = 0xFF >> 4 & prefix;
         }
@@ -409,8 +402,6 @@ void PMsgPack::write_scope(Type type, Out& out)
 
 pair<MemBlock, Value> PMsgPack::read(In& source)
 {
-    if (DEBUG) printf("in pfx... ");
-
     if(this->scope) {
 
         if(this->scope->elements < 1) {
@@ -429,13 +420,11 @@ pair<MemBlock, Value> PMsgPack::read(In& source)
     MemBlock name;
     auto prefix = source.read_move<uint8_t>(error);
 
-    if(DEBUG) printf("%02X\n", prefix);
 
 
     if(this->scope && this->scope->type == Type::Object) {
         name = prefix_is_str(prefix) ? read_name(prefix, this->buffer, source) : name;
         prefix = source.read_move<uint8_t>(error);
-        if(DEBUG) printf("overwite pfx -> %02X [%s]\n", prefix, String(name).unwrap().c_str());
 
     }
 
@@ -444,7 +433,6 @@ pair<MemBlock, Value> PMsgPack::read(In& source)
         Type type; size_t size;
         tie(type, size) = get_scope_info(prefix, source);
 
-        if(DEBUG) printf("    -> scope tp %d [%s] [%lu]\n", (int)type, String(name).unwrap().c_str(), size);
         this->scope_stack.emplace(type, size);
         this->scope = &this->scope_stack.top();
 
@@ -452,22 +440,18 @@ pair<MemBlock, Value> PMsgPack::read(In& source)
     }
 
     if(prefix_is_str(prefix)) {
-        if(DEBUG) printf("    -> str [%s]\n", String(name).unwrap().c_str());
         return { name, read_str(prefix, source) };
     }
 
     if(prefix_is_scalar(prefix)) {
-        if(DEBUG) printf("    -> scalar [%s]\n", String(name).unwrap().c_str());
         return { name, read_scalar(prefix, source) };
     }
 
 
     if(prefix_is_bin(prefix)) {
-        if(DEBUG) printf("    -> bin\n");
         return { name, read_bin(prefix, source) };
     }
 
-    if(DEBUG) printf("    -> err / unknow\n");
     /* shouldn't end here */
     error();
     return { MemBlock(), Type::Null };
@@ -475,7 +459,6 @@ pair<MemBlock, Value> PMsgPack::read(In& source)
 
 void PMsgPack::clear()
 {
-    if(DEBUG) printf("clear");
     Aux::clear_stack(this->scope_stack);
     this->scope = nullptr;
 }

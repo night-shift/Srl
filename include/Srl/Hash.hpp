@@ -105,10 +105,10 @@ namespace Srl { namespace Lib {
 
                 return entry;
 
-            } else {
-                prev = entry;
-                entry = entry->next;
             }
+
+            prev  = entry;
+            entry = entry->next;
         }
 
         return nullptr;
@@ -162,7 +162,7 @@ namespace Srl { namespace Lib {
             return;
         }
 
-        this->destroy<V>();
+        this->destroy_all<K, V>();
         this->heap.clear();
         this->elements = 0;
         this->limit = 0;
@@ -171,7 +171,7 @@ namespace Srl { namespace Lib {
     template<class K, class V, class H>
     HTable<K, V, H>& HTable<K, V, H>::operator= (HTable<K, V, H>&& m)
     {
-        this->destroy<V>();
+        this->destroy_all<K, V>();
 
         this->limit    = m.limit;
         this->elements = m.elements;
@@ -238,7 +238,8 @@ namespace Srl { namespace Lib {
         auto* entry = get_rm(key, hash);
 
         if(entry) {
-            destroy<V>(entry->val);
+            destroy_item<K>(entry->key);
+            destroy_item<V>(entry->val);
             heap.put_mem((uint8_t*)entry, sizeof(Entry));
             elements--;
         }
@@ -246,17 +247,90 @@ namespace Srl { namespace Lib {
 
     template<class K, class V, class H> template<class T>
     typename std::enable_if<!std::is_trivially_destructible<T>::value, void>::type
-    HTable<K, V, H>::destroy(V& val)
+    HTable<K, V, H>::destroy_item(T& itm)
     {
-        val.~V();
+        itm.~T();
     }
 
-    template<class K, class V, class H> template<class T>
-    typename std::enable_if<!std::is_trivially_destructible<T>::value, void>::type
-    HTable<K, V, H>::destroy()
+    template<class K, class V, class H> template<class Key, class Val>
+    typename std::enable_if<!std::is_trivially_destructible<Key>::value ||
+                            !std::is_trivially_destructible<Val>::value, void>::type
+
+    HTable<K, V, H>::destroy_all()
     {
-        foreach([](const K&, V& val) { val.~V(); });
+        foreach([this](const Key& key, Val& val)
+        {
+            destroy_item(key);
+            destroy_item(val);
+        });
     }
+
+
+    template<class K, class V, class H>
+    struct HTable<K, V, H>::Iterator {
+
+        Iterator() { }
+
+        Iterator(HTable<K, V, H>* htbl_) noexcept : htbl(htbl_)
+        {
+            advance();
+        }
+
+        bool operator!=(const Iterator& o) const noexcept
+        {
+            return this->entry != o.entry;
+        }
+
+        Iterator& operator++() noexcept
+        {
+            if(entry) {
+                advance();
+            }
+
+            return *this;
+        }
+
+        std::pair<const K&, V&> operator*() const
+        {
+            if(!entry) {
+                throw Srl::Exception("access iterator out of bounds");
+            }
+
+            return { entry->key, entry->val };
+        }
+
+    private:
+        HTable* htbl         = nullptr;
+        HTable::Entry* entry = nullptr;
+        size_t  bucket       = 0;
+
+        void advance() noexcept
+        {
+            if(!htbl || !htbl->table) {
+                return;
+            }
+
+            if(entry && entry->next) {
+                entry = entry->next;
+                return;
+            }
+
+            if(entry) {
+                bucket += 1;
+                entry = nullptr;
+            }
+
+            for(; bucket < htbl->cap; bucket++) {
+
+                auto* ptr = htbl->table[bucket];
+
+                if(ptr) {
+                    this->entry = ptr;
+                    break;
+                }
+            }
+        }
+    };
 
 } }
 

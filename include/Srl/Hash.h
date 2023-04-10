@@ -4,8 +4,11 @@
 #include "Common.h"
 #include "Heap.h"
 #include "Aux.h"
+#include "Srl/Exception.h"
 
 #include <cmath>
+#include <type_traits>
+#include <utility>
 
 namespace Srl { namespace Lib {
 
@@ -38,11 +41,13 @@ namespace Srl { namespace Lib {
     template <class Key, class Val, class HashFnc = HashSrl<Key>>
     class HTable {
 
+        struct Entry;
+
     public:
         HTable(size_t buckets = 64, double load_factor_ = 1.0)
             : load_factor(fmax(load_factor_, 0.1)), cap(Aux::round_pow2(buckets)) { }
 
-        ~HTable() { destroy<Val>(); }
+        ~HTable() { destroy_all<Key, Val>(); }
 
 
         HTable(const HTable& m) = default;
@@ -56,6 +61,18 @@ namespace Srl { namespace Lib {
         template<class KV, class... Args>
         std::pair<bool, Val*> insert (KV&& key, Args&&... args);
 
+        struct Iterator;
+
+        Iterator begin() noexcept
+        {
+            return Iterator(this);
+        }
+
+        Iterator end() noexcept
+        {
+            return Iterator();
+
+        }
 
         void foreach(const std::function<void(const Key&, Val&)>& fnc) const;
 
@@ -101,19 +118,21 @@ namespace Srl { namespace Lib {
 
         template<class T>
         typename std::enable_if<std::is_trivially_destructible<T>::value, void>::type
-        destroy(Val&) { }
+        destroy_item(T&) { }
 
         template<class T>
         typename std::enable_if<!std::is_trivially_destructible<T>::value, void>::type
-        destroy(Val&);
+        destroy_item(T&);
 
-        template<class T>
-        typename std::enable_if<std::is_trivially_destructible<T>::value, void>::type
-        destroy() { }
+        template<class K, class V>
+        typename std::enable_if<std::is_trivially_destructible<K>::value &&
+                                std::is_trivially_destructible<V>::value, void>::type
+        destroy_all() { }
 
-        template<class T>
-        typename std::enable_if<!std::is_trivially_destructible<T>::value, void>::type
-        destroy();
+        template<class K, class V>
+        typename std::enable_if<!std::is_trivially_destructible<K>::value ||
+                                !std::is_trivially_destructible<V>::value, void>::type
+        destroy_all();
     };
 
 

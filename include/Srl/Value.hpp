@@ -43,7 +43,7 @@ namespace Srl {
     {
         T r;
         this->paste(r);
-        return std::move(r);
+        return r;
     }
 
     template<class T> void Value::paste(T& o)
