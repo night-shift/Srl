@@ -2,13 +2,14 @@
 #define SRL_HASH_H
 
 #include "Common.h"
-#include "Heap.h"
 #include "Aux.h"
 #include "Srl/Exception.h"
 
 #include <cmath>
+#include <deque>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 namespace Srl { namespace Lib {
 
@@ -49,8 +50,8 @@ namespace Srl { namespace Lib {
 
         ~HTable() { destroy_all<Key, Val>(); }
 
-
-        HTable(const HTable& m) = default;
+        HTable(const HTable& m)             = delete;
+        HTable& operator= (const HTable& m) = delete;
 
         HTable(HTable&& m) { *this = std::forward<HTable>(m); }
 
@@ -60,6 +61,9 @@ namespace Srl { namespace Lib {
         /* fst -> exists? snd -> entry */
         template<class KV, class... Args>
         std::pair<bool, Val*> insert (KV&& key, Args&&... args);
+
+        template<class KV, class... Args>
+        std::pair<bool, Val*> upsert (KV&& key, Args&&... args);
 
         struct Iterator;
 
@@ -102,19 +106,21 @@ namespace Srl { namespace Lib {
         size_t limit    = 0;
         size_t elements = 0;
 
-        Entry** table   = nullptr;
+        Entry** table = nullptr;
+        std::vector<Entry*> mem_cache;
+
         HashFnc hash_fnc;
         Heap    heap;
 
-        void   redistribute();
+        void     redistribute();
         uint64_t get_bucket(uint64_t hash);
 
-        Entry** alloc_table();
+        Entry** alloc_table(size_t sz);
 
         Entry* get_rm (const Key& k, uint64_t hash);
 
         template<class KV, class... Args>
-        std::pair<bool, Val*> insert_hash (uint64_t hash, KV&& key, Args&&... args);
+        std::pair<bool, Val*> insert_hash (uint64_t hash, bool update_on_dup, KV&& key, Args&&... args);
 
         template<class T>
         typename std::enable_if<std::is_trivially_destructible<T>::value, void>::type

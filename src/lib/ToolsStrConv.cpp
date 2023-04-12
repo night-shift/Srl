@@ -134,7 +134,7 @@ namespace {
     {
         double val = type == Type::FP64 ? value.pblock().fp64 : value.pblock().fp32;
 
-        if(floor(val) == val && val <= numeric_limits<int64_t>::max() && val >= numeric_limits<int64_t>::min()) {
+        if(floor(val) == val && val <= (double)numeric_limits<int64_t>::max() && val >= numeric_limits<int64_t>::min()) {
 
             return conv_type<Type::I64>((int64_t)val, out);
         }

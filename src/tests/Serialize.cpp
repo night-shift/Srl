@@ -118,7 +118,7 @@ struct TestClassE {
 
 struct TestClassD {
 
-    const string SCOPE = "TestClassD";
+    string SCOPE = "TestClassD";
 
     TestClassE class_e;
     TestClassF class_f;

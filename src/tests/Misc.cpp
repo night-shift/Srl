@@ -370,6 +370,10 @@ bool test_pointer_serializing()
             ctx ("a", a)("b", b)("vec", vec)("c", c)
                 ("d", d) ("e", e);
         }
+
+        ~PtrTestStruct()
+        {
+        }
     };
 
     vector<shared_ptr<PtrTestStruct>> storage;
@@ -401,7 +405,7 @@ bool test_pointer_serializing()
         storage.push_back(ptr);
         int_storage.push_back(int_ptr);
         obj_storage.push_back(root_ptr);
-        pointers.push_back(&*ptr.get());
+        pointers.push_back(ptr.get());
     }
 
     vector<PtrTestStruct> restored;

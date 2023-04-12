@@ -2,8 +2,31 @@
 #define SRL_HASH_HPP
 
 #include "Hash.h"
+#include <algorithm>
+#include <utility>
+#include <vector>
 
 namespace Srl { namespace Lib {
+
+    template<class K, class V, class H>
+    HTable<K, V, H>& HTable<K, V, H>::operator= (HTable<K, V, H>&& m)
+    {
+        this->destroy_all<K, V>();
+
+        this->limit    = m.limit;
+        this->elements = m.elements;
+
+        m.limit    = 0;
+        m.elements = 0;
+
+        this->cap         = m.cap;
+        this->load_factor = m.load_factor;
+
+        this->table     = m.table;
+        this->mem_cache = std::move(m.mem_cache);
+
+        return *this;
+    }
 
     template<class K, class V, class H>
     uint64_t HTable<K, V, H>::get_bucket(uint64_t hash)
@@ -20,7 +43,7 @@ namespace Srl { namespace Lib {
     {
         if(this->limit == 0) {
             /* initial allocation */
-            this->table = this->alloc_table();
+            this->table = this->alloc_table(this->cap);
             this->limit = cap * load_factor;
 
             return;
@@ -30,7 +53,7 @@ namespace Srl { namespace Lib {
         this->cap *= 2;
         this->limit = cap * load_factor;
 
-        Entry** ntable = this->alloc_table();
+        auto* ntable = alloc_table(this->cap);
 
         for(auto i = 0U; i < old_dim; i++) {
             auto* entry = table[i];
@@ -55,9 +78,10 @@ namespace Srl { namespace Lib {
             }
         }
 
-        this->heap.put_mem((uint8_t*)this->table, old_dim * sizeof(Entry*));
+        this->heap.put_mem((uint8_t*)this->table, old_dim * sizeof(nullptr));
         this->table = ntable;
     }
+
 
     template<class K, class V, class H>
     V* HTable<K, V, H>::get(const K& key)
@@ -71,12 +95,12 @@ namespace Srl { namespace Lib {
         Entry* entry = table[bucket];
 
         while(entry) {
+
             if(entry->hash == hash && entry->key == key) {
                 return &entry->val;
-
-            } else {
-                entry = entry->next;
             }
+
+            entry = entry->next;
         }
 
         return nullptr;
@@ -118,11 +142,20 @@ namespace Srl { namespace Lib {
     std::pair<bool, V*> HTable<K, V, H>::insert(KV&& key, Args&&... args)
     {
         auto hash = hash_fnc(key);
-        return insert_hash(hash, std::forward<KV>(key), std::forward<Args>(args)...);
+        return insert_hash(hash, false, std::forward<KV>(key), std::forward<Args>(args)...);
     }
 
     template<class K, class V, class H> template<class KV, class... Args>
-    std::pair<bool, V*> HTable<K, V, H>::insert_hash(uint64_t hash, KV&& key, Args&&... args)
+    std::pair<bool, V*> HTable<K, V, H>::upsert(KV&& key, Args&&... args)
+    {
+        auto hash = hash_fnc(key);
+        return insert_hash(hash, true, std::forward<KV>(key), std::forward<Args>(args)...);
+    }
+
+    template<class K, class V, class H>
+    template<class KV, class... Args>
+    std::pair<bool, V*> HTable<K, V, H>::insert_hash(uint64_t hash, bool update_on_dup,
+                                                     KV&& key, Args&&... args)
     {
         if(srl_unlikely(this->elements >= this->limit)) {
             this->redistribute();
@@ -130,27 +163,46 @@ namespace Srl { namespace Lib {
 
         auto bucket  = get_bucket(hash);
         Entry* entry = table[bucket];
-        Entry* node  = nullptr;
+        Entry* prev  = nullptr;
 
         while(entry) {
 
             if(entry->hash == hash && entry->key == key) {
+
+                if(update_on_dup) {
+
+                    this->destroy_item(entry->val);
+                    new (&entry->val) V(std::forward<Args>(args)...);
+                }
+
                 return { true, &entry->val };
             }
 
-            node = entry;
+            prev  = entry;
             entry = entry->next;
         }
 
-        this->elements++;
-        auto* new_entry = this->heap.template create<Entry>(hash, std::forward<KV>(key), std::forward<Args>(args)...);
+        Entry* mem = nullptr;
 
-        if(node) {
-            node->next = new_entry;
+        if(this->mem_cache.size() > 0) {
+            mem = this->mem_cache.back();
+            this->mem_cache.pop_back();
+
+        } else {
+            mem = this->heap.template get_mem<Entry>(1);
+        }
+
+        auto* new_entry = new (mem) Entry (
+            hash, std::forward<KV>(key), std::forward<Args>(args)...
+        );
+
+        if(prev) {
+            prev->next = new_entry;
         } else {
             table[bucket] = new_entry;
         }
 
+        this->elements++;
 
         return { false, &(new_entry->val) };
     }
@@ -164,37 +216,19 @@ namespace Srl { namespace Lib {
 
         this->destroy_all<K, V>();
         this->heap.clear();
+        this->mem_cache.clear();
         this->elements = 0;
-        this->limit = 0;
+        this->limit    = 0;
     }
 
     template<class K, class V, class H>
-    HTable<K, V, H>& HTable<K, V, H>::operator= (HTable<K, V, H>&& m)
+    typename HTable<K, V, H>::Entry** HTable<K, V, H>::alloc_table(size_t sz)
     {
-        this->destroy_all<K, V>();
-
-        this->limit    = m.limit;
-        this->elements = m.elements;
-
-        m.limit    = 0;
-        m.elements = 0;
-
-        this->cap         = m.cap;
-        this->load_factor = m.load_factor;
-
-        this->heap  = std::move(m.heap);
-        this->table = m.table;
-
-        return *this;
-    }
-
-    template<class K, class V, class H>
-    typename HTable<K, V, H>::Entry**  HTable<K, V, H>::alloc_table()
-    {
-        Entry** tbl = this->heap.template get_mem<Entry*>(this->cap);
-        memset(tbl, 0, this->cap * sizeof(Entry*));
+        Entry** tbl = this->heap.template get_mem<Entry*>(sz);
+        memset(tbl, 0, this->cap * sizeof(nullptr));
         return tbl;
     }
+
 
     template<class K, class V, class H>
     void HTable<K, V, H>::foreach_break(const std::function<bool(const K&, V&)>& fnc) const
@@ -240,7 +274,8 @@ namespace Srl { namespace Lib {
         if(entry) {
             destroy_item<K>(entry->key);
             destroy_item<V>(entry->val);
-            heap.put_mem((uint8_t*)entry, sizeof(Entry));
+
+            this->mem_cache.push_back(entry);
             elements--;
         }
     }
