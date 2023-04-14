@@ -7,6 +7,7 @@
 
 #include <cmath>
 #include <deque>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -17,19 +18,17 @@ namespace Srl { namespace Lib {
 
         uint64_t hash_fnc(const uint8_t* bytes, size_t nbytes);
 
-        inline size_t round_pow2(size_t sz)
-        {
-            return std::pow(2, std::ceil(std::log2(sz)));
-        }
     }
 
-    template<class T> struct HashSrl;
+    template<class T, class = void> struct HashSrl;
 
     template<> struct HashSrl<std::string> {
         uint64_t operator() (const std::string& s) const { return Aux::hash_fnc((const uint8_t*)s.data(), s.size()); }
     };
 
-    template<> struct HashSrl<uint64_t> {
+
+    template<class T>
+    struct HashSrl<T, typename std::enable_if<std::is_convertible<T, uint64_t>::value>::type> {
         uint64_t operator() (const uint64_t& s) const { return s; }
     };
 
@@ -46,7 +45,7 @@ namespace Srl { namespace Lib {
 
     public:
         HTable(size_t buckets = 64, double load_factor_ = 1.0)
-            : load_factor(fmax(load_factor_, 0.1)), cap(Aux::round_pow2(buckets)) { }
+            : load_factor(fmax(load_factor_, 0.1)), cap(buckets) { }
 
         ~HTable() { destroy_all<Key, Val>(); }
 
@@ -62,8 +61,23 @@ namespace Srl { namespace Lib {
         template<class KV, class... Args>
         std::pair<bool, Val*> insert (KV&& key, Args&&... args);
 
+        /* fst -> updated? snd -> entry */
         template<class KV, class... Args>
         std::pair<bool, Val*> upsert (KV&& key, Args&&... args);
+
+        void foreach(const std::function<void(const Key&, Val&)>& fnc) const;
+
+        void foreach_break(const std::function<bool(const Key&, Val&)>& fnc) const;
+
+        void remove_if(const std::function<bool(const Key&, Val&)>& fnc);
+
+        void remove(const Key& key);
+
+        std::optional<Val> extract(const Key& key);
+
+        size_t num_entries() const { return this->elements; }
+
+        void clear();
 
         struct Iterator;
 
@@ -77,16 +91,6 @@ namespace Srl { namespace Lib {
             return Iterator();
 
         }
-
-        void foreach(const std::function<void(const Key&, Val&)>& fnc) const;
-
-        void foreach_break(const std::function<bool(const Key&, Val&)>& fnc) const;
-
-        void remove(const Key& key);
-
-        size_t num_entries() const { return this->elements; }
-
-        void clear();
 
     private:
         struct Entry {
@@ -114,6 +118,7 @@ namespace Srl { namespace Lib {
 
         void     redistribute();
         uint64_t get_bucket(uint64_t hash);
+        void     set_capacity(size_t new_cap);
 
         Entry** alloc_table(size_t sz);
 

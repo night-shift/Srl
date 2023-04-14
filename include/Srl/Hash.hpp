@@ -3,6 +3,7 @@
 
 #include "Hash.h"
 #include <algorithm>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -35,7 +36,14 @@ namespace Srl { namespace Lib {
         const auto shift = sizeof(uint64_t) * 4;
         const auto lim   = ~(uint64_t)0 >> shift;
 
-        return (this->cap <= lim ? hash ^ hash >> shift : hash) & (this->cap - 1);
+        return (this->cap <= lim ? hash ^ hash >> shift : hash) % this->cap;
+    }
+
+    template<class K, class V, class H>
+    void HTable<K, V, H>::set_capacity(size_t new_cap)
+    {
+        this->cap   = std::max((size_t)1, new_cap);
+        this->limit = std::max(elements + 10, (size_t)(new_cap * load_factor));
     }
 
     template<class K, class V, class H>
@@ -43,15 +51,14 @@ namespace Srl { namespace Lib {
     {
         if(this->limit == 0) {
             /* initial allocation */
+            this->set_capacity(this->cap);
             this->table = this->alloc_table(this->cap);
-            this->limit = cap * load_factor;
 
             return;
         }
 
         auto old_dim = this->cap;
-        this->cap *= 2;
-        this->limit = cap * load_factor;
+        this->set_capacity(this->cap * 2);
 
         auto* ntable = alloc_table(this->cap);
 
@@ -128,7 +135,6 @@ namespace Srl { namespace Lib {
                 }
 
                 return entry;
-
             }
 
             prev  = entry;
@@ -157,7 +163,7 @@ namespace Srl { namespace Lib {
     std::pair<bool, V*> HTable<K, V, H>::insert_hash(uint64_t hash, bool update_on_dup,
                                                      KV&& key, Args&&... args)
     {
-        if(srl_unlikely(this->elements >= this->limit)) {
+        if(srl_unlikely(this->limit < 1 || this->elements >= this->limit)) {
             this->redistribute();
         }
 
@@ -238,18 +244,24 @@ namespace Srl { namespace Lib {
         }
 
         auto n = 0U;
-        bool abort = false;
 
         for(auto i = 0U; i < this->cap; i++) {
+
             auto* entry = table[i];
 
-            while(entry && !abort) {
-                abort = fnc(entry->key, entry->val);
+            while(entry) {
+
+                auto abort = fnc(entry->key, entry->val);
+
+                if(abort) {
+                    return;
+                }
+
                 entry = entry->next;
                 n++;
             }
 
-            if(n >= this->elements || abort) {
+            if(n >= this->elements) {
                 break;
             }
         }
@@ -266,18 +278,87 @@ namespace Srl { namespace Lib {
     }
 
     template<class K, class V, class H>
+    void HTable<K, V, H>::remove_if(const std::function<bool(const K&, V&)>& fnc)
+    {
+        if(this->elements < 1) {
+            return;
+        }
+
+        auto n = 0U;
+        auto n_deleted = 0U;
+
+        for(auto i = 0U; i < this->cap; i++) {
+
+            Entry* prev = nullptr;
+            auto* entry = table[i];
+
+            while(entry) {
+
+                n++;
+                auto do_rm = fnc(entry->key, entry->val);
+
+                if(do_rm) {
+
+                    n_deleted++;
+
+                    if(prev) {
+                        prev->next = entry->next;
+                    } else {
+                        table[i] = entry->next;
+                    }
+
+                    destroy_item<K>(entry->key);
+                    destroy_item<V>(entry->val);
+
+                    this->mem_cache.push_back(entry);
+
+                } else {
+                    prev = entry;
+                }
+
+                entry = entry->next;
+            }
+
+            if(n >= this->elements) {
+                break;
+            }
+        }
+
+        this->elements -= n_deleted;
+    }
+
+
+    template<class K, class V, class H>
     void HTable<K, V, H>::remove(const K& key)
     {
         auto hash   = hash_fnc(key);
         auto* entry = get_rm(key, hash);
 
         if(entry) {
-            destroy_item<K>(entry->key);
-            destroy_item<V>(entry->val);
-
+            destroy_item<Entry>(*entry);
             this->mem_cache.push_back(entry);
             elements--;
         }
+    }
+
+    template<class K, class V, class H>
+    std::optional<V> HTable<K, V, H>::extract(const K& key)
+    {
+        auto hash   = hash_fnc(key);
+        auto* entry = get_rm(key, hash);
+
+        if(entry) {
+
+            V res = std::move(entry->val);
+            destroy_item<Entry>(*entry);
+
+            this->mem_cache.push_back(entry);
+            elements--;
+
+            return res;
+        }
+
+        return { };
     }
 
     template<class K, class V, class H> template<class T>
