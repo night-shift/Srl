@@ -26,7 +26,7 @@ namespace Srl {
         BitWrap(const std::function<uint8_t*(size_t)>& alloc_)
             : alloc(alloc_) { }
 
-        const Lib::MemBlock data;
+        Lib::MemBlock data;
         const std::function<uint8_t*(size_t)> alloc;
     };
 
@@ -40,8 +40,9 @@ namespace Srl {
                 [this](size_t sz)
                 {
                     vec->resize(sz / sizeof(T));
-                    return (uint8_t*)vec->data(); 
-                }) 
+                    bitwrap.data = { (uint8_t*)vec->data(), sz };
+                    return (uint8_t*)vec->data();
+                })
         {  }
 
         std::vector<T>* vec;
