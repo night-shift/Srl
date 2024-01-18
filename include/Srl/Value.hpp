@@ -39,14 +39,14 @@ namespace Srl {
         this->block.stored_local = true;
     }
 
-    template<class T> T Value::unwrap()
+    template<class T> T Value::unwrap() const
     {
         T r;
         this->paste(r);
         return r;
     }
 
-    template<class T> void Value::paste(T& o)
+    template<class T> void Value::paste(T& o) const
     {
         static_assert( TpTools::is_scalar(Lib::Switch<T>::type)
                        || Lib::Switch<T>::type == Type::String

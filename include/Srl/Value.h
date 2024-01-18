@@ -33,8 +33,8 @@ namespace Srl {
         Value(const Lib::MemBlock& data_, Type type_, Encoding encoding_)
             : block(data_, type_, encoding_) { }
 
-        template<class T> T    unwrap();
-        template<class T> void paste(T& o);
+        template<class T> T    unwrap() const;
+        template<class T> void paste(T& o) const;
 
         inline Type                    type()     const;
         inline Encoding                encoding() const;
