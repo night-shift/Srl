@@ -4,6 +4,7 @@
 #include "Exception.h"
 #include "String.h"
 #include "TpTools.h"
+#include <optional>
 
 namespace Srl {
 
@@ -46,6 +47,14 @@ namespace Srl {
         template<class T>
         typename std::enable_if<TpTools::is_scope(Lib::Switch<T>::type), T>::type
         unwrap();
+
+        template<class T>
+        std::optional<typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), T>::type>
+        option();
+
+        template<class T>
+        std::optional<typename std::enable_if<TpTools::is_scope(Lib::Switch<T>::type), T>::type>
+        option();
 
 
     private:

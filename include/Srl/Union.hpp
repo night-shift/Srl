@@ -27,6 +27,38 @@ namespace Srl {
         check_node();
         return this->nodeptr->unwrap<T>();
     }
+
+    template<class T>
+    std::optional<typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), T>::type>
+    Union::option()
+    {
+        if(this->valptr) {
+
+            try {
+                T res = this->valptr->unwrap<T>();
+                return { std::move(res) };
+
+            } catch(...) { }
+        }
+
+        return { };
+    }
+
+    template<class T>
+    std::optional<typename std::enable_if<TpTools::is_scope(Lib::Switch<T>::type), T>::type>
+    Union::option()
+    {
+        if(this->nodeptr) {
+
+            try {
+                T res = this->nodeptr->unwrap<T>();
+                return { std::move(res) };
+
+            } catch(...) { }
+        }
+
+        return { };
+    }
 }
 
 #endif
