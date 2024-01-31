@@ -12,18 +12,18 @@ namespace Srl {
     class ScopeWrap {
 
     public:
-        ScopeWrap(const std::function<void(Node&)>& insertfnc_, Type tp = Type::Object)
-            : scope_type(tp), insertfnc(insertfnc_)
+        ScopeWrap(const std::function<void(Node&)>& fn_insert_, Type tp = Type::Object)
+            : scope_type(tp), fn_insert(fn_insert_)
         {
         }
 
-        void insert(Node& node) const { insertfnc(node); }
+        void insert(Node& node) const { fn_insert(node); }
 
         Type type() const { return scope_type; }
 
     private:
         const Type scope_type;
-        const std::function<void(Node&)>& insertfnc;
+        const std::function<void(Node&)>& fn_insert;
 
     };
 }

@@ -90,6 +90,18 @@ Node& Tree::root()
     return *this->root_node;
 }
 
+Union Tree::get(const String& field_name)
+{
+    auto& rn = this->root();
+    return rn.get(field_name);
+}
+
+optional<Union> Tree::try_get(const String& field_name)
+{
+    auto& rn = this->root();
+    return rn.try_get(field_name);
+}
+
 void Tree::clear()
 {
     if(!this->env) {

@@ -3,8 +3,11 @@
 
 #include "Blocks.h"
 #include "Common.h"
+#include "Srl/Resolve.h"
 
 #include <functional>
+#include <utility>
+#include <vector>
 
 namespace Srl {
 
@@ -49,6 +52,21 @@ namespace Srl {
         BitWrap         bitwrap;
     };
 
+    class Bytes {
+
+        friend Srl::Lib::Switch<Bytes>;
+
+        std::vector<uint8_t> buf;
+
+    public:
+        Bytes(std::vector<uint8_t>&& buf_ = { })
+            : buf { std::forward<std::vector<uint8_t>>(buf_) } { }
+
+        std::vector<uint8_t>&& extract() &&
+        {
+            return std::move(buf);
+        }
+    };
 }
 
 #endif

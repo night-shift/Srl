@@ -224,7 +224,7 @@ namespace Srl {
 
     inline Union Node::operator[](const String& name)
     {
-        return this->field(name);
+        return this->get(name);
     }
 }
 

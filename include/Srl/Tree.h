@@ -3,6 +3,7 @@
 
 #include "Environment.h"
 #include "Out.h"
+#include "Union.h"
 
 #include <memory>
 
@@ -22,6 +23,9 @@ namespace Srl {
         Tree(Srl::Type tp);
 
         Node& root();
+
+        Union                get(const String& field_name);
+        std::optional<Union> try_get(const String& field_name);
 
         void clear();
 

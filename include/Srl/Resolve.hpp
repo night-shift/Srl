@@ -264,7 +264,7 @@ namespace Srl { namespace Lib {
         static void Paste(Union& u, Node& node, const ID& id = Aux::str_empty)
         {
             if(node.parsed) {
-                u = node.field(id);
+                u = node.get(id);
             } else {
                 u = node.consume_item(id);
                 node.consume_scope();
@@ -895,6 +895,24 @@ namespace Srl { namespace Lib {
         static void Paste(VecWrap<T>& wrap, const Value& value, const ID& id = Aux::str_empty)
         {
             Switch<BitWrap>::Paste(wrap.bitwrap, value, id);
+        }
+    };
+
+    template<> struct Switch<Bytes> {
+
+        static const Type type = Type::Binary;
+
+        static void Insert(const Bytes& bytes, Node& node, const String& name)
+        {
+            BitWrap bit_wrap(bytes.buf.data(), bytes.buf.size());
+            Switch<BitWrap>::Insert(bit_wrap, node, name);
+        }
+
+        template<class ID = String>
+        static void Paste(Bytes& bytes, const Value& value, const ID& id = Aux::str_empty)
+        {
+            VecWrap v_wrap(bytes.buf);
+            Switch<VecWrap<uint8_t>>::Paste(v_wrap, value, id);
         }
     };
 

@@ -3,13 +3,28 @@
 
 #include "Union.h"
 #include "Node.h"
+#include <optional>
 
 namespace Srl {
 
-    inline Union Union::operator[] (const String& name)
+    inline Union Union::get(const String& name)
     {
         check_node(name);
-        return this->nodeptr->field(name);
+        return this->nodeptr->get(name);
+    }
+
+    inline std::optional<Union> Union::try_get(const String& name)
+    {
+        if(!this->is_node()) {
+            return { };
+        }
+        return this->nodeptr->try_get(name);
+    }
+
+    template<class T>
+    Union::operator T()
+    {
+        return this->unwrap<T>();
     }
 
     template<class T>
@@ -29,10 +44,26 @@ namespace Srl {
     }
 
     template<class T>
-    std::optional<typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), T>::type>
-    Union::option()
+    typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), void>::type
+    Union::copy_to(T& v)
     {
-        if(this->valptr) {
+        check_value();
+        this->value()->paste(v);
+    }
+
+    template<class T>
+    typename std::enable_if<TpTools::is_scope(Lib::Switch<T>::type), void>::type
+    Union::copy_to(T& n)
+    {
+        check_node();
+        this->node()->paste(n);
+    }
+
+    template<class T>
+    std::optional<typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), T>::type>
+    Union::unwrap_if()
+    {
+        if(this->is_value()) {
 
             try {
                 T res = this->valptr->unwrap<T>();
@@ -46,9 +77,9 @@ namespace Srl {
 
     template<class T>
     std::optional<typename std::enable_if<TpTools::is_scope(Lib::Switch<T>::type), T>::type>
-    Union::option()
+    Union::unwrap_if()
     {
-        if(this->nodeptr) {
+        if(this->is_node()) {
 
             try {
                 T res = this->nodeptr->unwrap<T>();
@@ -59,6 +90,7 @@ namespace Srl {
 
         return { };
     }
+
 }
 
 #endif

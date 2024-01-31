@@ -22,23 +22,14 @@ namespace Srl {
         Node*  node()  { return nodeptr; }
         Value* value() { return valptr; }
 
-        /* saves boilerplate */
-        void check_node(const String& name = "")
-        {
-            if(!nodeptr) {
-                throw Exception("Field " + name.unwrap() + " is not a node.");
-            }
-        }
+        bool is_node() { return nodeptr != nullptr; }
+        bool is_value() { return valptr != nullptr; }
 
-        void check_value(const String& name = "")
+        template<class T>
+        operator T();
 
-        {
-            if(!valptr) {
-                throw Exception("Field " + name.unwrap() + " is not a value.");
-            }
-        }
-
-        Union operator [] (const String& name);
+        Union get (const String& name);
+        std::optional<Union> try_get (const String& name);
 
         template<class T>
         typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), T>::type
@@ -49,17 +40,49 @@ namespace Srl {
         unwrap();
 
         template<class T>
+        typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), void>::type
+        copy_to(T&);
+
+        template<class T>
+        typename std::enable_if<TpTools::is_scope(Lib::Switch<T>::type), void>::type
+        copy_to(T&);
+
+        template<class T>
         std::optional<typename std::enable_if<!TpTools::is_scope(Lib::Switch<T>::type), T>::type>
-        option();
+        unwrap_if();
 
         template<class T>
         std::optional<typename std::enable_if<TpTools::is_scope(Lib::Switch<T>::type), T>::type>
-        option();
-
+        unwrap_if();
 
     private:
         Node*  nodeptr = nullptr;
         Value* valptr  = nullptr;
+
+        void check_not_empty()
+        {
+            if(!nodeptr && !valptr) {
+                throw Exception("Srl::Union is empty.");
+            }
+        }
+
+        void check_node(const String& name = "")
+        {
+            check_not_empty();
+
+            if(!nodeptr) {
+                throw Exception("Field <" + name.unwrap() + "> is not a node.");
+            }
+        }
+
+        void check_value(const String& name = "")
+        {
+            check_not_empty();
+
+            if(!valptr) {
+                throw Exception("Field <" + name.unwrap() + "> is not a value.");
+            }
+        }
     };
 }
 

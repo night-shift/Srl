@@ -23,7 +23,7 @@ bool test_node_api()
         root.node("node0").insert("node1", root.node("node0"));
         root.node("node0").insert("field3", 3);
 
-        TEST(root["node0"]["field3"].unwrap<int>() == 3);
+        TEST(root.get("node0").get("field3").unwrap<int>() == 3);
 
         bool recursive  = true;
         size_t n_nodes  = 3;

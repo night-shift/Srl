@@ -67,7 +67,7 @@ namespace {
 
         } else {
             if(enabled(Opt, Throw)) {
-                auto msg = "Cannot access " + tp_name<T>() + " at index " + to_string(index) + ". Index out of bounds.";
+                auto msg = "Cannot access <" + tp_name<T>() + "> at index <" + to_string(index) + ">, index out of bounds.";
                 throw Exception(msg);
             }
             return nullptr;
@@ -104,7 +104,7 @@ namespace {
         }
 
         if(enabled(Opt, Throw) && !rslt) {
-            auto msg = tp_name<T>() + " " + name.unwrap(false) + " not found.";
+            auto msg = tp_name<T>() + " <" + name.unwrap(false) + "> not found.";
             throw Exception(msg);
         }
 
@@ -188,7 +188,29 @@ Node& Node::node(const String& name_)
 }
 
 
-Union Node::field(const String& name_)
+optional<Union> Node::try_get(const String& name_)
+{
+    try {
+        auto res = this->get(name_);
+        return { res };
+
+    } catch(...) {
+        return { };
+    }
+}
+
+optional<Union> Node::try_get(size_t index)
+{
+    try {
+        auto res = this->get(index);
+        return { res };
+
+    } catch(...) {
+        return { };
+    }
+}
+
+Union Node::get(const String& name_)
 {
     auto hash = hash_string(name_, *this->env);
     auto* resnode = find_link<Hash>(hash, this->nodes, name_);
@@ -202,7 +224,7 @@ Union Node::field(const String& name_)
     return Union(resvalue->field);
 }
 
-Union Node::field(size_t index)
+Union Node::get(size_t index)
 {
     auto* resnode = find_link<Index>(index, this->nodes);
 
@@ -292,7 +314,7 @@ Union Node::consume_item(const String& id, bool throw_err)
     }
 
     if(throw_err) {
-        throw Exception("Field " + id.unwrap(false) + " not found.");
+        throw Exception("Field <" + id.unwrap(false) + "> not found.");
     }
 
     return Union();
@@ -336,7 +358,7 @@ Node Node::consume_node(bool throw_ex, const String& id)
     }
 
     if(throw_ex) {
-        throw Exception("Field " + id.unwrap(false) + " not found");
+        throw Exception("Field <" + id.unwrap(false) + "> not found");
     }
 
     return Node(this->env->tree);
@@ -380,7 +402,7 @@ Value Node::consume_value(bool throw_ex, const String& id)
     }
 
     if(throw_ex) {
-        throw Exception("Field " + id.unwrap(false) + " not found");
+        throw Exception("Field <" + id.unwrap(false) + "> not found");
     }
 
     return Value(Type::Null);
@@ -558,7 +580,7 @@ list<Node*> Node::find_nodes(const String& name_, bool recursive)
 {
     list<Node*> rslt;
 
-    this->foreach_node([&rslt, this, name_] (Node& node) {
+    this->foreach_node([&rslt, name_] (Node& node) {
         if(node.name() == name_) {
             rslt.push_back(&node);
         }
@@ -571,7 +593,7 @@ list<Value*> Node::find_values(const String& name_, bool recursive)
 {
     list<Value*> rslt;
 
-    this->foreach_value([&rslt, this, name_] (Value& value) {
+    this->foreach_value([&rslt, name_] (Value& value) {
         if(value.name() == name_) {
             rslt.push_back(&value);
         }

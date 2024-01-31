@@ -1,16 +1,14 @@
 #ifndef SRL_NODE_H
 #define SRL_NODE_H
 
-#include "Enums.h"
-#include "Common.h"
 #include "Value.h"
-#include "In.h"
 #include "Resolve.h"
 #include "TpTools.h"
 #include "Heap.h"
 #include "Environment.h"
 #include "Tree.h"
 #include "Union.h"
+#include <optional>
 
 namespace Srl {
 
@@ -70,8 +68,11 @@ namespace Srl {
         Value& value (const String& name);
         Value& value (size_t index);
 
-        Union field(const String& name);
-        Union field(size_t index);
+        Union get(const String& name);
+        Union get(size_t index);
+
+        std::optional<Union> try_get(const String& name);
+        std::optional<Union> try_get(size_t index);
 
         Union operator[](const String& name);
 
