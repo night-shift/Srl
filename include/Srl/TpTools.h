@@ -139,7 +139,9 @@ namespace Srl { namespace TpTools {
         {
             double val = TP == Type::FP32 ? value.pblock().fp32 : value.pblock().fp64;
 
-            if(SrlType<T>::type != TP && (val < min<T>() || val > (double)max<T>())) {
+            if(SrlType<T>::type != TP && SrlType<T>::type != Type::FP64 &&
+              (val < min<T>() || val > (double)max<T>())) {
+
                 return false;
             }
 

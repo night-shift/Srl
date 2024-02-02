@@ -1,7 +1,6 @@
 #ifndef SRL_TOOLS_H
 #define SRL_TOOLS_H
 
-#include "Common.h"
 #include "Enums.h"
 #include "Type.h"
 #include "Blocks.h"

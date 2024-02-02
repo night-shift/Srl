@@ -1,9 +1,10 @@
 #ifndef SRL_UNION_H
 #define SRL_UNION_H
 
-#include "Exception.h"
+#include "Srl/Environment.h"
 #include "String.h"
 #include "TpTools.h"
+#include <exception>
 #include <optional>
 
 namespace Srl {
@@ -24,6 +25,10 @@ namespace Srl {
 
         bool is_node() { return nodeptr != nullptr; }
         bool is_value() { return valptr != nullptr; }
+
+
+        template<class T>
+        void throw_conversion_error(std::exception& prev_ex);
 
         template<class T>
         operator T();
@@ -59,30 +64,10 @@ namespace Srl {
         Node*  nodeptr = nullptr;
         Value* valptr  = nullptr;
 
-        void check_not_empty()
-        {
-            if(!nodeptr && !valptr) {
-                throw Exception("Srl::Union is empty.");
-            }
-        }
+        void check_not_empty();
+        void check_node();
+        void check_value();
 
-        void check_node(const String& name = "")
-        {
-            check_not_empty();
-
-            if(!nodeptr) {
-                throw Exception("Field <" + name.unwrap() + "> is not a node.");
-            }
-        }
-
-        void check_value(const String& name = "")
-        {
-            check_not_empty();
-
-            if(!valptr) {
-                throw Exception("Field <" + name.unwrap() + "> is not a value.");
-            }
-        }
     };
 }
 

@@ -12,7 +12,7 @@ namespace Srl {
     class ScopeWrap {
 
     public:
-        ScopeWrap(const std::function<void(Node&)>& fn_insert_, Type tp = Type::Object)
+        ScopeWrap(const std::function<void(Node&)>& fn_insert_ = [](auto&) { }, Type tp = Type::Object)
             : scope_type(tp), fn_insert(fn_insert_)
         {
         }

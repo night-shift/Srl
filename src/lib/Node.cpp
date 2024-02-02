@@ -7,7 +7,7 @@ using namespace Lib;
 
 namespace {
 
-    int MAX_SAFE_NESTED_SCOPE_DEPTH = 256;
+    int MAX_SAFE_NESTED_SCOPE_DEPTH = 128;
 
     template<class T> const string& tp_name();
     template<> const string& tp_name<Node>()  { static const string str = "Node";  return str; }
@@ -15,9 +15,9 @@ namespace {
 
     typedef uint8_t Option;
 
-    const Option Hash            = 1 << 0; /* compare by name hash */
-    const Option Address         = 1 << 1; /* compare by address */
-    const Option Index           = 1 << 2; /* access  by Index */
+    const Option None            = 1 << 0;
+    const Option Hash            = 1 << 1; /* compare by name hash */
+    const Option Address         = 1 << 2; /* compare by address */
     const Option Remove          = 1 << 3; /* remove found link */
     const Option Throw           = 1 << 4; /* throw exception on not found or multiple findings */
     const Option Check_Duplicate = 1 << 5; /* check for multiple results */
@@ -27,6 +27,11 @@ namespace {
     constexpr bool enabled(Option options, Option option)
     {
         return (options & option) > 0;
+    }
+
+    Exception field_name_not_found_ex(const String& field_name, const String& node_name)
+    {
+        return Exception("Field <" + field_name.unwrap(false) + "> in <" + node_name.unwrap(false) + "> not found.");
     }
 
     template<class T>
@@ -51,9 +56,8 @@ namespace {
     template<Option Opt, class T> typename enable_if<enabled(Opt, Address), bool>::type
     compare(Itr<T>& itr, T* pointer) { return &itr->field == pointer; }
 
-    template<Option Opt, class TKey, class T>
-    typename enable_if<enabled(Opt, Index), Link<T>*>::type
-    find_link(TKey index, Cont<T>& links)
+    template<Option Opt,  class T>
+    Link<T>* get_link_at_index(size_t index, Cont<T>& links)
     {
         if(index < links.size()) {
             auto itr = links.begin();
@@ -75,8 +79,8 @@ namespace {
     }
 
     template<Option Opt, class TKey, class T>
-    typename enable_if<!enabled(Opt, Index), Link<T>*>::type
-    find_link(TKey key, Cont<T>& links, const String& name = String())
+    Link<T>* find_link(TKey key, Cont<T>& links, const String& field_name = Environment::EmptyString,
+                                                 const String& node_name = Environment::EmptyString)
     {
         Itr<T> end    = links.end();
         Link<T>* rslt = nullptr;
@@ -85,7 +89,7 @@ namespace {
             if(compare<Opt, T>(itr, key)) {
 
                 if(enabled(Opt, Throw) && rslt) {
-                    auto msg = tp_name<T>() + " duplication: " + name.unwrap(false) + ".";
+                    auto msg = tp_name<T>() + " duplication: <" + field_name.unwrap(false) + "> in <" + node_name.unwrap(false) + ">";
                     throw Exception(msg);
                 }
 
@@ -104,8 +108,7 @@ namespace {
         }
 
         if(enabled(Opt, Throw) && !rslt) {
-            auto msg = tp_name<T>() + " <" + name.unwrap(false) + "> not found.";
-            throw Exception(msg);
+            throw field_name_not_found_ex(field_name, node_name);
         }
 
         return rslt;
@@ -164,27 +167,30 @@ Value& Node::value(const String& name_)
 {
     auto hash  = hash_string(name_, *this->env);
     auto hash_name = make_pair(hash, &name_);
-    auto* link = find_link<Throw | Hash | Name>(hash_name, this->values, name_);
+    auto* link = find_link<Throw | Hash | Name>(hash_name, this->values, name_, this->name());
 
     return link->field;
 }
 
 Value& Node::value(size_t index)
 {
-    auto* link = find_link<Throw | Index>(index, this->values);
+    auto* link = get_link_at_index<Throw>(index, this->values);
     return link->field;
 }
 
 Node& Node::node(size_t index)
 {
-    return find_link<Throw | Index>(index, this->nodes)->field;
+    auto* link = get_link_at_index<Throw>(index, this->nodes);
+    return link->field;
 }
 
 Node& Node::node(const String& name_)
 {
     auto hash = hash_string(name_, *this->env);
     auto hash_name = make_pair(hash, &name_);
-    return find_link<Throw | Hash | Name>(hash_name, this->nodes, name_)->field;
+    auto* link = find_link<Throw | Hash | Name>(hash_name, this->nodes, name_, this->name());
+
+    return link->field;
 }
 
 
@@ -212,27 +218,26 @@ optional<Union> Node::try_get(size_t index)
 
 Union Node::get(const String& name_)
 {
-    auto hash = hash_string(name_, *this->env);
-    auto* resnode = find_link<Hash>(hash, this->nodes, name_);
+    auto* resvalue = find_link<Name>(name_, this->values, name_, this->name());
 
-    if(resnode) {
-        return Union(resnode->field);
+    if(resvalue) {
+        return Union(resvalue->field);
     }
 
-    auto* resvalue = find_link<Throw | Hash>(hash, this->values, name_);
+    auto* resnode = find_link<Throw | Name>(name_, this->nodes, name_, this->name());
 
-    return Union(resvalue->field);
+    return Union(resnode->field);
 }
 
 Union Node::get(size_t index)
 {
-    auto* resnode = find_link<Index>(index, this->nodes);
+    auto* resnode = get_link_at_index<None>(index, this->nodes);
 
     if(resnode) {
         return Union(resnode->field);
     }
 
-    auto* resvalue = find_link<Throw | Index>(index, this->values);
+    auto* resvalue = get_link_at_index<None>(index, this->values);
 
     return Union(resvalue->field);
 }
@@ -314,7 +319,7 @@ Union Node::consume_item(const String& id, bool throw_err)
     }
 
     if(throw_err) {
-        throw Exception("Field <" + id.unwrap(false) + "> not found.");
+        throw field_name_not_found_ex(id, this->name());
     }
 
     return Union();
@@ -358,7 +363,7 @@ Node Node::consume_node(bool throw_ex, const String& id)
     }
 
     if(throw_ex) {
-        throw Exception("Field <" + id.unwrap(false) + "> not found");
+        throw field_name_not_found_ex(id, this->name());
     }
 
     return Node(this->env->tree);
@@ -402,7 +407,7 @@ Value Node::consume_value(bool throw_ex, const String& id)
     }
 
     if(throw_ex) {
-        throw Exception("Field <" + id.unwrap(false) + "> not found");
+        throw field_name_not_found_ex(id, this->name());
     }
 
     return Value(Type::Null);
@@ -631,7 +636,7 @@ void Node::remove_node(const String& name_)
 
 void Node::remove_node(size_t index)
 {
-    find_link<Remove | Index>(index, this->nodes);
+    get_link_at_index<Remove>(index, this->nodes);
 }
 
 void Node::remove_node(Node* to_remove)
@@ -646,7 +651,7 @@ void Node::remove_value(const String& name_)
 
 void Node::remove_value(size_t index)
 {
-    find_link<Remove | Index>(index, this->values);
+    get_link_at_index<Remove>(index, this->values);
 }
 
 void Node::remove_value(Value* to_remove)

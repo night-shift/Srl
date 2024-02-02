@@ -1,5 +1,6 @@
 #include "Tests.h"
 #include "BasicStruct.h"
+#include "Srl/Context.h"
 #include "Srl/Hash.h"
 #include "Srl/PJson.h"
 #include "Srl/PMsgPack.h"
@@ -35,25 +36,29 @@ void Tests::print_log(const std::string& message)
     }
 }
 
+
 int main(int argc, char** args)
 {
     for(int i = 0; i < argc; i++) {
+
         if(string(args[i]) == "-v") {
             Tests::Verbose = true;
 
         } else if(string(args[i]) == "-b") {
             Tests::Run_Benchmarks = true;
 
-        } else if(string(args[i], 3) == "-o=") {
+        } else if(string(args[i], 2) == "-o") {
             istringstream is(string(args[i] + 3));
             int in;
             is >> in;
+
             if(in >= 0) { Tests::Benchmark_Objects = in; }
 
-        } else if(string(args[i], 3) == "-i=") {
+        } else if(string(args[i], 2) == "-i") {
             istringstream is(string(args[i] + 3));
             int in;
             is >> in;
+
             if(in >= 0) { Tests::Benchmark_Iterations = in; }
         }
     }
@@ -62,15 +67,16 @@ int main(int argc, char** args)
         Tests::run_benches();
 
     } else {
-        bool success = Tests::test_parser();
-        success &= Tests::test_malicious_input();
-        success &= Tests::test_misc();
+        bool success = Tests::test_parser() &&
+                       Tests::test_malicious_input() &&
+                       Tests::test_misc();
 
         cout<<endl;
         if(success) {
             cout << "Tests passed." <<endl;
         } else {
             cout << "Tests failed." <<endl;
+            return -1;
         }
     }
 

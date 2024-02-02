@@ -43,6 +43,7 @@ bool malicious_input()
         success = true;
         print_log("ok. -> " + string(ex.what()) + "\n");
     }
+
     try {
         print_log("\tWrong field access.....");
         node.node("cev");
@@ -52,6 +53,7 @@ bool malicious_input()
         success &= true;
         print_log("ok. -> " + string(ex.what()) + "\n");
     }
+
     try {
         print_log("\tType mismatch..........");
         node.unwrap_field<int>("vec");
@@ -62,6 +64,7 @@ bool malicious_input()
         success &= true;
         print_log("ok. -> " + string(ex.what()) + "\n");
     }
+
     try {
         print_log("\tOverflow int string....");
         node.insert("string", to_string(numeric_limits<uint64_t>::max()) + "1");
@@ -73,6 +76,7 @@ bool malicious_input()
         success &= true;
         print_log("ok. -> " + string(ex.what()) + "\n");
     }
+
     try {
         print_log("\tOverflow integer max...");
         auto i = (uint64_t)(numeric_limits<int64_t>::max()) + 1;
@@ -85,6 +89,7 @@ bool malicious_input()
         success &= true;
         print_log("ok. -> " + string(ex.what()) + "\n");
     }
+
     try {
         print_log("\tOverflow integer min...");
         int64_t i = numeric_limits<int64_t>::min();
@@ -97,6 +102,7 @@ bool malicious_input()
         success &= true;
         print_log("ok. -> " + string(ex.what()) + "\n");
     }
+
     try {
         print_log("\tOverflow fp max........");
         auto d = numeric_limits<double>::max();
@@ -109,6 +115,7 @@ bool malicious_input()
         success &= true;
         print_log("ok. -> " + string(ex.what()) + "\n");
     }
+
     try {
         print_log("\tOverflow fp min........");
         auto d = numeric_limits<double>::lowest();
@@ -121,6 +128,20 @@ bool malicious_input()
         success &= true;
         print_log("ok. -> " + string(ex.what()) + "\n");
     }
+
+    try {
+        print_log("\tOverflow fp inf to integer........");
+        auto str = "123123e100000";
+        node.insert("inf_fp_str");
+        uint64_t i = node.get("inf_fp_str");
+        success = false;
+        print_log("failed.\n");
+
+    } catch(Exception& ex) {
+        success &= true;
+        print_log("ok. -> " + string(ex.what()) + "\n");
+    }
+
     try {
         print_log("\tNegative to unsigned...");
         short s = -1;
