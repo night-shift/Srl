@@ -334,7 +334,16 @@ namespace {
         /* big container bit at pos 7 set */
         if(prefix & (1 << 6)) {
             type = prefix & 2 ? Type::Object : Type::Array;
-            size = prefix & 1 ? in.read_move<uint32_t>(error) : in.read_move<uint16_t>(error);
+
+            if(prefix & 1) {
+                uint32_t size_be = in.read_move<uint32_t>(error);
+                size = swap_bytes(size_be);
+
+            } else {
+                uint16_t size_be = in.read_move<uint16_t>(error);
+                size = swap_bytes(size_be);
+            }
+
 
         } else {
             type = prefix & (1 << 4) ? Type::Array : Type::Object;
@@ -367,7 +376,10 @@ void PMsgPack::write(const Value& value, const MemBlock& name, Out& out)
     if(type == Type::Scope_End) {
         assert(this->scope_stack.size() > 0);
 
-        out.write(this->scope->ticket, (const uint8_t*)&scope->elements, 0, 4);
+        uint32_t scope_elems = this->scope->elements;
+        auto scope_elems_be = swap_bytes(scope_elems);
+
+        out.write(this->scope->ticket, (const uint8_t*)&scope_elems_be, 0, 4);
         this->scope_stack.pop();
         this->scope = this->scope_stack.size() > 0 ? &this->scope_stack.top() : nullptr;
 

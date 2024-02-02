@@ -495,6 +495,7 @@ Value Node::consume_value(bool throw_ex, size_t)
 void Node::to_source()
 {
     Value scope_start = Value(this->scope_type);
+
     this->env->write(scope_start, this->name());
 
     for(auto& v : this->values) {

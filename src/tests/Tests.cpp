@@ -37,8 +37,10 @@ void Tests::print_log(const std::string& message)
 }
 
 
+
 int main(int argc, char** args)
 {
+
     for(int i = 0; i < argc; i++) {
 
         if(string(args[i]) == "-v") {
