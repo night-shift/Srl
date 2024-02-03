@@ -265,7 +265,6 @@ namespace {
             val = (0xFF >> 1) & prefix;
         }
 
-        //if(DEBUG) printf("      read fixnum pfx %02X (%d) -> %d\n", prefix, (is_neg_fixnum), val);
         return Value(val);
     }
 

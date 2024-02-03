@@ -13,7 +13,7 @@
 namespace Srl {
 
     template<class T>
-    inline void Union::throw_conversion_error(std::exception& prev_ex)
+    Exception Union::make_conversion_error(std::exception& prev_ex)
     {
         check_not_empty();
 
@@ -37,7 +37,7 @@ namespace Srl {
                        "<" + TpTools::get_name(target_type) +"> because the following error occured: " +
                        std::string(prev_ex.what());
 
-        throw Exception(message);
+        return Exception(message);
     }
 
     inline void Union::check_not_empty()
@@ -112,10 +112,8 @@ namespace Srl {
 
         } catch(std::exception& ex) {
 
-            this->throw_conversion_error<T>(ex);
+            throw this->make_conversion_error<T>(ex);
         }
-
-        return Union();
     }
 
     template<class T>
@@ -129,10 +127,8 @@ namespace Srl {
 
         } catch(std::exception& ex) {
 
-            this->throw_conversion_error<T>(ex);
+            throw this->make_conversion_error<T>(ex);
         }
-
-        return Union();
     }
 
     template<class T>
@@ -146,7 +142,7 @@ namespace Srl {
 
         } catch(std::exception& ex) {
 
-            this->throw_conversion_error<T>(ex);
+            throw this->make_conversion_error<T>(ex);
         }
     }
 

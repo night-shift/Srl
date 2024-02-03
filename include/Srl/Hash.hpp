@@ -5,7 +5,6 @@
 #include <algorithm>
 #include <optional>
 #include <utility>
-#include <vector>
 
 namespace Srl { namespace Lib {
 
@@ -47,7 +46,7 @@ namespace Srl { namespace Lib {
     }
 
     template<class K, class V, class H>
-    srl_noinline void HTable<K, V, H>::redistribute()
+    void HTable<K, V, H>::redistribute()
     {
         if(this->limit == 0) {
             /* initial allocation */
@@ -93,7 +92,7 @@ namespace Srl { namespace Lib {
     template<class K, class V, class H>
     V* HTable<K, V, H>::get(const K& key)
     {
-        if(srl_unlikely(elements < 1)) {
+        if(elements < 1) {
             return nullptr;
         }
 
@@ -163,7 +162,7 @@ namespace Srl { namespace Lib {
     std::pair<bool, V*> HTable<K, V, H>::insert_hash(uint64_t hash, bool update_on_dup,
                                                      KV&& key, Args&&... args)
     {
-        if(srl_unlikely(this->limit < 1 || this->elements >= this->limit)) {
+        if(this->limit < 1 || this->elements >= this->limit) {
             this->redistribute();
         }
 

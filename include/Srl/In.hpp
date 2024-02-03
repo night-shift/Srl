@@ -118,7 +118,7 @@ namespace Srl { namespace Lib {
 
         while(*this->peek(0, error) != delimiter) {
 
-            if(srl_unlikely(steps + 1 > bufsz)) {
+            if(steps + 1 > bufsz) {
                 bufsz += steps + 10;
                 buf.resize(bufsz);
             }

@@ -26,10 +26,6 @@ namespace Srl {
         bool is_node() { return nodeptr != nullptr; }
         bool is_value() { return valptr != nullptr; }
 
-
-        template<class T>
-        void throw_conversion_error(std::exception& prev_ex);
-
         template<class T>
         operator T();
 
@@ -67,6 +63,10 @@ namespace Srl {
         void check_not_empty();
         void check_node();
         void check_value();
+
+        template<class T>
+        Exception make_conversion_error(std::exception& prev_ex);
+
 
     };
 }

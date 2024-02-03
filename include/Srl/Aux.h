@@ -3,17 +3,10 @@
 
 #include "Blocks.h"
 #include "Heap.h"
-#include "Common.h"
 
-#include <type_traits>
 #include <utility>
 
 namespace Srl { namespace Lib { namespace Aux {
-
-    #define srl_unlikely(expr) __builtin_expect((expr), 0)
-    #define srl_likely(expr)   __builtin_expect((expr), 1)
-
-    #define srl_noinline __attribute__ ((noinline))
 
     template<class T>
     T read (const uint8_t* address)

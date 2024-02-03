@@ -46,7 +46,7 @@ namespace {
     template<Option Opt, class T> typename enable_if<enabled(Opt, Name), bool>::type
     compare(Itr<T>& itr, const String& name) { return itr->field.name() == name; }
 
-    template<Option Opt, class T> typename enable_if<enabled(Opt, Name) && enabled(Opt, Name), bool>::type
+    template<Option Opt, class T> typename enable_if<enabled(Opt, Name) && enabled(Opt, Hash), bool>::type
     compare(Itr<T>& itr, const pair<uint64_t, const String*>& hash_name)
     {
         return itr->hash == hash_name.first &&
@@ -172,6 +172,16 @@ Value& Node::value(const String& name_)
     return link->field;
 }
 
+Node& Node::node(const String& name_)
+{
+    auto hash = hash_string(name_, *this->env);
+    auto hash_name = make_pair(hash, &name_);
+    auto* link = find_link<Throw | Hash | Name>(hash_name, this->nodes, name_, this->name());
+
+    return link->field;
+}
+
+
 Value& Node::value(size_t index)
 {
     auto* link = get_link_at_index<Throw>(index, this->values);
@@ -181,15 +191,6 @@ Value& Node::value(size_t index)
 Node& Node::node(size_t index)
 {
     auto* link = get_link_at_index<Throw>(index, this->nodes);
-    return link->field;
-}
-
-Node& Node::node(const String& name_)
-{
-    auto hash = hash_string(name_, *this->env);
-    auto hash_name = make_pair(hash, &name_);
-    auto* link = find_link<Throw | Hash | Name>(hash_name, this->nodes, name_, this->name());
-
     return link->field;
 }
 

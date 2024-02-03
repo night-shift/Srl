@@ -56,7 +56,7 @@ bool malicious_input()
 
     try {
         print_log("\tType mismatch..........");
-        node.unwrap_field<int>("vec");
+        node.get("vec").unwrap<int>();
         success = false;
         print_log("failed.\n");
 
@@ -132,8 +132,9 @@ bool malicious_input()
     try {
         print_log("\tOverflow fp inf to integer........");
         auto str = "123123e100000";
-        node.insert("inf_fp_str");
-        uint64_t i = node.get("inf_fp_str");
+        node.insert("inf_fp_str", str);
+
+        node.get("inf_fp_str").unwrap<uint64_t>();
         success = false;
         print_log("failed.\n");
 
@@ -164,8 +165,8 @@ bool malicious_input()
 
         print_log("\tExcessive nesting with '{' load source...");
 
-        Srl::Tree tree;
-        tree.load_source(source_nested, Srl::PJson());
+        Srl::Tree tree_ld;
+        tree_ld.load_source(source_nested, Srl::PJson());
         success = false;
         print_log("failed.\n");
 

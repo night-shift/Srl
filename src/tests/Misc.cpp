@@ -33,10 +33,19 @@ bool test_node_api()
         TEST(root.has_node("node1"));
         TEST(!root.has_node("node2"));
 
+        root.get("node0");
+        root.get("node1");
+        TEST(!root.try_get("node2").has_value());
+
         TEST(root.has_value("field0"));
         TEST(root.has_value("field1"));
         TEST(root.has_value("field2"));
         TEST(!root.has_value("field3"));
+
+        int f0 = root.get("field0");
+        auto f1 = root.get("field1");
+        short f2 = root.get("field2");
+        TEST(!root.try_get("field3").has_value());
 
         auto all_nodes = root.all_nodes(recursive);
         TEST(all_nodes.size() == n_nodes)

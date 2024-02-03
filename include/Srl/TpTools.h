@@ -120,7 +120,7 @@ namespace Srl { namespace TpTools {
         }
 
         template<class T, Type TP>
-        typename std::enable_if<is_integral(TP) && !is_signed(TP), bool>::type
+        typename std::enable_if<is_integral(TP) && !is_signed(TP) && TP != Type::Bool, bool>::type
         try_apply(T& target, const Value& value)
         {
             uint64_t val = value.pblock().ui64;
@@ -128,6 +128,16 @@ namespace Srl { namespace TpTools {
             if(overflows<T>(val)) {
                 return false;
             }
+
+            target = val;
+            return true;
+        }
+
+        template<class T, Type TP>
+        typename std::enable_if<TP == Type::Bool, bool>::type
+        try_apply(T& target, const Value& value)
+        {
+            auto val = value.pblock().i64;
 
             target = val;
             return true;
