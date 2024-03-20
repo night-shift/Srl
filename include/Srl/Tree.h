@@ -33,7 +33,7 @@ namespace Srl {
         void load_object(const T& type);
 
         template<class TParser>
-        void load_source (Lib::In::Source source, TParser&& parser = TParser());
+        void load_source(Lib::In::Source source, TParser&& parser = TParser());
 
         template<class TParser>
         void load_source (const uint8_t* data, size_t data_len, TParser&& parser = TParser());

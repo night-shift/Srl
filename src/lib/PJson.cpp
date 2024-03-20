@@ -160,9 +160,12 @@ void PJson::insert_spacing(Type type, Out& out)
     if(this->compact) {
         return;
     }
-    auto depth = type == Type::Scope_End
-        ? this->scope_stack.size() - 1
-        : this->scope_stack.size();
+
+    auto depth = this->scope_stack.size();
+
+    if(type == Type::Scope_End && depth > 0) {
+        depth -= 1;
+    }
 
     if(this->scope_stack.size() > 0) {
         out.write('\n');

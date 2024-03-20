@@ -5,42 +5,39 @@ using namespace Lib;
 
 namespace {
 
-    uint64_t murmur_hash2(const uint8_t * bytes, size_t nbytes)
+    const uint64_t fnv1a_prime = 0x100000001B3;
+    const uint64_t fnv1a_base  = 0xCBF29CE484222325;
+
+    template<size_t N> void fnv1a_unfold(const uint8_t* bytes, uint64_t& hash)
     {
-        const auto wordlen = sizeof(size_t);
+        hash = (hash ^ *bytes) * fnv1a_prime;
+        fnv1a_unfold<N - 1>(bytes + 1, hash);
+    }
 
-        const uint64_t mul  = 0xC6A4A7935BD1E995;
-        const uint64_t base = 0xCBF29CE484222325;
-        const uint64_t shr  = 47;
+    template<> inline void fnv1a_unfold<0>(const uint8_t*, uint64_t&) { }
 
-        size_t hash = base ^ (nbytes * mul);
+    uint64_t fnv1a(const uint8_t* bytes, size_t nbytes)
+    {
+        auto hash = fnv1a_base;
 
-        for(; nbytes >= wordlen; nbytes -= wordlen, bytes += wordlen) {
+        for(auto unroll = nbytes / 8; unroll > 0;
+            unroll--, bytes += 8) {
 
-            auto b = Aux::read<size_t>(bytes);
-
-            b *= mul;
-            b ^= b >> shr;
-            b *= mul;
-
-            hash ^= b;
-            hash *= mul;
+            fnv1a_unfold<8>(bytes, hash);
         }
 
-        switch(nbytes % 8) {
-            case 7 : hash ^= (uint64_t)bytes[6] << 48;
-            case 6 : hash ^= (uint64_t)bytes[5] << 40;
-            case 5 : hash ^= (uint64_t)bytes[4] << 32;
-            case 4 : hash ^= (uint64_t)bytes[3] << 24;
-            case 3 : hash ^= (uint64_t)bytes[2] << 16;
-            case 2 : hash ^= (uint64_t)bytes[1] << 8;
-            case 1 : hash ^= (uint64_t)bytes[0];
-                     hash *= mul;
-        };
+        auto rem = nbytes % 8;
 
-        hash ^= hash >> shr;
-        hash *= mul;
-        hash ^= hash >> shr;
+        switch(rem) {
+            case 0 : break;
+            case 1 : fnv1a_unfold<1>(bytes, hash); break;
+            case 2 : fnv1a_unfold<2>(bytes, hash); break;
+            case 3 : fnv1a_unfold<3>(bytes, hash); break;
+            case 4 : fnv1a_unfold<4>(bytes, hash); break;
+            case 5 : fnv1a_unfold<5>(bytes, hash); break;
+            case 6 : fnv1a_unfold<6>(bytes, hash); break;
+            case 7 : fnv1a_unfold<7>(bytes, hash); break;
+        }
 
         return hash;
     }
@@ -48,5 +45,5 @@ namespace {
 
 uint64_t Aux::hash_fnc(const uint8_t* bytes, size_t nbytes)
 {
-    return murmur_hash2(bytes, nbytes);
+    return fnv1a(bytes, nbytes);
 }
